@@ -1,0 +1,20 @@
+# Normalize line endings
+* text=auto
+
+# RTL
+*.v    text eol=lf
+*.sv   text eol=lf
+*.vh   text eol=lf
+
+# Python
+*.py   text eol=lf
+
+# Embedded C/C++
+*.c    text eol=lf
+*.cpp  text eol=lf
+*.h    text eol=lf
+*.hpp  text eol=lf
+
+# Scripts
+*.sh   text eol=lf
+*.tcl  text eol=lf
