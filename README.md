@@ -7,7 +7,7 @@
     - mac(conv, fc), relu, pooling등을 수행함.
 
 ### Testbench 구성
-- tb/tb_core/[tb_core.v](tb/tb_core/tb_core.v)
+- tb/tb_core/[tb_core.sv](tb/tb_core/tb_core.sv)
     - rtl_dummy들을 연결하고, tb 수행
 
 ### 참고
