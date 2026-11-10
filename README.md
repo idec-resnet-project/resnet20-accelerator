@@ -1,6 +1,11 @@
 # ResNet-20 Accelerator on FPGA
 
 ### 회로 디자인
+- Block disign
+
+![block](docs/imgs/block.png)
+
+
 - verification/[reference_rtl](verification/reference_rtl)/*.v
     - 구현 예정인 각 모듈 (완성된 디지털 회로 아님)
     - single MAC 구조
