@@ -3,9 +3,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { INPUT = 1, SKIP = 128, SKIP_CONV = 192, CONV_RELU = 80,
-       RESIDUAL_RELU = 112, RESIDUAL_GAP = 116, FC_OUT = 66 };
-enum { CAPACITY = 32 * 32 * 16, MAX_KERNEL = 64 * 64 * 3 * 3, SCALE = 1024 };
+// Command codes from the ResNet-20 PS program.
+enum {
+    INPUT         = 1,
+    SKIP          = 128,
+    SKIP_CONV     = 192,
+    CONV_RELU     = 80,
+    RESIDUAL_RELU = 112,
+    RESIDUAL_GAP  = 116,
+    FC_OUT        = 66
+};
+
+// Input stream indices match model_stream_e in the SystemVerilog adapter.
+enum {
+    STREAM_FEATURE = 0,
+    STREAM_KERNEL  = 1,
+    STREAM_BIAS    = 2
+};
+
+enum {
+    CAPACITY   = 32 * 32 * 16,
+    MAX_KERNEL = 64 * 64 * 3 * 3,
+    SCALE      = 1024
+};
 
 typedef struct {
     float feature[CAPACITY];
@@ -15,9 +35,12 @@ typedef struct {
     float biases[64];
     int feature_count;
     int skip_count;
-    int logits[10];
+    float logits[10];
 } Model;
 
+// --------------------------------
+// Model lifetime
+// --------------------------------
 void *resnet20_create(void)
 {
     return calloc(1, sizeof(Model));
@@ -35,14 +58,17 @@ void resnet20_reset(void *handle)
     model->skip_count = 0;
 }
 
+// --------------------------------
+// Fixed-point conversion and input streams
+// --------------------------------
 static float from_word(int word)
 {
     return (float)(int16_t)(uint16_t)word / SCALE;
 }
 
-static int to_word(float value)
+static int to_word(float value, int frac_bits)
 {
-    float rounded = roundf(value * SCALE);
+    float rounded = roundf(ldexpf(value, frac_bits));
     if (rounded > INT16_MAX) return INT16_MAX;
     if (rounded < INT16_MIN) return INT16_MIN;
     return (int)rounded;
@@ -52,12 +78,23 @@ void resnet20_store(void *handle, int stream, int index, int word)
 {
     Model *model = handle;
     switch (stream) {
-    case 0: model->feature[index] = from_word(word); break;
-    case 1: model->weights[index] = from_word(word); break;
-    case 2: model->biases[index] = from_word(word); break;
+    case STREAM_FEATURE:
+        model->feature[index] = from_word(word);
+        break;
+
+    case STREAM_KERNEL:
+        model->weights[index] = from_word(word);
+        break;
+
+    case STREAM_BIAS:
+        model->biases[index] = from_word(word);
+        break;
     }
 }
 
+// --------------------------------
+// Float computation
+// --------------------------------
 static float convolve(const Model *model, const float *kernel, int w, int h, int cin,
                       int k, int stride, int pad, int ox, int oy, float acc)
 {
@@ -68,6 +105,7 @@ static float convolve(const Model *model, const float *kernel, int w, int h, int
             for (int kx = 0; kx < k; ++kx) {
                 int ix = ox * stride + kx - pad;
                 if (ix >= 0 && ix < w) {
+                    // Feature storage is HWC. Kernel taps are ordered ic, ky, kx.
                     int feature_index = (iy * w + ix) * cin + ic;
                     int kernel_index = (ic * k + ky) * k + kx;
                     acc += model->feature[feature_index] * kernel[kernel_index];
@@ -126,6 +164,7 @@ int resnet20_step(void *handle, int op, int w, int h, int cin, int cout,
             }
         }
     }
+    // Projection updates the shortcut. Other layers advance the main feature.
     if (op == SKIP_CONV) {
         memcpy(model->skip, model->scratch, out_count * sizeof(float));
         model->skip_count = out_count;
@@ -137,7 +176,7 @@ int resnet20_step(void *handle, int op, int w, int h, int cin, int cout,
         }
         model->feature_count = cout;
     } else if (op == FC_OUT) {
-        for (int oc = 0; oc < cout; ++oc) model->logits[oc] = to_word(model->scratch[oc]);
+        for (int oc = 0; oc < cout; ++oc) model->logits[oc] = model->scratch[oc];
     } else {
         memcpy(model->feature, model->scratch, out_count * sizeof(float));
         model->feature_count = out_count;
@@ -145,8 +184,8 @@ int resnet20_step(void *handle, int op, int w, int h, int cin, int cout,
     return 0;
 }
 
-int resnet20_logit(void *handle, int channel)
+int resnet20_logit(void *handle, int channel, int frac_bits)
 {
     const Model *model = handle;
-    return model->logits[channel];
+    return to_word(model->logits[channel], frac_bits);
 }

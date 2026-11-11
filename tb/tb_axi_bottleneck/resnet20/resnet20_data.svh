@@ -1,3 +1,6 @@
+    // --------------------------------
+    // Model data files
+    // --------------------------------
     localparam string MODEL_DATA_SUBDIR = "resnet20/data";
 
     function automatic int read_word(int fd, string path);
@@ -25,53 +28,44 @@
         return words;
     endfunction
 
-    function automatic model_run_config build_model_config(string data_dir, bit unit_test);
+    // --------------------------------
+    // Model command payloads and expected results
+    // --------------------------------
+    function automatic model_run_config build_model_config(string data_dir, int output_frac_bits);
         model_run_config cfg = new;
         model_command command;
         instruction_t inst;
         string path;
         int fd, words_read;
+
+        cfg.output_frac_bits = output_frac_bits;
         path = {data_dir, "/weight.bin"};
-        if (!unit_test) begin
-            fd = $fopen(path, "rb");
-            if (!fd) $fatal(1, "Cannot open %s", path);
-        end else begin
-            cfg.output_tolerance = 0;
-        end
+        fd = $fopen(path, "rb");
+        if (!fd) $fatal(1, "Cannot open %s", path);
         words_read = 0;
-        for (int i = 0; i < (unit_test ? 2 : $size(PROGRAM)); i++) begin
+        for (int i = 0; i < $size(PROGRAM); i++) begin
             command = new;
-            inst = get_instruction(i, unit_test);
+            inst = PROGRAM[i];
             command.instruction = pack_instruction(inst);
+            command.result_count = stream_words(inst, RESULT);
             for (int s = FEATURE; s <= BIAS; s++)
                 command.payload[s].words = new[stream_words(inst, model_stream_e'(s))];
-            if (unit_test) begin
-                if (i == 0) command.payload[FEATURE].words = '{1536, 65024};
-                else begin
-                    command.payload[KERNEL].words = '{512, 65280};
-                    command.payload[BIAS].words = '{128};
-                    command.expected = '{1024};
-                end
-            end else begin
-                if (inst.op == OP_INPUT)
-                    command.payload[FEATURE].words = read_hex({data_dir, "/input_q5_10.hex"},
+
+            if (inst.op == OP_INPUT)
+                command.payload[FEATURE].words = read_hex({data_dir, "/input_q5_10.hex"},
                                                         stream_words(inst, FEATURE));
-                for (int s = KERNEL; s <= BIAS; s++) begin
-                    for (int j = 0; j < command.payload[s].words.size(); j++) begin
-                        command.payload[s].words[j] = read_word(fd, path);
-                        words_read++;
-                    end
+            for (int s = KERNEL; s <= BIAS; s++) begin
+                for (int j = 0; j < command.payload[s].words.size(); j++) begin
+                    command.payload[s].words[j] = read_word(fd, path);
+                    words_read++;
                 end
-                if (inst.op == OP_FC_OUT)
-                    command.expected = read_hex({data_dir, "/expected_logits_q5_10.hex"},
-                                                stream_words(inst, RESULT));
             end
+            if (command.result_count != 0)
+                command.reference_logits_path = {data_dir, "/reference_logits_float.txt"};
             cfg.commands.push_back(command);
         end
-        if (!unit_test) begin
-            if (words_read != 271690 || $fgetc(fd) >= 0)
-                $fatal(1, "Expected exactly 543380 bytes in %s", path);
-            $fclose(fd);
-        end
+        if (words_read != 271690 || $fgetc(fd) >= 0)
+            $fatal(1, "Expected exactly 543380 bytes in %s", path);
+        $fclose(fd);
         return cfg;
     endfunction

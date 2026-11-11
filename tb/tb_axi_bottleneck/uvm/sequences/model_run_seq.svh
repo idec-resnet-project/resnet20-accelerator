@@ -1,10 +1,17 @@
+    // --------------------------------
+    // Model command sequence
+    // --------------------------------
     class model_run_seq extends uvm_sequence #(uvm_sequence_item);
         bottleneck_env env;
         model_run_config cfg;
-        bit exercise_stalls;
 
-        function new(string name = "model_run_seq"); super.new(name); endfunction
+        function new(string name = "model_run_seq");
+            super.new(name);
+        endfunction
 
+        // --------------------------------
+        // AXI-Lite command and status
+        // --------------------------------
         task access_reg(bit write, bit [31:0] address, inout bit [31:0] data,
                         input int aw_delay = 0, input int w_delay = 0,
                         input bit [1:0] expected_resp = 0);
@@ -44,15 +51,16 @@
             timed_out = 1;
         endtask
 
+        // --------------------------------
+        // AXI-Stream transfers
+        // --------------------------------
         function axis_item source_request(model_command cmd, model_stream_e stream);
             axis_item item = new;
             item.words = cmd.payload[stream].words;
             item.count = item.words.size();
             item.timeout_cycles = cfg.timeout_cycles;
-            if (exercise_stalls) begin
-                item.initial_delay = int'(stream) * 2;
-                item.gap_max = stream == BIAS ? 3 : 1;
-            end
+            item.initial_delay = int'(stream) * 2;
+            item.gap_max = stream == BIAS ? 3 : 1;
             return item;
         endfunction
 
@@ -71,6 +79,9 @@
                 `uvm_fatal("TX_FAILED", $sformatf("%s transfer did not finish", stream.name()))
         endtask
 
+        // --------------------------------
+        // Command execution
+        // --------------------------------
         task send_and_check(model_command cmd, int index);
             bit [31:0] state;
             bit timed_out;
@@ -81,6 +92,7 @@
                 if (state & (cfg.done_mask | cfg.error_mask))
                     `uvm_fatal("STALE_STATUS", "New INPUT retained old status before receiving data")
             end
+            // The feature, kernel, and bias DMA channels are independent.
             fork
                 send_source(cmd, FEATURE);
                 send_source(cmd, KERNEL);
@@ -94,14 +106,13 @@
 
         task execute_command(model_command cmd, int index);
             axis_item receive_item;
-            if (cmd.expected.size() != 0) begin
+            if (cmd.result_count != 0) begin
                 receive_item = new;
-                receive_item.count = cmd.expected.size();
+                receive_item.count = cmd.result_count;
                 receive_item.timeout_cycles = cfg.timeout_cycles;
-                if (exercise_stalls) begin
-                    receive_item.initial_delay = 100;
-                    receive_item.gap_max = 3;
-                end
+                receive_item.initial_delay = 100;
+                receive_item.gap_max = 3;
+                // Arm the output sink before the command can produce data.
                 fork
                     transfer_stream(RESULT, receive_item);
                     begin

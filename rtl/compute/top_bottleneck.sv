@@ -174,6 +174,7 @@ core #(
     .in_enable         (in_enable),
     .in_data           (),
     .kernel_data       (),
+    .bias_data         (),
     .out_enable        (out_enable),
     .out_data          ()
 );

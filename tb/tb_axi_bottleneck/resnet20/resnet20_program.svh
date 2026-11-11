@@ -1,3 +1,6 @@
+    // --------------------------------
+    // Instruction fields
+    // --------------------------------
     localparam int OP_INPUT = 1;
     localparam int OP_FC_OUT = 66;
     localparam int CORE_MAC = 64;
@@ -6,6 +9,9 @@
         int op, width, height, cin, cout, kernel_size, stride, padding;
     } instruction_t;
 
+    // --------------------------------
+    // Model command table
+    // --------------------------------
     // Matches resnet20_instruction_set in verification/resnet20/resnet20.c.
     localparam instruction_t PROGRAM[30] = '{
         '{1, 32, 32, 3, 0, 0, 1, 0},
@@ -40,12 +46,9 @@
         '{66, 1, 1, 64, 10, 1, 1, 0}
     };
 
-    function automatic instruction_t get_instruction(int index, bit unit_test);
-        if (!unit_test) return PROGRAM[index];
-        if (index == 0) return '{OP_INPUT, 1, 1, 2, 0, 0, 1, 0};
-        return '{OP_FC_OUT, 1, 1, 2, 1, 1, 1, 0};
-    endfunction
-
+    // --------------------------------
+    // Register encoding and stream lengths
+    // --------------------------------
     function automatic bit [31:0] pack_instruction(instruction_t inst);
         return inst.op | ((inst.stride - 1) << 8) | (inst.padding << 9) |
                ((inst.width - 1) << 10) | ((inst.height - 1) << 16) |

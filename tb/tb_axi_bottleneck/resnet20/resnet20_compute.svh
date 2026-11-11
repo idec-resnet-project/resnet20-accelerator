@@ -1,19 +1,25 @@
+    // --------------------------------
+    // Float model entry points
+    // --------------------------------
     import "DPI-C" function chandle resnet20_create();
     import "DPI-C" function void resnet20_destroy(chandle handle);
     import "DPI-C" function void resnet20_reset(chandle handle);
     import "DPI-C" function void resnet20_store(chandle handle, int stream, int index, int word_value);
     import "DPI-C" function int resnet20_step(chandle handle, int op, int w, int h,
         int cin, int cout, int k, int stride, int pad);
-    import "DPI-C" function int resnet20_logit(chandle handle, int channel);
+    import "DPI-C" function int resnet20_logit(chandle handle, int channel, int frac_bits);
 
+    // --------------------------------
+    // Model command and DPI adapter
+    // --------------------------------
     class resnet20_backend extends model_backend;
         chandle handle;
         instruction_t inst;
-        bit unit_test;
         int next_command;
+        int output_frac_bits;
 
-        function new(bit unit_test);
-            this.unit_test = unit_test;
+        function new(int output_frac_bits);
+            this.output_frac_bits = output_frac_bits;
             handle = resnet20_create();
             if (handle == null) $fatal(1, "Could not allocate ResNet-20 state");
         endfunction
@@ -30,8 +36,8 @@
 
         virtual function bit describe(bit [31:0] instruction);
             if (instruction[7:0] == OP_INPUT) next_command = 0;
-            if (next_command >= (unit_test ? 2 : $size(PROGRAM))) return 0;
-            inst = get_instruction(next_command, unit_test);
+            if (next_command >= $size(PROGRAM)) return 0;
+            inst = PROGRAM[next_command];
             if (pack_instruction(inst) != instruction) return 0;
             return 1;
         endfunction
@@ -52,11 +58,11 @@
         endfunction
 
         virtual function int result_word(int index);
-            return resnet20_logit(handle, index);
+            return resnet20_logit(handle, index, output_frac_bits);
         endfunction
     endclass
 
-    function automatic model_backend build_model_backend(bit unit_test);
-        resnet20_backend selected = new(unit_test);
+    function automatic model_backend build_model_backend(int output_frac_bits);
+        resnet20_backend selected = new(output_frac_bits);
         return selected;
     endfunction

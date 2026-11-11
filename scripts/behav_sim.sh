@@ -3,15 +3,38 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 TB_PATH="$ROOT/tb/tb_core"
 PATH_LOG="$ROOT/build/sim/tb_core"
+POST_SYNTHESIS="${TB_CORE_POST_SYNTHESIS:-0}"
+if [[ "$POST_SYNTHESIS" == 1 ]]; then
+    PATH_LOG="$ROOT/build/sim/tb_core_synthesis"
+fi
 GUI=0
 WINDOWS=0
-for option in "$@"; do
-    case "$option" in
+SKIP_DELAY=1
+OUTPUT_FRAC_BITS=10
+usage() {
+    local script=behav_sim.sh
+    if [[ "$POST_SYNTHESIS" == 1 ]]; then script=synthesis_sim.sh; fi
+    echo "Usage: bash scripts/$script [tb_core] [--skip-delay N] [--output-frac-bits N] [--gui]" >&2
+}
+while (( $# )); do
+    case "$1" in
         tb_core) ;;
         --gui) GUI=1 ;;
-        *) echo "Usage: bash utiles/behav_sim.sh [tb_core] [--gui]" >&2; exit 2 ;;
+        --skip-delay)
+            shift
+            [[ "${1:-}" =~ ^[1-9][0-9]*$ ]] || { usage; exit 2; }
+            SKIP_DELAY="$1"
+            ;;
+        --output-frac-bits)
+            shift
+            [[ "${1:-}" =~ ^([0-9]|1[0-5])$ ]] || { usage; exit 2; }
+            OUTPUT_FRAC_BITS="$1"
+            ;;
+        *) usage; exit 2 ;;
     esac
+    shift
 done
+[[ "${INPUT_GAP:-0}" =~ ^[0-9]+$ ]] || { echo 'INPUT_GAP must be nonnegative.' >&2; exit 2; }
 case "$(uname -s)" in MINGW*|MSYS*) WINDOWS=1 ;; esac
 for tool in xvlog xelab xsim; do
     name="$tool"
@@ -19,6 +42,16 @@ for tool in xvlog xelab xsim; do
     command -v "$name" >/dev/null || { echo "[ ERROR ] $name not found. Add Vivado bin to PATH." >&2; exit 1; }
 done
 [[ -f "$TB_PATH/tb_core.f" ]] || { echo '[ ERROR ] tb_core.f not found.' >&2; exit 1; }
+python_cmd="${PYTHON:-}"
+if [[ -z "$python_cmd" ]]; then
+    for candidate in python3 python python3.14; do
+        if "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 10))' >/dev/null 2>&1; then
+            python_cmd="$candidate"
+            break
+        fi
+    done
+fi
+[[ -n "$python_cmd" ]] || { echo '[ ERROR ] Set PYTHON to a Python 3.10+ executable.' >&2; exit 1; }
 tool_path() {
     if (( WINDOWS )); then cygpath -am "$1"; else printf '%s\n' "$1"; fi
 }
@@ -31,14 +64,28 @@ run_tool() {
         "$name" "$@"
     fi
 }
+netlist=
+compile_flags=()
+elab_targets=(tb_core)
+if [[ "$POST_SYNTHESIS" == 1 ]]; then
+    bash "$ROOT/scripts/synthesis.sh" tb_core --output-frac-bits "$OUTPUT_FRAC_BITS"
+    netlist="$ROOT/build/synth/tb_core/frac_$OUTPUT_FRAC_BITS/core_funcsim.v"
+    compile_flags=(-d TB_CORE_POST_SYNTHESIS)
+    # Vivado's functional Verilog netlist includes glbl.
+    elab_targets+=(glbl -L unisims_ver)
+fi
 mkdir -p -- "$PATH_LOG"
 (
     cd -- "$TB_PATH"
+    if [[ "$POST_SYNTHESIS" == 1 ]]; then
+        printf 'verilog work "%s"\n' "$(tool_path "$netlist")"
+    fi
     while IFS= read -r source || [[ -n "$source" ]]; do
         source=${source%$'\r'}
         source=${source#"${source%%[![:space:]]*}"}
         source=${source%"${source##*[![:space:]]}"}
         [[ -z "$source" || "$source" == \#* ]] && continue
+        if [[ "$POST_SYNTHESIS" == 1 && "$source" == dummy/core.v ]]; then continue; fi
         [[ -f "$source" ]] || { echo "[ ERROR ] Source not found: $source" >&2; exit 1; }
         absolute="$(cd -- "$(dirname -- "$source")" && pwd)/$(basename -- "$source")"
         printf 'sv work "%s"\n' "$(tool_path "$absolute")"
@@ -47,18 +94,26 @@ mkdir -p -- "$PATH_LOG"
 cd -- "$PATH_LOG"
 : > simulate.log
 
+"$python_cmd" "$(tool_path "$ROOT/verification/core/golden_ref/generate_resnet20_core.py")" --out vectors
+
 echo '------------------------------------'
 echo '[1/3] Compiling HDL...'
 echo '------------------------------------'
-run_tool xvlog -prj sources.prj -i "$(tool_path "$TB_PATH/include")" -log compile.log
+run_tool xvlog -prj sources.prj -i "$(tool_path "$TB_PATH/include")" "${compile_flags[@]}" -log compile.log
 
 echo '------------------------------------'
 echo '[2/3] Elaborating tb_core...'
 echo '------------------------------------'
-run_tool xelab tb_core -s behav_tb -debug typical -log elaborate.log
+{
+    printf -- '-generic_top "SKIP_DELAY_CYCLES=%s"\n' "$SKIP_DELAY"
+    printf -- '-generic_top "OUTPUT_FRAC_BITS=%s"\n' "$OUTPUT_FRAC_BITS"
+} > elaborate_args.f
+debug=()
+if (( GUI )); then debug+=(-debug typical); fi
+run_tool xelab "${elab_targets[@]}" -s behav_tb -f elaborate_args.f "${debug[@]}" -log elaborate.log
 
 echo '------------------------------------'
-echo '[3/3] Running case1...'
+echo '[3/3] Running ResNet-20 core verification...'
 echo '------------------------------------'
 args=(behav_tb -log simulate.log)
 
@@ -70,16 +125,9 @@ if (( GUI )); then
     # -runall performs "run all; quit" even when opening the GUI.
     # Run through Tcl instead, leaving the simulator open at $finish.
     cat > gui_run.tcl <<'TCL'
-log_wave -r /tb_core/*
-set wave_config [file normalize [file join [file dirname [info script]] .. tb_core.wcfg]]
-if {[file isfile $wave_config]} {
-    open_wave_config $wave_config
-} else {
-    add_wave /tb_core/clk /tb_core/nrst
-    add_wave /tb_core/mac_in_enable /tb_core/mac_in_data
-    add_wave /tb_core/mac_out_enable /tb_core/mac_out_data
-    add_wave /tb_core/gap_out_enable /tb_core/gap_out_data
-}
+add_wave /tb_core/clk /tb_core/nrst
+add_wave /tb_core/in_enable /tb_core/in_data /tb_core/kernel_data /tb_core/bias_data
+add_wave /tb_core/out_enable /tb_core/out_data
 run all
 TCL
     args+=(-gui -onfinish stop -tclbatch gui_run.tcl)

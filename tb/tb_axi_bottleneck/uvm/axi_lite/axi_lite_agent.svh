@@ -1,27 +1,46 @@
+    // --------------------------------
+    // Register transaction
+    // --------------------------------
     class axi_lite_item extends uvm_sequence_item;
         `uvm_object_utils(axi_lite_item)
+
         bit write;
         bit [31:0] addr, data;
         bit [1:0] resp;
         int aw_delay, w_delay;
         int timeout_cycles = 1_000_000;
-        function new(string name = "axi_lite_item"); super.new(name); endfunction
+        function new(string name = "axi_lite_item");
+            super.new(name);
+        endfunction
     endclass
 
+    // --------------------------------
+    // Single register access
+    // --------------------------------
     class axi_lite_transfer extends uvm_sequence #(axi_lite_item);
         axi_lite_item request;
-        function new(string name = "axi_lite_transfer"); super.new(name); endfunction
+        function new(string name = "axi_lite_transfer");
+            super.new(name);
+        endfunction
+
         virtual task body();
             start_item(request);
             finish_item(request);
         endtask
     endclass
 
+    // --------------------------------
+    // AXI-Lite channel driver
+    // --------------------------------
     class axi_lite_driver extends uvm_driver #(axi_lite_item);
         `uvm_component_utils(axi_lite_driver)
+
         virtual axi_lite_if vif;
 
-        function new(string name, uvm_component parent); super.new(name, parent); endfunction
+        function new(string name, uvm_component parent);
+            super.new(name, parent);
+        endfunction
+
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(virtual axi_lite_if)::get(this, "", "vif", vif))
@@ -59,6 +78,7 @@
         endtask
 
         task drive_write(axi_lite_item item);
+            // AW and W can arrive in either order.
             fork
                 drive_aw(item);
                 drive_w(item);
@@ -78,6 +98,7 @@
 
         task drive_read(axi_lite_item item);
             bit accepted;
+            // Once AR is accepted, wait only for the read response.
             accepted = 0;
             vif.araddr = item.addr;
             vif.arvalid = 1;
@@ -120,19 +141,25 @@
         endtask
     endclass
 
+    // --------------------------------
+    // Completed write monitor
+    // --------------------------------
     class axi_lite_monitor extends uvm_monitor;
         `uvm_component_utils(axi_lite_monitor)
+
         virtual axi_lite_if vif;
         uvm_analysis_port #(axi_lite_item) observed;
         function new(string name, uvm_component parent);
             super.new(name, parent);
             observed = new("observed", this);
         endfunction
+
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(virtual axi_lite_if)::get(this, "", "vif", vif))
                 `uvm_fatal("NOVIF", "Missing AXI-Lite monitor interface")
         endfunction
+
         task run_phase(uvm_phase phase);
             bit [31:0] awaddr, wdata;
             axi_lite_item item;
@@ -153,18 +180,26 @@
         endtask
     endclass
 
+    // --------------------------------
+    // AXI-Lite agent
+    // --------------------------------
     class axi_lite_agent extends uvm_agent;
         `uvm_component_utils(axi_lite_agent)
+
         uvm_sequencer #(axi_lite_item) sequencer;
         axi_lite_driver driver;
         axi_lite_monitor monitor;
-        function new(string name, uvm_component parent); super.new(name, parent); endfunction
+        function new(string name, uvm_component parent);
+            super.new(name, parent);
+        endfunction
+
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             sequencer = new("sequencer", this);
             driver = axi_lite_driver::type_id::create("driver", this);
             monitor = axi_lite_monitor::type_id::create("monitor", this);
         endfunction
+
         function void connect_phase(uvm_phase phase);
             super.connect_phase(phase);
             driver.seq_item_port.connect(sequencer.seq_item_export);
