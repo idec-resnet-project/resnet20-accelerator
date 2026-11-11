@@ -25,6 +25,7 @@ module core #(
     input  wire                                  in_enable,
     input  wire [BITWIDTH-1:0]                   in_data,
     input  wire [BITWIDTH-1:0]                   kernel_data,
+    input  wire [BITWIDTH-1:0]                   bias_data,
     
     // output
     output reg                                   out_enable,

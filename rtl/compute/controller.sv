@@ -32,6 +32,11 @@ module controller #(
     input  wire                                  dma_kernel_valid,
     output wire                                  dma_kernel_ready,
     input  wire                                  dma_kernel_last,
+
+    // DMA bias
+    input  wire                                  dma_bias_valid,
+    output wire                                  dma_bias_ready,
+    input  wire                                  dma_bias_last,
     
     // DMA output
     output wire                                  dma_output_valid,
@@ -48,25 +53,59 @@ module controller #(
     input  wire                                  rmem_wr_ready
 );
 
+// FSM
+typedef enum reg [7:0] {
+    IDLE       = 8'b00000001,
+    DECODE     = 8'b00000010,
+    IN_FEATURE = 8'b00000100,
+    IN_KERNEL  = 8'b00001000,
+    IN_BIAS    = 8'b00010000,
+    RUN        = 8'b00100000,
+    OUTPUT     = 8'b01000000,
+    ERROR      = 8'b10000000
+} state_t;
+
+typedef enum reg [3:0] { 
+    IDLE            = 4'b0000,
+    DONE            = 4'b0001,
+    INPUT           = 4'b0010,
+    RUN             = 4'b0100,
+    OUTPUT          = 4'b0110, 
+    DECODE_ERROR    = 4'b1000, // error case : 의미는 크게 없고 Wave 편의로 그냥 추가함. 
+    INPUT_ERROR     = 4'b1010,
+    RUN_ERROR       = 4'b1100,
+    OUTPUT_ERROR    = 4'b1110
+} response_t;
+
+// counter
+localparam BITWIDTH_CNT = 32;
+
+// --------------------------------
+// wire & reg
+// --------------------------------
+// FSM
+state_t     cstate; // current
+state_t     nstate; // next
+response_t  rstate; // response
+
+// counter
+reg [BITWIDTH_CNT-1:0] cnt_feature;
+reg [BITWIDTH_CNT-1:0] cnt_kernel;
+reg [BITWIDTH_CNT-1:0] cnt_bias;
+reg [BITWIDTH_CNT-1:0] cnt_run;
+reg [BITWIDTH_CNT-1:0] cnt_output;
+
 // --------------------------------
 // FSM
 // -------------------------------
-
-
-
-// --------------------------------
-// counters
-// --------------------------------
-
-
 
 // --------------------------------
 // core control
 // --------------------------------
 
+// --------------------------------
+// AXI control
+// --------------------------------
 
-// --------------------------------
-// buffer control
-// --------------------------------
 
 endmodule

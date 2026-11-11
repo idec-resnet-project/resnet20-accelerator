@@ -1,224 +1,141 @@
 `timescale 1ns/1ps
 
-module tb_core;
-
-    // ------------------------------------
-    // Data Configuration
-    // ------------------------------------
-    // Reference vectors and behavioral DUT arithmetic are fixed to signed Q7.8.
-    localparam integer  BITWIDTH = 16;
-    localparam integer  INT_WIDTH = 7;
-    localparam integer  FRAC_WIDTH = BITWIDTH - 1 - INT_WIDTH;
-
-    // ------------------------------------
-    // Clock and Reset
-    // ------------------------------------
-    reg                 clk = 0;
-    reg                 nrst = 0;
+module tb_core #(
+    parameter int SKIP_DELAY_CYCLES = 1,
+    parameter int OUTPUT_FRAC_BITS  = 10
+);
+    // --------------------------------
+    // Clock and reset
+    // --------------------------------
+    logic clk  = 0;
+    logic nrst = 0;
 
     always #5 clk = ~clk;
 
-    // ------------------------------------
-    // MAC
-    // ------------------------------------
-    reg                        mac_enable = 0;
-    reg [4:0]                  mac_iteration = 1;
-    reg                        mac_in_enable = 0;
-    reg signed [BITWIDTH-1:0]  mac_in_data = 0;
-    reg signed [BITWIDTH-1:0]  mac_kernel_data = 0;
-    wire                       mac_out_enable;
-    wire signed [BITWIDTH-1:0] mac_out_data;
+    // --------------------------------
+    // Core interface
+    // --------------------------------
+    // Layer configuration
+    logic residual_enable = 0;
+    logic relu_enable     = 0;
+    logic gap_enable      = 0;
+    logic output_is_logit = 0;
+    logic [15:0] mac_iteration = 0;
+    logic [15:0] gap_iteration = 0;
 
-    mac #(
-        .BITWIDTH    (BITWIDTH)
-    ) u_mac (
-        .clk         (clk),
-        .nrst        (nrst),
-        .enable      (mac_enable),
-        .iteration   (mac_iteration),
-        .in_enable   (mac_in_enable),
-        .in_data     (mac_in_data),
-        .kernel_data (mac_kernel_data),
-        .out_enable  (mac_out_enable),
-        .out_data    (mac_out_data)
+    // Input stream
+    logic               in_enable   = 0;
+    logic signed [15:0] in_data     = 0;
+    logic signed [15:0] kernel_data = 0;
+    logic signed [15:0] bias_data   = 0;
+
+    // Output stream
+    wire               out_enable;
+    wire signed [15:0] out_data;
+
+    int input_gap = 0;
+
+`ifdef TB_CORE_POST_SYNTHESIS
+    core dut (
+`else
+    core #(
+        .OUTPUT_FRAC_BITS (OUTPUT_FRAC_BITS)
+    ) dut (
+`endif
+        .clk               (clk),
+        .nrst              (nrst),
+
+        // Configuration
+        .mac_enable        (1'b1),
+        .mac_iteration     (mac_iteration),
+        .residual_enable   (residual_enable),
+        .relu_enable       (relu_enable),
+        .pooling_enable    (1'b0),
+        .pooling_iteration (16'd0),
+        .gap_enable        (gap_enable),
+        .gap_iteration     (gap_iteration),
+        .output_is_logit   (output_is_logit),
+
+        // Input
+        .in_enable         (in_enable),
+        .in_data           (in_data),
+        .kernel_data       (kernel_data),
+        .bias_data         (bias_data),
+
+        // Output
+        .out_enable        (out_enable),
+        .out_data          (out_data)
     );
 
-    // ------------------------------------
-    // Residual
-    // ------------------------------------
-    reg                        residual_enable = 0;
-    wire                       residual_in_enable;
-    wire signed [BITWIDTH-1:0] residual_in_data;
-    wire signed [BITWIDTH-1:0] residual_skip_data;
-    integer skip_index = 0;
-    wire                       residual_out_enable;
-    wire signed [BITWIDTH-1:0] residual_out_data;
+    // --------------------------------
+    // Model, schedule, and checking
+    // --------------------------------
+    `include "resnet20_model.svh"
+    `include "data_schedule.svh"
+    `include "resnet20_scoreboard.svh"
+    `include "resnet20_driver.svh"
 
-    residual #(
-        .BITWIDTH    (BITWIDTH)
-    ) u_residual (
-        .clk         (clk),
-        .nrst        (nrst),
-        .enable      (residual_enable),
-        .in_enable   (residual_in_enable),
-        .in_data     (residual_in_data),
-        .skip_data   (residual_skip_data),
-        .out_enable  (residual_out_enable),
-        .out_data    (residual_out_data)
-    );
+    // --------------------------------
+    // Inference sequence
+    // --------------------------------
+    task automatic run_resnet20;
+        layer_t layer;
 
-    // ------------------------------------
-    // ReLU
-    // ------------------------------------
-    reg                        relu_enable = 0;
-    wire                       relu_in_enable;
-    wire signed [BITWIDTH-1:0] relu_in_data;
-    wire                       relu_out_enable;
-    wire signed [BITWIDTH-1:0] relu_out_data;
+        for (int i = 0; i < LAYER_COUNT; i++) begin
+            layer = layers[i];
+            case (layer.op)
+                OP_INPUT: begin
+                    read_hex("vectors/input_q5_10.hex", layer.width * layer.height * layer.cin,
+                             feature);
+                end
 
-    relu #(
-        .BITWIDTH    (BITWIDTH)
-    ) u_relu (
-        .clk         (clk),
-        .nrst        (nrst),
-        .enable      (relu_enable),
-        .in_enable   (relu_in_enable),
-        .in_data     (relu_in_data),
-        .out_enable  (relu_out_enable),
-        .out_data    (relu_out_data)
-    );
+                OP_SKIP: begin
+                    // Preserve the identity shortcut before updating feature.
+                    for (int j = 0; j < layer.width * layer.height * layer.cin; j++)
+                        shortcut[j] = feature[j];
+                end
 
-    // ------------------------------------
-    // Pooling
-    // ------------------------------------
-    reg                        pooling_enable    = 0;
-    reg [4:0]                  pooling_iteration = 4;
-    wire                       pooling_in_enable;
-    wire signed [BITWIDTH-1:0] pooling_in_data;
-    wire                       pooling_out_enable;
-    wire signed [BITWIDTH-1:0] pooling_out_data;
-
-    pooling #(
-        .BITWIDTH    (BITWIDTH)
-    ) u_pooling (
-        .clk         (clk),
-        .nrst        (nrst),
-        .enable      (pooling_enable),
-        .iteration   (pooling_iteration),
-        .in_enable   (pooling_in_enable),
-        .in_data     (pooling_in_data),
-        .out_enable  (pooling_out_enable),
-        .out_data    (pooling_out_data)
-    );
-
-    // ------------------------------------
-    // GAP
-    // ------------------------------------
-    reg                        gap_enable    = 0;
-    reg [4:0]                  gap_iteration = 9;
-    wire                       gap_in_enable;
-    wire signed [BITWIDTH-1:0] gap_in_data;
-    wire                       gap_out_enable;
-    wire signed [BITWIDTH-1:0] gap_out_data;
-
-    general_average_pooling #(
-        .BITWIDTH    (BITWIDTH)
-    ) u_gap (
-        .clk         (clk),
-        .nrst        (nrst),
-        .enable      (gap_enable),
-        .iteration   (gap_iteration),
-        .in_enable   (gap_in_enable),
-        .in_data     (gap_in_data),
-        .out_enable  (gap_out_enable),
-        .out_data    (gap_out_data)
-    );
-
-    // ------------------------------------
-    // Pipeline Connections
-    // ------------------------------------
-
-    assign residual_in_enable  = mac_out_enable;
-    assign residual_in_data   = mac_out_data;
-
-    assign relu_in_enable      = residual_out_enable;
-    assign relu_in_data       = residual_out_data;
-
-    assign pooling_in_enable   = relu_out_enable;
-    assign pooling_in_data    = relu_out_data;
-
-    assign gap_in_enable       = pooling_out_enable;
-    assign gap_in_data        = pooling_out_data;
-
-    // ------------------------------------
-    // Model Configuration
-    // ------------------------------------
-    `include "ResNet.svh"
-
-    // ------------------------------------
-    // Data buffers
-    // ------------------------------------
-    reg signed [BITWIDTH-1:0] feature [0:BUFFER_SIZE-1];
-    reg signed [BITWIDTH-1:0] kernel  [0:BUFFER_SIZE-1];
-
-    // ------------------------------------
-    // Shared Buffers
-    // ------------------------------------
-    reg signed [BITWIDTH-1:0] feature_buf [0:BUFFER_SIZE-1];
-    reg signed [BITWIDTH-1:0] kernel_buf  [0:BUFFER_SIZE-1];
-    reg signed [BITWIDTH-1:0] skip_buf    [0:BUFFER_SIZE-1];
-    reg signed [BITWIDTH-1:0] output_data [0:BUFFER_SIZE-1];
-
-    // ------------------------------------
-    // Residual Skip Source
-    // ------------------------------------
-    // The scheduled skip array has exactly the Conv3 output order.
-    assign residual_skip_data = (skip_index < INPUT_WORDS) ? skip_buf[skip_index] : 0;
-    always @(posedge clk or negedge nrst) begin
-        if (!nrst) skip_index <= 0;
-        else if (residual_enable && mac_out_enable) begin
-            if (skip_index >= INPUT_WORDS) $fatal(1, "[ ERROR ] Extra residual input");
-            skip_index <= skip_index + 1;
+                default: run_affine(i);
+            endcase
         end
-    end
 
-    initial begin
-        #2000000;
-        $fatal(1, "[ ERROR ] Simulation timeout");
-    end
+        if (weights_consumed != WEIGHT_WORDS)
+            $fatal(1, "Consumed %0d bytes, expected %0d", 2 * weights_consumed, 2 * WEIGHT_WORDS);
+        $display("[ PASS ] full ResNet-20 consumed %0d weight bytes", 2 * weights_consumed);
+    endtask
 
-    // ------------------------------------
-    // TB Tasks
-    // ------------------------------------
-    `include "PS.svh"
-    `include "utiles.svh"
-    `include "scoreboard.svh"
-    `include "controller.svh"
+    // --------------------------------
+    // Test entry point
+    // --------------------------------
+    initial begin : test
+        string weight_path;
+        if (!$value$plusargs("weight_path=%s", weight_path))
+            weight_path = "../../../verification/resnet20/weight.bin";
+        if ($value$plusargs("input_gap=%d", input_gap) && input_gap < 0)
+            $fatal(1, "input_gap must be nonnegative");
+        if (SKIP_DELAY_CYCLES < 1)
+            $fatal(1, "SKIP_DELAY_CYCLES must be positive");
+        if (OUTPUT_FRAC_BITS < 0 || OUTPUT_FRAC_BITS > 15)
+            $fatal(1, "OUTPUT_FRAC_BITS must be between 0 and 15");
+        weights_consumed = 0;
+        $display("[ INFO ] ResNet-20 Q5.10 input_gap=%0d skip_delay=%0d output_frac_bits=%0d",
+                 input_gap, SKIP_DELAY_CYCLES, OUTPUT_FRAC_BITS);
 
-    // ------------------------------------
-    // Simulation
-    // ------------------------------------
-    initial begin : simulation_run
-        load_data();
-        core_reset();
-        scoreboard_init();
-
-        phase1_data_schedule(feature, kernel, feature_buf, kernel_buf);
-        phase1_setup();
-        core_run(1, PHASE1_SCHEDULE_WORDS, PHASE_FEATURE_WORDS);
-        scoreboard(output_data, PHASE_FEATURE_WORDS, "ref_2_relu1");
-
-        phase2_data_schedule(output_data, kernel, feature_buf, kernel_buf);
-        phase2_setup();
-        core_run(2, PHASE2_SCHEDULE_WORDS, PHASE_FEATURE_WORDS);
-        scoreboard(output_data, PHASE_FEATURE_WORDS, "ref_4_relu2");
-
-        phase3_data_schedule(output_data, kernel, feature, feature_buf, kernel_buf, skip_buf);
-        phase3_setup();
-        core_run(3, PHASE3_SCHEDULE_WORDS, OUTPUT_WORDS);
-        scoreboard(output_data, OUTPUT_WORDS, "ref_ouptut");
-
-        scoreboard_finish();
+        read_model(weight_path);
+        check_schedule();
+`ifdef TB_CORE_POST_SYNTHESIS
+        // The Vivado global startup reset holds the primitives for 100 ns.
+        repeat (11) @(posedge clk);
+`endif
+        repeat (3) @(negedge clk);
+        nrst = 1;
+        check_arithmetic();
+        run_resnet20();
+        $write("[ INFO ] Q%0d.%0d logits:", 15 - OUTPUT_FRAC_BITS, OUTPUT_FRAC_BITS);
+        for (int i = 0; i < LOGIT_COUNT; i++) $write(" %0d", feature[i]);
+        $display("");
+        check_logit_snr();
+        idle(2);
         $display("[ PASS ] ALL TESTS PASSED");
         $finish;
     end

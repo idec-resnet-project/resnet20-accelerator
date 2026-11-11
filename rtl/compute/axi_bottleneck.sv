@@ -48,6 +48,12 @@ module axi_bottleneck #(
     input  wire                             s_axis_kernel_tlast,
     output wire                             s_axis_kernel_tready,
 
+    // IDMA bias
+    input  wire [BITWIDTH-1:0]              s_axis_bias_tdata,
+    input  wire                             s_axis_bias_tvalid,
+    input  wire                             s_axis_bias_tlast,
+    output wire                             s_axis_bias_tready,
+
     // ODMA
     output wire [BITWIDTH-1:0]              m_axis_output_tdata,
     output wire [BITWIDTH/8-1:0]            m_axis_output_tkeep,
@@ -118,6 +124,10 @@ top_bottleneck #(
     .dma_kernel_ready  (s_axis_kernel_tready),
     .dma_kernel_last   (s_axis_kernel_tlast),
     .dma_kernel_data   (s_axis_kernel_tdata),
+    .dma_bias_valid    (s_axis_bias_tvalid),
+    .dma_bias_ready    (s_axis_bias_tready),
+    .dma_bias_last     (s_axis_bias_tlast),
+    .dma_bias_data     (s_axis_bias_tdata),
     .dma_result_valid  (m_axis_output_tvalid),
     .dma_result_ready  (m_axis_output_tready),
     .dma_result_last   (m_axis_output_tlast),
