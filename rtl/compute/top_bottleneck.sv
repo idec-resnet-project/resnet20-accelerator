@@ -26,6 +26,12 @@ module top_bottleneck #(
     output wire                       dma_kernel_ready,
     input  wire                       dma_kernel_last,
     input  wire [BITWIDTH-1:0]        dma_kernel_data,
+
+    // IDMA bias
+    input  wire                       dma_bias_valid,
+    output wire                       dma_bias_ready,
+    input  wire                       dma_bias_last,
+    input  wire [BITWIDTH-1:0]        dma_bias_data,
     
     // ODMA output
     output wire                       dma_result_valid,
@@ -136,6 +142,9 @@ controller #(
     .dma_kernel_valid  (dma_kernel_valid),
     .dma_kernel_ready  (dma_kernel_ready),
     .dma_kernel_last   (dma_kernel_last),
+    .dma_bias_valid    (dma_bias_valid),
+    .dma_bias_ready    (dma_bias_ready),
+    .dma_bias_last     (dma_bias_last),
     .dma_result_valid  (dma_result_valid),
     .dma_result_ready  (dma_result_ready),
     .dma_result_last   (dma_result_last)

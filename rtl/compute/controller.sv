@@ -32,6 +32,11 @@ module controller #(
     input  wire                                  dma_kernel_valid,
     output wire                                  dma_kernel_ready,
     input  wire                                  dma_kernel_last,
+
+    // DMA bias
+    input  wire                                  dma_bias_valid,
+    output wire                                  dma_bias_ready,
+    input  wire                                  dma_bias_last,
     
     // DMA output
     output wire                                  dma_output_valid,
@@ -47,6 +52,9 @@ module controller #(
     output wire                                  rmem_wr_valid,
     input  wire                                  rmem_wr_ready
 );
+
+// Bias storage and scheduling are not implemented yet.
+assign dma_bias_ready = 1'b0;
 
 // --------------------------------
 // FSM
