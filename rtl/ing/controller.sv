@@ -95,6 +95,27 @@ reg [BITWIDTH_CNT-1:0] cnt_bias;
 reg [BITWIDTH_CNT-1:0] cnt_run;
 reg [BITWIDTH_CNT-1:0] cnt_output;
 
+// buffer switch
+reg is_bmem_in; // use with core
+
+// configure
+wire            input_enable,
+wire            output_enable,
+wire            is_skip,        // if (is_skip == 1) save core output in residual buffer
+wire            stride,         // stride-1 (1~2)
+wire            padding,        // padding (0~1)
+wire            size,           // {W-1, H-1, C-1} 각 6bit 씩
+wire            PL_state   
+
+
+// CNN
+reg [5:0] fw, fc; // width == height
+reg [5:0] kw, kd, kc;
+reg [5:0] ow, oc
+wire padding;
+wire stride;
+reg [BITWIDTH_CNT:0] len_in, len_out;
+
 // --------------------------------
 // FSM
 // -------------------------------
@@ -102,10 +123,41 @@ reg [BITWIDTH_CNT-1:0] cnt_output;
 // --------------------------------
 // core control
 // --------------------------------
+// config
+assign mac_enable       = cfg[2];
+assign residual_enable  = cfg[3];
+assign relu_enable      = cfg[4];
+assign pool_enable      = cfg[5];
+assign gap_enable       = cfg[6];
+assign stride           = cfg[8];
+assign padding          = cfg[8]; 
+
 
 // --------------------------------
 // AXI control
 // --------------------------------
+
+
+// -------------------------------- 
+// calc CNN  
+// --------------------------------
+always_ff @(negedge clk or posedge nrst) begin : update_feaure_size
+    if (!nrst) begin
+        fw <= 0;
+        fc <= 0;
+    end else if (cstat == IN_FEATURE) begin
+        fw <= cfg[]
+always_ff @(negedge clk or posedge nrst) begin : calc_CNN_size
+    if (!nrst) begin
+        fw <= 0;
+        fc <= 0;
+        kw <= 0;
+        kd <= 0;
+        kc <= 0;
+        padding <= 0;
+        stride <= 0;
+    end
+end
 
 
 endmodule
