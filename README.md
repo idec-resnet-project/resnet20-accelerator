@@ -71,3 +71,7 @@ bash scripts/synthesis_sim.sh tb_core
 
 - [기존 Q7.8 bottleneck 테스트 흐름](docs/bottleneck_flow.md)
 - [기존 Q7.8 데이터 배치 규칙](docs/appendix.md)
+
+## References
+
+- [IEEE Xplore – Toward Full-Stack Acceleration of Deep Convolutional Neural Networks on FPGAs](https://ieeexplore.ieee.org/document/9354062)
