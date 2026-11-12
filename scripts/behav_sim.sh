@@ -68,8 +68,8 @@ netlist=
 compile_flags=()
 elab_targets=(tb_core)
 if [[ "$POST_SYNTHESIS" == 1 ]]; then
-    bash "$ROOT/scripts/synthesis.sh" tb_core --output-frac-bits "$OUTPUT_FRAC_BITS"
-    netlist="$ROOT/build/synth/tb_core/frac_$OUTPUT_FRAC_BITS/core_funcsim.v"
+    bash "$ROOT/scripts/synthesis.sh" tb_core
+    netlist="$ROOT/build/synth/tb_core/zedboard/reference_rtl/core_funcsim.v"
     compile_flags=(-d TB_CORE_POST_SYNTHESIS)
     # Vivado's functional Verilog netlist includes glbl.
     elab_targets+=(glbl -L unisims_ver)
@@ -85,7 +85,7 @@ mkdir -p -- "$PATH_LOG"
         source=${source#"${source%%[![:space:]]*}"}
         source=${source%"${source##*[![:space:]]}"}
         [[ -z "$source" || "$source" == \#* ]] && continue
-        if [[ "$POST_SYNTHESIS" == 1 && "$source" == dummy/core.v ]]; then continue; fi
+        if [[ "$POST_SYNTHESIS" == 1 && "$source" == ../../verification/core/reference_rtl/* ]]; then continue; fi
         [[ -f "$source" ]] || { echo "[ ERROR ] Source not found: $source" >&2; exit 1; }
         absolute="$(cd -- "$(dirname -- "$source")" && pwd)/$(basename -- "$source")"
         printf 'sv work "%s"\n' "$(tool_path "$absolute")"

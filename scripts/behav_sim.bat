@@ -64,7 +64,7 @@ rem check environment
 rem ----------------------------------------------------------------
 :environment
 if "%TB_CORE_POST_SYNTHESIS%"=="1" (
-    set "NETLIST=%ROOT%\build\synth\tb_core\frac_%OUTPUT_FRAC_BITS%\core_funcsim.v"
+    set "NETLIST=%ROOT%\build\synth\tb_core\zedboard\reference_rtl\core_funcsim.v"
 )
 if defined NETLIST (
     if not exist "%NETLIST%" goto error_netlist
@@ -172,7 +172,7 @@ rem ----------------------------------------------------------------
 :add_source
 set "SOURCE=%~1"
 if "%SOURCE:~0,1%"=="#" exit /b 0
-if defined NETLIST if /i "%SOURCE%"=="dummy/core.v" exit /b 0
+if defined NETLIST if /i "%~dp1"=="%ROOT%\verification\core\reference_rtl\" exit /b 0
 if not exist "%SOURCE%" (
     echo [ ERROR ] Source not found: "%SOURCE%". 1>&2
     exit /b 1
@@ -198,7 +198,7 @@ exit /b 1
 
 :error_netlist
 echo [ ERROR ] Functional netlist missing or empty: "%NETLIST%". 1>&2
-echo [ INFO ] Generate it with: "%~dp0synthesis.bat" %TB_NAME% --output-frac-bits %OUTPUT_FRAC_BITS% 1>&2
+echo [ INFO ] Generate it with: "%~dp0synthesis.bat" %TB_NAME% 1>&2
 set "EXIT_CODE=1"
 goto finish
 

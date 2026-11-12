@@ -10,8 +10,7 @@ set "OUTPUT_FRAC_BITS=10"
 set "CONFIG_SIM=0"
 set "SKIP_DELAY="
 set "GUI_FLAG="
-set "PATH_PUSHED=0"
-set "EXIT_CODE=0"
+set "PYTHON_CMD="
 
 :options
 if "%~1"=="" goto environment
@@ -59,33 +58,20 @@ if "%CONFIG_SIM%"=="1" goto simulate
 if defined SKIP_DELAY goto error_args
 if defined GUI_FLAG goto error_args
 
-where /q vivado.bat
-if errorlevel 1 (
-    echo [ ERROR ] vivado.bat not found. Add Vivado bin to PATH. 1>&2
-    exit /b 1
+if defined PYTHON set "PYTHON_CMD=%PYTHON%"
+for %%P in (python3 python python3.14) do (
+    if not defined PYTHON_CMD (
+        "%%P" -c "import sys; sys.exit(sys.version_info < (3, 10))" >nul 2>&1
+        if not errorlevel 1 set "PYTHON_CMD=%%P"
+    )
 )
-
-set "PATH_LOG=%ROOT%\build\synth\tb_core\frac_%OUTPUT_FRAC_BITS%"
-if not exist "%PATH_LOG%" mkdir "%PATH_LOG%"
-pushd "%PATH_LOG%"
-if errorlevel 1 goto error_synthesis
-set "PATH_PUSHED=1"
+if not defined PYTHON_CMD goto error_python
 
 rem ----------------------------------------------------------------
 rem synthesize
 rem ----------------------------------------------------------------
-echo ----------------------------------------------------------------
-echo Synthesizing tb_core DUT with output_frac_bits=%OUTPUT_FRAC_BITS%...
-echo ----------------------------------------------------------------
-
-set "TB_CORE_SYNTH_FRAC_BITS=%OUTPUT_FRAC_BITS%"
-call vivado.bat -mode batch -source "%ROOT:\=/%/scripts/synthesis.tcl" -log synthesis.log -journal synthesis.jou
-if errorlevel 1 goto error_synthesis
-for %%F in (core.dcp core_funcsim.v) do (
-    if not exist "%%F" goto error_synthesis
-    if %%~zF equ 0 goto error_synthesis
-)
-goto finish
+"%PYTHON_CMD%" "%ROOT%\scripts\synthesis.py"
+exit /b %ERRORLEVEL%
 
 rem ----------------------------------------------------------------
 rem simulate the existing netlist
@@ -103,10 +89,6 @@ rem ----------------------------------------------------------------
 echo Usage: %~nx0 [tb_core] [--output-frac-bits N] [--sim [--skip-delay N] [--gui]] 1>&2
 exit /b 2
 
-:error_synthesis
-echo [ ERROR ] Synthesis failed. See "%PATH_LOG%\synthesis.log". 1>&2
-set "EXIT_CODE=1"
-
-:finish
-if "%PATH_PUSHED%"=="1" popd
-exit /b %EXIT_CODE%
+:error_python
+echo [ ERROR ] Set PYTHON to a Python 3.10+ executable. 1>&2
+exit /b 1

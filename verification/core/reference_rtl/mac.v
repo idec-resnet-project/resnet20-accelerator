@@ -1,17 +1,66 @@
 `timescale 1ns/1ps
 // Same-clock, valid-only stream. Configuration stays stable until drained.
-// collect_input and handle_output run every clock; registers separate stages.
-module mac #(parameter integer BITWIDTH = 16)(
+module mac #(
+    parameter integer BITWIDTH = 16,
+    parameter integer BITWIDTH_MAC_ITERATION = 16
+)(
     input wire clk,
     input wire nrst,
     input wire enable,
-    input wire [4:0] iteration,
+    input wire [BITWIDTH_MAC_ITERATION-1:0] iteration,
     input wire in_enable,
     input wire signed [BITWIDTH-1:0] in_data,
     input wire signed [BITWIDTH-1:0] kernel_data,
     output reg out_enable,
     output reg signed [BITWIDTH-1:0] out_data
 );
+    wire valid;
+    wire signed [BITWIDTH-1:0] data;
+
+    mac_accumulate #(
+        .BITWIDTH               (BITWIDTH),
+        .BITWIDTH_MAC_ITERATION (BITWIDTH_MAC_ITERATION),
+        .INPUT_FRAC_BITS        (8)
+    ) u_accumulate (
+        .clk         (clk),
+        .nrst        (nrst),
+        .enable      (enable),
+        .iteration   (iteration),
+        .in_enable   (in_enable),
+        .in_data     (in_data),
+        .kernel_data (kernel_data),
+        .bias_data   ({BITWIDTH{1'b0}}),
+        .last_input  (),
+        .out_enable  (valid),
+        .out_data    (data)
+    );
+
+    always @* begin
+        out_enable = valid;
+        out_data = data;
+    end
+endmodule
+
+// The reference core supplies the bias and uses Q5.10 at the same MAC stage.
+module mac_accumulate #(
+    parameter integer BITWIDTH = 16,
+    parameter integer BITWIDTH_MAC_ITERATION = 16,
+    parameter integer INPUT_FRAC_BITS = 10
+)(
+    input wire clk,
+    input wire nrst,
+    input wire enable,
+    input wire [BITWIDTH_MAC_ITERATION-1:0] iteration,
+    input wire in_enable,
+    input wire signed [BITWIDTH-1:0] in_data,
+    input wire signed [BITWIDTH-1:0] kernel_data,
+    input wire signed [BITWIDTH-1:0] bias_data,
+    output wire last_input,
+    output reg out_enable,
+    output reg signed [BITWIDTH-1:0] out_data
+);
+
+    localparam integer ACTIVATION_DIVISOR = 1 << INPUT_FRAC_BITS;
 
     // ------------------------------------
     // Fixed-point arithmetic
@@ -37,45 +86,17 @@ module mac #(parameter integer BITWIDTH = 16)(
     endfunction
 
     reg signed [63:0] accumulator;
-    reg [4:0] input_count;
+    reg [BITWIDTH_MAC_ITERATION-1:0] input_count;
     reg pending_enable;
     reg signed [BITWIDTH-1:0] pending_data;
     // One multiplier, one accumulator update per enabled input clock.
     wire signed [2*BITWIDTH-1:0] product = in_data * kernel_data;
     wire signed [63:0] extended_product = $signed(product);
-    wire signed [63:0] total = accumulator + extended_product;
-
-    task automatic collect_input;
-        begin
-            pending_enable <= 0;
-            if (in_enable) begin
-                if (!enable) begin
-                    accumulator <= 0;
-                    input_count <= 0;
-                    pending_data <= in_data;
-                    pending_enable <= 1;
-                end else if (input_count == iteration - 1'b1) begin
-                    pending_data <= saturate(rounded_divide(total, 256));
-                    pending_enable <= 1;
-                    accumulator <= 0;
-                    input_count <= 0;
-                end else begin
-                    accumulator <= total;
-                    input_count <= input_count + 1'b1;
-                end
-            end
-        end
-    endtask
-
-    // ------------------------------------
-    // Output stage (reads the previous clock's pending result)
-    // ------------------------------------
-    task automatic handle_output;
-        begin
-            out_enable <= pending_enable;
-            if (pending_enable) out_data <= pending_data;
-        end
-    endtask
+    wire signed [63:0] extended_bias = $signed(bias_data);
+    wire signed [63:0] base_sum = (input_count == 0) ?
+                                  (extended_bias <<< INPUT_FRAC_BITS) : accumulator;
+    wire signed [63:0] total = base_sum + extended_product;
+    assign last_input = enable && in_enable && input_count == iteration - 1'b1;
 
     always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
@@ -86,8 +107,26 @@ module mac #(parameter integer BITWIDTH = 16)(
             accumulator <= 0;
             input_count <= 0;
         end else begin
-            collect_input();
-            handle_output();
+            out_enable <= pending_enable;
+            if (pending_enable) out_data <= pending_data;
+
+            pending_enable <= 0;
+            if (in_enable) begin
+                if (!enable) begin
+                    accumulator <= 0;
+                    input_count <= 0;
+                    pending_data <= in_data;
+                    pending_enable <= 1;
+                end else if (last_input) begin
+                    pending_data <= saturate(rounded_divide(total, ACTIVATION_DIVISOR));
+                    pending_enable <= 1;
+                    accumulator <= 0;
+                    input_count <= 0;
+                end else begin
+                    accumulator <= total;
+                    input_count <= input_count + 1'b1;
+                end
+            end
         end
     end
 endmodule

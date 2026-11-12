@@ -9,8 +9,12 @@ module axi_bottleneck #(
     parameter integer  PARALLEL_PF                = 1,
     // AXI4-Lite  
     parameter integer  AXI_LITE_ADDR_WIDTH        = 32,
-    localparam integer AXI_LITE_DATA_WIDTH        = 32
+    parameter integer AXI_LITE_DATA_WIDTH         = 32,
     parameter [31:0]   CONFIG_DEFAULT             = '0,
+    // Buffer address widths. Each RAM stores 2**width words.
+    parameter integer BRAM_FEATRE_CAPACITY        = 14,
+    parameter integer BRAM_KERNEL_CAPACITY        = 16,
+    parameter integer BRAM_BIAS_CAPACITY          = 6
 )(
     input  wire                             s_axi_aclk,
     input  wire                             s_axi_aresetn,
@@ -74,7 +78,7 @@ wire [AXI_LITE_DATA_WIDTH-1:0] cfg;
 axi_lite_reg #(
     .AXI_LITE_ADDR_WIDTH (AXI_LITE_ADDR_WIDTH),
     .AXI_LITE_DATA_WIDTH (AXI_LITE_DATA_WIDTH),
-    .DEFAULT            (CONFIG_DEFAULT)
+    .DEFAULT             (CONFIG_DEFAULT)
 ) u_axi_lite_reg (
     .s_axi_aclk    (s_axi_aclk),
     .s_axi_aresetn (s_axi_aresetn),
@@ -97,7 +101,7 @@ axi_lite_reg #(
     .s_axi_rresp   (s_axi_rresp),
     .s_axi_rvalid  (s_axi_rvalid),
     .s_axi_rready  (s_axi_rready),
-    .cfg_data      (cfg_data)
+    .cfg_data      (cfg)
 );
 
 // ----------------------------------------
@@ -111,7 +115,10 @@ top_bottleneck #(
     .BITWIDTH_POOLING_ITERATION (BITWIDTH_POOLING_ITERATION),
     .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION),
     .PARALLEL_PC                (PARALLEL_PC),
-    .PARALLEL_PF                (PARALLEL_PF)
+    .PARALLEL_PF                (PARALLEL_PF),
+    .BRAM_FEATRE_CAPACITY       (BRAM_FEATRE_CAPACITY),
+    .BRAM_KERNEL_CAPACITY       (BRAM_KERNEL_CAPACITY),
+    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY)
 ) u_top_bottleneck (
     .clk               (s_axi_aclk),
     .nrst              (s_axi_aresetn),

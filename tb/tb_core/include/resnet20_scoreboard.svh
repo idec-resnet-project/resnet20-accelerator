@@ -71,7 +71,7 @@
     end
 
     task automatic finish_compare;
-        repeat (4) begin
+        repeat (CORE_PIPELINE_CYCLES + 1) begin
             @(negedge clk);
             in_enable = 0;
         end
@@ -85,6 +85,23 @@
     // --------------------------------
     // Final logit SNR
     // --------------------------------
+    function automatic word_t format_logit(input word_t value);
+        int sample, divisor;
+
+        sample = int'(value);
+        if (OUTPUT_FRAC_BITS < CORE_FRAC_BITS) begin
+            divisor = 1 << (CORE_FRAC_BITS - OUTPUT_FRAC_BITS);
+            if (sample < 0) sample = -((-sample + divisor / 2) / divisor);
+            else sample = (sample + divisor / 2) / divisor;
+        end else begin
+            sample = sample <<< (OUTPUT_FRAC_BITS - CORE_FRAC_BITS);
+        end
+
+        if (sample > 32767) return 32767;
+        if (sample < -32768) return -32768;
+        return word_t'(sample);
+    endfunction
+
     task automatic check_logit_snr;
         localparam real MIN_SNR_DB = 50.0;
         localparam real OUTPUT_SCALE = 2.0 ** OUTPUT_FRAC_BITS;

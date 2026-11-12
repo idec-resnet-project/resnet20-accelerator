@@ -4,6 +4,10 @@ module tb_core #(
     parameter int SKIP_DELAY_CYCLES = 1,
     parameter int OUTPUT_FRAC_BITS  = 10
 );
+    // Five registered datapath stages with two clocks per stage.
+    localparam int CORE_PIPELINE_CYCLES = 10;
+    localparam int CORE_FRAC_BITS = 10;
+
     // --------------------------------
     // Clock and reset
     // --------------------------------
@@ -19,7 +23,6 @@ module tb_core #(
     logic residual_enable = 0;
     logic relu_enable     = 0;
     logic gap_enable      = 0;
-    logic output_is_logit = 0;
     logic [15:0] mac_iteration = 0;
     logic [15:0] gap_iteration = 0;
 
@@ -35,13 +38,7 @@ module tb_core #(
 
     int input_gap = 0;
 
-`ifdef TB_CORE_POST_SYNTHESIS
     core dut (
-`else
-    core #(
-        .OUTPUT_FRAC_BITS (OUTPUT_FRAC_BITS)
-    ) dut (
-`endif
         .clk               (clk),
         .nrst              (nrst),
 
@@ -54,7 +51,6 @@ module tb_core #(
         .pooling_iteration (16'd0),
         .gap_enable        (gap_enable),
         .gap_iteration     (gap_iteration),
-        .output_is_logit   (output_is_logit),
 
         // Input
         .in_enable         (in_enable),
@@ -132,7 +128,10 @@ module tb_core #(
         check_arithmetic();
         run_resnet20();
         $write("[ INFO ] Q%0d.%0d logits:", 15 - OUTPUT_FRAC_BITS, OUTPUT_FRAC_BITS);
-        for (int i = 0; i < LOGIT_COUNT; i++) $write(" %0d", feature[i]);
+        for (int i = 0; i < LOGIT_COUNT; i++) begin
+            feature[i] = format_logit(feature[i]);
+            $write(" %0d", feature[i]);
+        end
         $display("");
         check_logit_snr();
         idle(2);

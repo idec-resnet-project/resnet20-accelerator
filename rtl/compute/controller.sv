@@ -39,9 +39,9 @@ module controller #(
     input  wire                                  dma_bias_last,
     
     // DMA output
-    output wire                                  dma_output_valid,
-    input  wire                                  dma_output_ready,
-    output wire                                  dma_output_last,
+    output wire                                  dma_result_valid,
+    input  wire                                  dma_result_ready,
+    output wire                                  dma_result_last,
     // Feature memory read
     input  wire                                  fmem_rd_valid,
     output wire                                  fmem_rd_ready,
@@ -66,11 +66,11 @@ typedef enum reg [7:0] {
 } state_t;
 
 typedef enum reg [3:0] { 
-    IDLE            = 4'b0000,
+    RESP_IDLE       = 4'b0000,
     DONE            = 4'b0001,
     INPUT           = 4'b0010,
-    RUN             = 4'b0100,
-    OUTPUT          = 4'b0110, 
+    RESP_RUN        = 4'b0100,
+    RESP_OUTPUT     = 4'b0110,
     DECODE_ERROR    = 4'b1000, // error case : 의미는 크게 없고 Wave 편의로 그냥 추가함. 
     INPUT_ERROR     = 4'b1010,
     RUN_ERROR       = 4'b1100,

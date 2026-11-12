@@ -7,7 +7,11 @@ module top_bottleneck #(
     parameter integer BITWIDTH_GAP_ITERATION     = 16,
     // parallelism
     parameter integer PARALLEL_PC                = 1,
-    parameter integer PARALLEL_PF                = 1
+    parameter integer PARALLEL_PF                = 1,
+    // Buffer address widths. Each RAM stores 2**width words.
+    parameter integer BRAM_FEATRE_CAPACITY       = 14,
+    parameter integer BRAM_KERNEL_CAPACITY       = 16,
+    parameter integer BRAM_BIAS_CAPACITY         = 6
 )(
     input  wire                       clk,
     input  wire                       nrst,
@@ -39,73 +43,35 @@ module top_bottleneck #(
     output wire                       dma_result_last,
     output wire [BITWIDTH-1:0]        dma_result_data
 );
-
 // --------------------------------
-// Buffer
+// wire & reg
 // --------------------------------
-localparam integer BRAM_DATA_WIDTH = 16;
-localparam integer BRAM_DEPTH      = 2048;
-localparam integer BRAM_ADDR_WIDTH = $clog2(BRAM_DEPTH);
-
 // Feature buffer
-wire                       feature_mem_wr_en   [0:1];
-wire [BRAM_ADDR_WIDTH-1:0] feature_mem_wr_addr [0:1];
-wire [BRAM_DATA_WIDTH-1:0] feature_mem_wr_data [0:1];
-wire [BRAM_ADDR_WIDTH-1:0] feature_mem_rd_addr [0:1];
-wire [BRAM_DATA_WIDTH-1:0] feature_mem_rd_data [0:1];
-
-generate
-    for (genvar i = 0; i < 2; i = i + 1) begin : gen_feature_mem
-        blk_mem_gen_0 u_mem (
-            .clka  (clk),
-            .wea   (feature_mem_wr_en[i]),
-            .addra (feature_mem_wr_addr[i]),
-            .dina  (feature_mem_wr_data[i]),
-            .clkb  (clk),
-            .addrb (feature_mem_rd_addr[i]),
-            .doutb (feature_mem_rd_data[i])
-        );
-    end
-endgenerate
-
+wire                            fmem_wr_en   [0:1];
+wire [BRAM_FEATRE_CAPACITY-1:0] fmem_wr_addr [0:1];
+wire [BITWIDTH-1:0]             fmem_wr_data [0:1];
+wire [BRAM_FEATRE_CAPACITY-1:0] fmem_rd_addr [0:1];
+wire [BITWIDTH-1:0]             fmem_rd_data [0:1];
 // Kernel buffer
-wire                       kernel_mem_wr_en;
-wire [BRAM_ADDR_WIDTH-1:0] kernel_mem_wr_addr;
-wire [BRAM_DATA_WIDTH-1:0] kernel_mem_wr_data;
-wire [BRAM_ADDR_WIDTH-1:0] kernel_mem_rd_addr;
-wire [BRAM_DATA_WIDTH-1:0] kernel_mem_rd_data;
+wire                            kmem_wr_en;
+wire [BRAM_KERNEL_CAPACITY-1:0] kmem_wr_addr;
+wire [BITWIDTH-1:0]             kmem_wr_data;
+wire [BRAM_KERNEL_CAPACITY-1:0] kmem_rd_addr;
+wire [BITWIDTH-1:0]             kmem_rd_data;
+// Bias buffer
+wire                          bmem_wr_en;
+wire [BRAM_BIAS_CAPACITY-1:0] bmem_wr_addr;
+wire [BITWIDTH-1:0]           bmem_wr_data;
+wire [BRAM_BIAS_CAPACITY-1:0] bmem_rd_addr;
+wire [BITWIDTH-1:0]           bmem_rd_data;
+// Residual buffer holds a feature map.
+wire                            rmem_wr_en;
+wire [BRAM_FEATRE_CAPACITY-1:0] rmem_wr_addr;
+wire [BITWIDTH-1:0]             rmem_wr_data;
+wire [BRAM_FEATRE_CAPACITY-1:0] rmem_rd_addr;
+wire [BITWIDTH-1:0]             rmem_rd_data;
 
-blk_mem_gen_0 u_kernel_mem (
-    .clka  (clk),
-    .wea   (kernel_mem_wr_en),
-    .addra (kernel_mem_wr_addr),
-    .dina  (kernel_mem_wr_data),
-    .clkb  (clk),
-    .addrb (kernel_mem_rd_addr),
-    .doutb (kernel_mem_rd_data)
-);
-
-// Residual buffer
-wire                       residual_mem_wr_en;
-wire [BRAM_ADDR_WIDTH-1:0] residual_mem_wr_addr;
-wire [BRAM_DATA_WIDTH-1:0] residual_mem_wr_data;
-wire [BRAM_ADDR_WIDTH-1:0] residual_mem_rd_addr;
-wire [BRAM_DATA_WIDTH-1:0] residual_mem_rd_data;
-
-blk_mem_gen_0 u_residual_mem (
-    .clka  (clk),
-    .wea   (residual_mem_wr_en),
-    .addra (residual_mem_wr_addr),
-    .dina  (residual_mem_wr_data),
-    .clkb  (clk),
-    .addrb (residual_mem_rd_addr),
-    .doutb (residual_mem_rd_data)
-);
-
-// --------------------------------
-// Controller
-// --------------------------------
-
+// control
 wire                                  mac_enable;
 wire [BITWIDTH_MAC_ITERATION-1:0]     mac_iteration;
 wire                                  residual_enable;
@@ -117,6 +83,82 @@ wire [BITWIDTH_GAP_ITERATION-1:0]     gap_iteration;
 wire                                  in_enable;
 wire                                  out_enable;
 
+// --------------------------------
+// controll
+// --------------------------------
+
+
+// --------------------------------
+// Buffer
+// --------------------------------
+// Feature buffer
+
+generate
+    for (genvar i = 0; i < 2; i = i + 1) begin : gen_feature_mem
+        buffer #(
+            .DEPTH    (BRAM_FEATRE_CAPACITY),
+            .BITWIDTH (BITWIDTH)
+        ) u_mem (
+            .clka  (clk),
+            .wea   (fmem_wr_en[i]),
+            .addra (fmem_wr_addr[i]),
+            .dina  (fmem_wr_data[i]),
+            .clkb  (clk),
+            .addrb (fmem_rd_addr[i]),
+            .doutb (fmem_rd_data[i])
+        );
+    end
+endgenerate
+
+// Kernel buffer
+
+buffer #(
+    .DEPTH    (BRAM_KERNEL_CAPACITY),
+    .BITWIDTH (BITWIDTH)
+) u_kernel_mem (
+    .clka  (clk),
+    .wea   (kmem_wr_en),
+    .addra (kmem_wr_addr),
+    .dina  (kmem_wr_data),
+    .clkb  (clk),
+    .addrb (kmem_rd_addr),
+    .doutb (kmem_rd_data)
+);
+
+// Bias buffer
+
+buffer #(
+    .DEPTH    (BRAM_BIAS_CAPACITY),
+    .BITWIDTH (BITWIDTH)
+) u_bias_mem (
+    .clka  (clk),
+    .wea   (bmem_wr_en),
+    .addra (bmem_wr_addr),
+    .dina  (bmem_wr_data),
+    .clkb  (clk),
+    .addrb (bmem_rd_addr),
+    .doutb (bmem_rd_data)
+);
+
+// Residual buffer holds a feature map.
+
+buffer #(
+    .DEPTH    (BRAM_FEATRE_CAPACITY),
+    .BITWIDTH (BITWIDTH)
+) u_residual_mem (
+    .clka  (clk),
+    .wea   (rmem_wr_en),
+    .addra (rmem_wr_addr),
+    .dina  (rmem_wr_data),
+    .clkb  (clk),
+    .addrb (rmem_rd_addr),
+    .doutb (rmem_rd_data)
+);
+
+// --------------------------------
+// Controller
+// --------------------------------
+
 controller #(
     .CONFIG_BITWIDTH            (CONFIG_BITWIDTH),
     .BITWIDTH_MAC_ITERATION     (BITWIDTH_MAC_ITERATION),
@@ -125,7 +167,9 @@ controller #(
 ) u_controller (
     .clk               (clk),
     .nrst              (nrst),
+    // config
     .cfg               (cfg),
+    // control
     .mac_enable        (mac_enable),
     .mac_iteration     (mac_iteration),
     .residual_enable   (residual_enable),
@@ -134,8 +178,10 @@ controller #(
     .pooling_iteration (pooling_iteration),
     .gap_enable        (gap_enable),
     .gap_iteration     (gap_iteration),
+    // I/O
     .in_enable         (in_enable),
     .out_enable        (out_enable),
+    // DMAs
     .dma_feature_valid (dma_feature_valid),
     .dma_feature_ready (dma_feature_ready),
     .dma_feature_last  (dma_feature_last),
@@ -163,19 +209,22 @@ core #(
 ) u_core (
     .clk               (clk),
     .nrst              (nrst),
-    .mac_enable        (mac_enable),
+    // control
+    .mac_enable        (mac_enable),        // mac 
     .mac_iteration     (mac_iteration),
-    .residual_enable   (residual_enable),
-    .relu_enable       (relu_enable),
-    .pooling_enable    (pooling_enable),
-    .pooling_iteration (pooling_iteration),
-    .gap_enable        (gap_enable),
+    .residual_enable   (residual_enable),   // residual
+    .relu_enable       (relu_enable),       // relu
+    .pooling_enable    (pooling_enable),    // pooling
+    .pooling_iteration (pooling_iteration), 
+    .gap_enable        (gap_enable),        // GAP
     .gap_iteration     (gap_iteration),
-    .in_enable         (in_enable),
+    // input
+    .in_enable         (in_enable),         
     .in_data           (),
-    .kernel_data       (),
+    .kernel_data       (),                  
     .bias_data         (),
-    .out_enable        (out_enable),
+    // output
+    .out_enable        (out_enable),        
     .out_data          ()
 );
 

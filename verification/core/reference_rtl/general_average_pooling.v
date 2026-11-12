@@ -1,11 +1,13 @@
 `timescale 1ns/1ps
 // Same-clock, valid-only stream. Configuration stays stable until drained.
-// collect_input and handle_output run every clock; registers separate stages.
-module general_average_pooling #(parameter integer BITWIDTH = 16)(
+module general_average_pooling #(
+    parameter integer BITWIDTH = 16,
+    parameter integer BITWIDTH_GAP_ITERATION = 16
+)(
     input wire clk,
     input wire nrst,
     input wire enable,
-    input wire [4:0] iteration,
+    input wire [BITWIDTH_GAP_ITERATION-1:0] iteration,
     input wire in_enable,
     input wire signed [BITWIDTH-1:0] in_data,
     output reg out_enable,
@@ -36,15 +38,27 @@ module general_average_pooling #(parameter integer BITWIDTH = 16)(
     endfunction
 
     reg signed [63:0] accumulator;
-    reg [4:0] input_count;
+    reg [BITWIDTH_GAP_ITERATION-1:0] input_count;
     reg pending_enable;
     reg signed [63:0] pending_sum;
-    reg [4:0] pending_divisor;
+    reg [BITWIDTH_GAP_ITERATION-1:0] pending_divisor;
     wire signed [63:0] extended_input = $signed(in_data);
     wire signed [63:0] total = accumulator + extended_input;
 
-    task automatic collect_input;
-        begin
+    always @(posedge clk or negedge nrst) begin
+        if (!nrst) begin
+            accumulator <= 0;
+            input_count <= 0;
+            pending_sum <= 0;
+            pending_divisor <= 1;
+            pending_enable <= 0;
+            out_enable <= 0;
+            out_data <= 0;
+        end else begin
+            out_enable <= pending_enable;
+            if (pending_enable)
+                out_data <= saturate(rounded_divide(pending_sum, pending_divisor));
+
             pending_enable <= 0;
             if (in_enable) begin
                 if (!enable) begin
@@ -64,29 +78,6 @@ module general_average_pooling #(parameter integer BITWIDTH = 16)(
                     input_count <= input_count + 1'b1;
                 end
             end
-        end
-    endtask
-
-    task automatic handle_output;
-        begin
-            out_enable <= pending_enable;
-            if (pending_enable)
-                out_data <= saturate(rounded_divide(pending_sum, pending_divisor));
-        end
-    endtask
-
-    always @(posedge clk or negedge nrst) begin
-        if (!nrst) begin
-            accumulator <= 0;
-            input_count <= 0;
-            pending_sum <= 0;
-            pending_divisor <= 1;
-            pending_enable <= 0;
-            out_enable <= 0;
-            out_data <= 0;
-        end else begin
-            collect_input();
-            handle_output();
         end
     end
 endmodule

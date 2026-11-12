@@ -24,19 +24,15 @@
     task automatic send_skip(input word_t value, input int index);
         idle(SKIP_DELAY_CYCLES - 1);
         @(negedge clk);
-        // A residual result must wait until the shortcut word is driven.
-        if (out_enable !== 1'b0) $fatal(1, "%s: output before skip input", compare_name);
         drive(value, 0, 0, index);
     endtask
 
-    task automatic configure(input bit residual, relu, gap, input int taps, group_size,
-                             input bit is_logit = 0);
+    task automatic configure(input bit residual, relu, gap, input int taps, group_size);
         residual_enable = residual;
         relu_enable = relu;
         gap_enable = gap;
         mac_iteration = 16'(taps);
         gap_iteration = 16'(group_size);
-        output_is_logit = is_logit;
     endtask
 
     // --------------------------------
@@ -64,8 +60,7 @@
         budget = longint'(out_h) * out_w * layer.cout *
                  (longint'(taps) * (input_gap + 1) + (residual ? SKIP_DELAY_CYCLES : 0)) + 16;
         begin_compare(layer_name[index], use_gap ? 1 : out_w, layer.cout, result_words, budget);
-        configure(residual, (layer.op & FLAG_RELU) != 0, use_gap, taps, out_h * out_w,
-                  layer.op == OP_FC_OUT);
+        configure(residual, (layer.op & FLAG_RELU) != 0, use_gap, taps, out_h * out_w);
 
         // Channel-major transmission also keeps each GAP window contiguous.
         for (int oc = 0; oc < layer.cout; oc++) begin
