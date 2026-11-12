@@ -75,3 +75,8 @@ feat/core-idec
 - 작업 완료 후 Pull Request를 통해 `develop`에 병합합니다.
 - 통합 테스트 및 검증 완료 후 `develop`을 `main`에 병합합니다.
 - 다른 팀원의 브랜치에 직접 변경 사항을 푸시하지 않습니다.
+
+## Git Guide
+
+Git 사용이 익숙하지 않은 팀원은
+[Git Guide](../docs/GIT_GUIDE.md)를 참고해 주세요.
