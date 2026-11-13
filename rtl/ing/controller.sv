@@ -10,14 +10,14 @@ module controller #(
 
     // config
     input  wire [CONFIG_BITWIDTH-1:0]            cfg,
-    output wire                                  mac_enable,
-    output wire [BITWIDTH_MAC_ITERATION-1:0]     mac_iteration,
-    output wire                                  residual_enable,
-    output wire                                  relu_enable,
-    output wire                                  pooling_enable,
-    output wire [BITWIDTH_POOLING_ITERATION-1:0] pooling_iteration,
-    output wire                                  gap_enable,
-    output wire [BITWIDTH_GAP_ITERATION-1:0]     gap_iteration,
+    output reg                                   mac_enable,
+    output reg  [BITWIDTH_MAC_ITERATION-1:0]     mac_iteration,
+    output reg                                   residual_enable,
+    output reg                                   relu_enable,
+    output reg                                   pooling_enable,
+    output reg  [BITWIDTH_POOLING_ITERATION-1:0] pooling_iteration,
+    output reg                                   gap_enable,
+    output reg  [BITWIDTH_GAP_ITERATION-1:0]     gap_iteration,
     
     // core input
     output wire                                  in_enable,
@@ -79,6 +79,7 @@ typedef enum reg [3:0] {
 
 // counter
 localparam BITWIDTH_CNT = 32;
+localparam BITWIDTH_CTG_DATA = 6;
 
 // --------------------------------
 // wire & reg
@@ -98,66 +99,144 @@ reg [BITWIDTH_CNT-1:0] cnt_output;
 // buffer switch
 reg is_bmem_in; // use with core
 
-// configure
-wire            input_enable,
-wire            output_enable,
-wire            is_skip,        // if (is_skip == 1) save core output in residual buffer
-wire            stride,         // stride-1 (1~2)
-wire            padding,        // padding (0~1)
-wire            size,           // {W-1, H-1, C-1} 각 6bit 씩
-wire            PL_state   
+// DMA
+wire dma_kernel_hk;
+wire dma_bias_hk;
+wire dma_feature_hk;
+wire dma_result_hk;
 
+// configure
+wire                              cfg_input_enable;
+wire                              cfg_output_enable;
+wire                              cfg_mac_enable;
+wire                              cfg_residualenable;
+wire                              cfg_relu_enable;
+wire                              cfg_pooling_enable;
+wire                              cfg_gap_enable;
+wire                              cfg_is_skip;    
+wire                              cfg_stride;     
+wire                              cfg_padding;    
+wire [BITWIDTH_CTG_DATA-1:0]      cfg_w;    
+wire [BITWIDTH_CTG_DATA-1:0]      cfg_h;       
+wire [BITWIDTH_CTG_DATA-1:0]      cfg_c;       
 
 // CNN
-reg [5:0] fw, fc; // width == height
-reg [5:0] kw, kd, kc;
-reg [5:0] ow, oc
-wire padding;
-wire stride;
-reg [BITWIDTH_CNT:0] len_in, len_out;
+reg [BITWIDTH_CTG_DATA-1:0]  fw, fc; // width == height
+reg [BITWIDTH_CTG_DATA-1:0]  kw, kd, kc;
+reg [BITWIDTH_CTG_DATA-1:0]  ow, oc
+wire                         padding;
+wire                         stride;
+reg [BITWIDTH_CNT-1:0]       len_in, len_out;
+wire [BITWIDTH_CTG_DATA-1:0] next_ow;
 
 // --------------------------------
 // FSM
 // -------------------------------
 
+
+// --------------------------------
+// count
+// --------------------------------
+always_ff @(negedge clk or posedge nrst) begin : counter_feature
+    if (!nrst) begin
+        cnt_feature <= 0;
+    end else if ()
+end
+ 
+
 // --------------------------------
 // core control
 // --------------------------------
 // config
-assign mac_enable       = cfg[2];
-assign residual_enable  = cfg[3];
-assign relu_enable      = cfg[4];
-assign pool_enable      = cfg[5];
-assign gap_enable       = cfg[6];
-assign stride           = cfg[8];
-assign padding          = cfg[8]; 
+assign cfg_input_enable     = cfg[0]; 
+assign cfg_output_enable    = cfg[1]; 
+assign cfg_mac_enable       = cfg[2];
+assign cfg_residualenable   = cfg[3];
+assign cfg_relu_enable      = cfg[4];
+assign cfg_pooling_enable   = cfg[5];
+assign cfg_gap_enable       = cfg[6];
+assign cfg_is_skip          = cfg[7];
+assign cfg_stride           = cfg[8];
+assign cfg_padding          = cfg[9];
+assign cfg_w                = cfg[15:10];
+assign cfg_h                = cfg[21:16];
+assign cfg_c                = cfg[27:22];
+
+assign next_ow              = ((ow - ctg_w + {ctg_padding, 1'b0}) << ctg_stride) + 1;
+
+always_ff @(negedge clk or posedge nrst) begin : update_config
+    if (!nrst) begin
+        mac_enable      <= '0;
+        residualenable  <= '0;
+        relu_enable     <= '0;
+        pooling_enable  <= '0;
+        gap_enable      <= '0;
+    end else if (cstat == DECODE) begin
+        mac_enable      <= cfg_mac_enable;
+        residualenable  <= cfg_residualenable;
+        relu_enable     <= cfg_relu_enable;
+        pooling_enable  <= cfg_pooling_enable;
+        gap_enable      <= cfg_gap_enable;
+    end else begin
+        mac_enable      <= mac_enable; 
+        residualenable  <= residualenable; 
+        relu_enable     <= relu_enable; 
+        pooling_enable  <= pooling_enable; 
+        gap_enable      <= gap_enable; 
+    end
+end
+
+always_ff @(negedge clk or posedge nrst) begin : calc_CNN_size
+    if (!nrst) begin
+        fw      <= '0;
+        fc      <= '0;
+        kw      <= '0;
+        kd      <= '0;
+        kc      <= '0;
+        ow      <= '0;
+        oc      <= '0;
+        padding <= '0;
+        stride  <= '0;
+    end else if (cstate == DECODE) begin
+        if (ctg_input_enable) begin
+            fw      <= fw;
+            fc      <= fc;
+            kw      <= kw;
+            kd      <= kd;
+            kc      <= kc;
+            ow      <= cfg_w;
+            oc      <= cfg_c;
+            padding <= padding;
+            stride  <= stride;
+        end else begin
+            fw      <= ow;
+            fc      <= oc;
+            kw      <= cfg_w;
+            kd      <= oc;
+            kc      <= cfg_c;
+            ow      <= next_ow;
+            oc      <= ctg_c;
+            padding <= ctg_padding;
+            stride  <= ctg_stride;
+        end
+    end else begin
+        fw      <= fw;
+        fc      <= fc;
+        kw      <= kw;
+        kd      <= kd;
+        kc      <= kc;
+        ow      <= ow;
+        oc      <= oc;
+        padding <= padding;
+        stride  <= stride;
+    end
+end
 
 
 // --------------------------------
 // AXI control
 // --------------------------------
 
-
-// -------------------------------- 
-// calc CNN  
-// --------------------------------
-always_ff @(negedge clk or posedge nrst) begin : update_feaure_size
-    if (!nrst) begin
-        fw <= 0;
-        fc <= 0;
-    end else if (cstat == IN_FEATURE) begin
-        fw <= cfg[]
-always_ff @(negedge clk or posedge nrst) begin : calc_CNN_size
-    if (!nrst) begin
-        fw <= 0;
-        fc <= 0;
-        kw <= 0;
-        kd <= 0;
-        kc <= 0;
-        padding <= 0;
-        stride <= 0;
-    end
-end
 
 
 endmodule
