@@ -17,6 +17,7 @@ module top_bottleneck #(
     input  wire                       nrst,
     
     // config
+    input  wire                       cfg_enable,
     input  wire [CONFIG_BITWIDTH-1:0] cfg,
     
     // IDMA feature
@@ -93,9 +94,7 @@ wire is_bmem0_in;
 // --------------------------------
 // ping-pong datapath 
 assign in_data          = fmem_rd_data[is_bmem0_in]; 
-assign fmem_wr_valid[0] = (is_bmem0_in) ? out_enable       : dma_feature_vaild;
 assign fmem_wr_data[0]  = (is_bmem0_in) ? out_data         : dma_feature_data;
-assign fmem_wr_valid[1] = (is_bmem0_in) ? dma_feature_vaild: out_enable;
 assign fmem_wr_data[1]  = (is_bmem0_in) ? dma_feature_data : out_data;
 
 // DMA datapath
@@ -178,13 +177,16 @@ controller #(
     .CONFIG_BITWIDTH            (CONFIG_BITWIDTH),
     .BITWIDTH_MAC_ITERATION     (BITWIDTH_MAC_ITERATION),
     .BITWIDTH_POOLING_ITERATION (BITWIDTH_POOLING_ITERATION),
-    .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION)
+    .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION),
+    .BRAM_FEATRE_CAPACITY       (BRAM_FEATRE_CAPACITY),
+    .BRAM_KERNEL_CAPACITY       (BRAM_KERNEL_CAPACITY),
+    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY)
 ) u_controller (
     .clk               (clk),
     .nrst              (nrst),
     // config
+    .cfg_enable        (cfg_enable),
     .cfg               (cfg),
-    // control
     .mac_enable        (mac_enable),
     .mac_iteration     (mac_iteration),
     .residual_enable   (residual_enable),
@@ -193,6 +195,8 @@ controller #(
     .pooling_iteration (pooling_iteration),
     .gap_enable        (gap_enable),
     .gap_iteration     (gap_iteration),
+    // control
+    .is_bmem0_in       (is_bmem0_in),
     // I/O
     .in_enable         (in_enable),
     .out_enable        (out_enable),
@@ -208,7 +212,21 @@ controller #(
     .dma_bias_last     (dma_bias_last),
     .dma_result_valid  (dma_result_valid),
     .dma_result_ready  (dma_result_ready),
-    .dma_result_last   (dma_result_last)
+    .dma_result_last   (dma_result_last),
+    // mem control
+    .fmem_wr_enable    (fmem_wr_en),
+    .fmem_wr_addr      (fmem_wr_addr),
+    .fmem_rd_addr      (fmem_rd_addr),
+    .kmem_wr_enable    (kmem_wr_en),
+    .kmem_wr_addr      (kmem_wr_addr),
+    .kmem_rd_addr      (kmem_rd_addr),
+    .bmem_wr_enable    (bmem_wr_en),
+    .bmem_wr_addr      (bmem_wr_addr),
+    .bmem_rd_addr      (bmem_rd_addr),
+    .rmem_wr_enable    (rmem_wr_en),
+    .rmem_wr_addr      (rmem_wr_addr),
+    .rmem_rd_addr      (rmem_rd_addr)
+
 );
 
 // --------------------------------

@@ -2,34 +2,22 @@
 set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 TB_PATH="$ROOT/tb/tb_core"
-PATH_LOG="$ROOT/build/sim/tb_core"
+PATH_LOG="$ROOT/.log/sim/tb_core"
 POST_SYNTHESIS="${TB_CORE_POST_SYNTHESIS:-0}"
 if [[ "$POST_SYNTHESIS" == 1 ]]; then
-    PATH_LOG="$ROOT/build/sim/tb_core_synthesis"
+    PATH_LOG="$ROOT/.log/sim/tb_core_synthesis"
 fi
 GUI=0
 WINDOWS=0
-SKIP_DELAY=1
-OUTPUT_FRAC_BITS=10
 usage() {
     local script=behav_sim.sh
     if [[ "$POST_SYNTHESIS" == 1 ]]; then script=synthesis_sim.sh; fi
-    echo "Usage: bash scripts/$script [tb_core] [--skip-delay N] [--output-frac-bits N] [--gui]" >&2
+    echo "Usage: bash scripts/$script [tb_core] [--gui]" >&2
 }
 while (( $# )); do
     case "$1" in
         tb_core) ;;
         --gui) GUI=1 ;;
-        --skip-delay)
-            shift
-            [[ "${1:-}" =~ ^[1-9][0-9]*$ ]] || { usage; exit 2; }
-            SKIP_DELAY="$1"
-            ;;
-        --output-frac-bits)
-            shift
-            [[ "${1:-}" =~ ^([0-9]|1[0-5])$ ]] || { usage; exit 2; }
-            OUTPUT_FRAC_BITS="$1"
-            ;;
         *) usage; exit 2 ;;
     esac
     shift
@@ -69,7 +57,7 @@ compile_flags=()
 elab_targets=(tb_core)
 if [[ "$POST_SYNTHESIS" == 1 ]]; then
     bash "$ROOT/scripts/synthesis.sh" tb_core
-    netlist="$ROOT/build/synth/tb_core/zedboard/reference_rtl/core_funcsim.v"
+    netlist="$ROOT/.log/synth/tb_core/zedboard/reference_rtl/core_funcsim.v"
     compile_flags=(-d TB_CORE_POST_SYNTHESIS)
     # Vivado's functional Verilog netlist includes glbl.
     elab_targets+=(glbl -L unisims_ver)
@@ -104,13 +92,9 @@ run_tool xvlog -prj sources.prj -i "$(tool_path "$TB_PATH/include")" "${compile_
 echo '------------------------------------'
 echo '[2/3] Elaborating tb_core...'
 echo '------------------------------------'
-{
-    printf -- '-generic_top "SKIP_DELAY_CYCLES=%s"\n' "$SKIP_DELAY"
-    printf -- '-generic_top "OUTPUT_FRAC_BITS=%s"\n' "$OUTPUT_FRAC_BITS"
-} > elaborate_args.f
 debug=()
 if (( GUI )); then debug+=(-debug typical); fi
-run_tool xelab "${elab_targets[@]}" -s behav_tb -f elaborate_args.f "${debug[@]}" -log elaborate.log
+run_tool xelab "${elab_targets[@]}" -s behav_tb "${debug[@]}" -timescale 1ns/1ps -log elaborate.log
 
 echo '------------------------------------'
 echo '[3/3] Running ResNet-20 core verification...'

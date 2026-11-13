@@ -4,15 +4,11 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 usage() {
-    echo 'Usage: bash scripts/synthesis.sh [tb_core] [--output-frac-bits N]' >&2
+    echo 'Usage: bash scripts/synthesis.sh [tb_core]' >&2
 }
 while (( $# )); do
     case "$1" in
         tb_core) ;;
-        --output-frac-bits)
-            shift
-            [[ "${1:-}" =~ ^([0-9]|1[0-5])$ ]] || { usage; exit 2; }
-            ;;
         *) usage; exit 2 ;;
     esac
     shift

@@ -104,5 +104,5 @@ def verify(run):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--run', type=Path, default=ROOT / 'build/sim/tb_core')
+    parser.add_argument('--run', type=Path, default=ROOT / '.log/sim/tb_core')
     verify(parser.parse_args().run)

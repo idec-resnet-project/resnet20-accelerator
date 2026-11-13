@@ -1,9 +1,8 @@
 `timescale 1ns/1ps
 
-module tb_core #(
-    parameter int SKIP_DELAY_CYCLES = 1,
-    parameter int OUTPUT_FRAC_BITS  = 10
-);
+module tb_core;
+    localparam int SKIP_DELAY_CYCLES = 1;
+    localparam int OUTPUT_FRAC_BITS  = 10;
     // Five registered datapath stages with two clocks per stage.
     localparam int CORE_PIPELINE_CYCLES = 10;
     localparam int CORE_FRAC_BITS = 10;

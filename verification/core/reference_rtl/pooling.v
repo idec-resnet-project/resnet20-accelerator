@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 // Same-clock, valid-only stream. Configuration stays stable until drained.
 module pooling #(
     parameter integer BITWIDTH = 16,

@@ -1,9 +1,5 @@
-// Uncomment to use the RTL DUT. The RTL datapath and command status are in progress.
-// `define TB_AXI_BOTTLENECK_USE_RTL
-
-module tb_axi_bottleneck #(
-    parameter int OUTPUT_FRAC_BITS = 10
-);
+module tb_axi_bottleneck;
+    localparam int OUTPUT_FRAC_BITS = 10;
     import uvm_pkg::*;
     import model_contract_pkg::*;
     import tb_axi_bottleneck_pkg::*;
