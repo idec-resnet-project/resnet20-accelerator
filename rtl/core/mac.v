@@ -15,4 +15,44 @@ module mac #(
     output reg signed  [BITWIDTH-1:0]               out_data
 );
 
+//===============================
+// Multiply
+//===============================
+always @(posedge clk or negedge nrst) begin
+    // Reset
+    if (!nrst) begin
+        out_enable <= 0;
+        out_data <= 64'd0;
+    end
+end
+
+
+//===============================
+// Accumulate
+//===============================
+always @(posedge clk or negedge nrst) begin
+    // Reset
+    if (!nrst) begin
+
+    end
+    else begin
+
+    end
+end
+
+//===============================
+// Fixed-point conversion
+//===============================
+
+
+//===============================
+// Output
+//===============================
+always @(posedge clk or negedge nrst) begin
+    // Reset
+    if (!nrst) begin
+        
+    end
+end
+
 endmodule
