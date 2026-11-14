@@ -38,7 +38,8 @@ module axi_lite_reg #(
 
     // Configuration register value for the UART core
     output wire [31:0]                      cfg_data,
-    output reg                              cfg_data_enable 
+    output reg                              cfg_data_enable,
+    input  wire [3:0]                       cfg_response
 );
 
 // Protection attributes are accepted but not interpreted.
@@ -114,7 +115,7 @@ always @(posedge s_axi_aclk) begin
     else if (ar_hs) begin
         case (raddr)
             ADDR_CONFIG: 
-                rdata <= reg_config;
+                rdata <= {cfg_response, reg_config[27:0]};
             default : 
                 rdata <= 0;
         endcase

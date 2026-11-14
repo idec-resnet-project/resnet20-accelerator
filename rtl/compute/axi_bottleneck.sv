@@ -75,6 +75,7 @@ assign m_axis_output_tkeep = '1;
 // ----------------------------------------
 wire [AXI_LITE_DATA_WIDTH-1:0] cfg;
 wire                           cfg_enable;
+wire [3:0]                     cfg_response;
 
 axi_lite_reg #(
     .AXI_LITE_ADDR_WIDTH (AXI_LITE_ADDR_WIDTH),
@@ -103,7 +104,8 @@ axi_lite_reg #(
     .s_axi_rvalid  (s_axi_rvalid),
     .s_axi_rready  (s_axi_rready),
     .cfg_data      (cfg),
-    .cfg_data_enable (cfg_enable)
+    .cfg_data_enable (cfg_enable),
+    .cfg_response    (cfg_response)
 );
 
 // ----------------------------------------
@@ -126,6 +128,7 @@ top_bottleneck #(
     .nrst              (s_axi_aresetn),
     .cfg_enable        (cfg_enable),
     .cfg               (cfg),
+    .cfg_response      (cfg_response),
     .dma_feature_valid (s_axis_feature_tvalid),
     .dma_feature_ready (s_axis_feature_tready),
     .dma_feature_last  (s_axis_feature_tlast),

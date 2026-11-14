@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="C:/Users/zlak0/Desktop/resnet20-accelerator/.log/wave_viewer/32406-17615-22807/behav_tb.wdb" id="1">
+         <top_modules>
+            <top_module name="model_contract_pkg" />
+            <top_module name="resnet20_pkg" />
+            <top_module name="std" />
+            <top_module name="tb_axi_bottleneck_partial" />
+            <top_module name="tb_axi_bottleneck_pkg" />
+            <top_module name="uvm_pkg" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="8.160098667 ms"></ZoomStartTime>
+      <ZoomEndTime time="16.880098668 ms"></ZoomEndTime>
+      <Cursor1Time time="9.613432000 ms"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="184"></NameColumnWidth>
+      <ValueColumnWidth column_width="58"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="46" />
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axi_aclk" type="logic">
+      <obj_property name="ElementShortName">s_axi_aclk</obj_property>
+      <obj_property name="ObjectShortName">s_axi_aclk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axi_aresetn" type="logic">
+      <obj_property name="ElementShortName">s_axi_aresetn</obj_property>
+      <obj_property name="ObjectShortName">s_axi_aresetn</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axi_rdata" type="array">
+      <obj_property name="ElementShortName">s_axi_rdata[31:0]</obj_property>
+      <obj_property name="ObjectShortName">s_axi_rdata[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/cfg_enable" type="logic">
+      <obj_property name="ElementShortName">cfg_enable</obj_property>
+      <obj_property name="ObjectShortName">cfg_enable</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/m_axis_output_tkeep" type="array">
+      <obj_property name="ElementShortName">m_axis_output_tkeep[1:0]</obj_property>
+      <obj_property name="ObjectShortName">m_axis_output_tkeep[1:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/cfg" type="array">
+      <obj_property name="ElementShortName">cfg[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cfg[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/cfg_response" type="array">
+      <obj_property name="ElementShortName">cfg_response[3:0]</obj_property>
+      <obj_property name="ObjectShortName">cfg_response[3:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_feature_tvalid" type="logic">
+      <obj_property name="ElementShortName">s_axis_feature_tvalid</obj_property>
+      <obj_property name="ObjectShortName">s_axis_feature_tvalid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_feature_tready" type="logic">
+      <obj_property name="ElementShortName">s_axis_feature_tready</obj_property>
+      <obj_property name="ObjectShortName">s_axis_feature_tready</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_feature_tlast" type="logic">
+      <obj_property name="ElementShortName">s_axis_feature_tlast</obj_property>
+      <obj_property name="ObjectShortName">s_axis_feature_tlast</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_feature_tdata" type="array">
+      <obj_property name="ElementShortName">s_axis_feature_tdata[15:0]</obj_property>
+      <obj_property name="ObjectShortName">s_axis_feature_tdata[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_kernel_tvalid" type="logic">
+      <obj_property name="ElementShortName">s_axis_kernel_tvalid</obj_property>
+      <obj_property name="ObjectShortName">s_axis_kernel_tvalid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_kernel_tready" type="logic">
+      <obj_property name="ElementShortName">s_axis_kernel_tready</obj_property>
+      <obj_property name="ObjectShortName">s_axis_kernel_tready</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_kernel_tlast" type="logic">
+      <obj_property name="ElementShortName">s_axis_kernel_tlast</obj_property>
+      <obj_property name="ObjectShortName">s_axis_kernel_tlast</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_kernel_tdata" type="array">
+      <obj_property name="ElementShortName">s_axis_kernel_tdata[15:0]</obj_property>
+      <obj_property name="ObjectShortName">s_axis_kernel_tdata[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_bias_tvalid" type="logic">
+      <obj_property name="ElementShortName">s_axis_bias_tvalid</obj_property>
+      <obj_property name="ObjectShortName">s_axis_bias_tvalid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_bias_tready" type="logic">
+      <obj_property name="ElementShortName">s_axis_bias_tready</obj_property>
+      <obj_property name="ObjectShortName">s_axis_bias_tready</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_bias_tlast" type="logic">
+      <obj_property name="ElementShortName">s_axis_bias_tlast</obj_property>
+      <obj_property name="ObjectShortName">s_axis_bias_tlast</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/s_axis_bias_tdata" type="array">
+      <obj_property name="ElementShortName">s_axis_bias_tdata[15:0]</obj_property>
+      <obj_property name="ObjectShortName">s_axis_bias_tdata[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/m_axis_output_tvalid" type="logic">
+      <obj_property name="ElementShortName">m_axis_output_tvalid</obj_property>
+      <obj_property name="ObjectShortName">m_axis_output_tvalid</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/m_axis_output_tready" type="logic">
+      <obj_property name="ElementShortName">m_axis_output_tready</obj_property>
+      <obj_property name="ObjectShortName">m_axis_output_tready</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/m_axis_output_tlast" type="logic">
+      <obj_property name="ElementShortName">m_axis_output_tlast</obj_property>
+      <obj_property name="ObjectShortName">m_axis_output_tlast</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/m_axis_output_tdata" type="array">
+      <obj_property name="ElementShortName">m_axis_output_tdata[15:0]</obj_property>
+      <obj_property name="ObjectShortName">m_axis_output_tdata[15:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cstate" type="array">
+      <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/rstate" type="array">
+      <obj_property name="ElementShortName">rstate[3:0]</obj_property>
+      <obj_property name="ObjectShortName">rstate[3:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/fc" type="array">
+      <obj_property name="ElementShortName">fc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">fc[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/fw" type="array">
+      <obj_property name="ElementShortName">fw[5:0]</obj_property>
+      <obj_property name="ObjectShortName">fw[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/oc" type="array">
+      <obj_property name="ElementShortName">oc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">oc[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ow" type="array">
+      <obj_property name="ElementShortName">ow[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ow[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/kw" type="array">
+      <obj_property name="ElementShortName">kw[5:0]</obj_property>
+      <obj_property name="ObjectShortName">kw[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/kc" type="array">
+      <obj_property name="ElementShortName">kc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">kc[5:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_feature" type="array">
+      <obj_property name="ElementShortName">cnt_feature[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_feature[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/len_feature" type="array">
+      <obj_property name="ElementShortName">len_feature[31:0]</obj_property>
+      <obj_property name="ObjectShortName">len_feature[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_kernel" type="array">
+      <obj_property name="ElementShortName">cnt_kernel[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_kernel[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/len_kernel" type="array">
+      <obj_property name="ElementShortName">len_kernel[31:0]</obj_property>
+      <obj_property name="ObjectShortName">len_kernel[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_bias" type="array">
+      <obj_property name="ElementShortName">cnt_bias[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_bias[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/len_bias" type="array">
+      <obj_property name="ElementShortName">len_bias[31:0]</obj_property>
+      <obj_property name="ObjectShortName">len_bias[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_run" type="array">
+      <obj_property name="ElementShortName">cnt_run[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_run[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
+      <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/len_output" type="array">
+      <obj_property name="ElementShortName">len_output[31:0]</obj_property>
+      <obj_property name="ObjectShortName">len_output[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_dma_output" type="array">
+      <obj_property name="ElementShortName">cnt_dma_output[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_dma_output[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/gap_enable" type="logic">
+      <obj_property name="ElementShortName">gap_enable</obj_property>
+      <obj_property name="ObjectShortName">gap_enable</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/gap_iteration" type="array">
+      <obj_property name="ElementShortName">gap_iteration[15:0]</obj_property>
+      <obj_property name="ObjectShortName">gap_iteration[15:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/in_enable" type="logic">
+      <obj_property name="ElementShortName">in_enable</obj_property>
+      <obj_property name="ObjectShortName">in_enable</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/out_enable" type="logic">
+      <obj_property name="ElementShortName">out_enable</obj_property>
+      <obj_property name="ObjectShortName">out_enable</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/dma_result_last" type="logic">
+      <obj_property name="ElementShortName">dma_result_last</obj_property>
+      <obj_property name="ObjectShortName">dma_result_last</obj_property>
+   </wvobject>
+</wave_config>

@@ -19,6 +19,7 @@ module top_bottleneck #(
     // config
     input  wire                       cfg_enable,
     input  wire [CONFIG_BITWIDTH-1:0] cfg,
+    output wire [3:0]                 cfg_response,
     
     // IDMA feature
     input  wire                       dma_feature_valid,
@@ -187,6 +188,7 @@ controller #(
     // config
     .cfg_enable        (cfg_enable),
     .cfg               (cfg),
+    .cfg_response      (cfg_response),
     .mac_enable        (mac_enable),
     .mac_iteration     (mac_iteration),
     .residual_enable   (residual_enable),

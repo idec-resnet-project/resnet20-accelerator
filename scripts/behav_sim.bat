@@ -18,6 +18,11 @@ set "COMPILE_FLAGS="
 set "NETLIST="
 set "PYTHON_CMD="
 set "UVM_FLAGS="
+set "AXI_TB="
+set "DUMMY="
+set "DPI_FLAGS="
+set "NEEDS_PYTHON="
+set "SHARED_TB_INCLUDE="
 
 if "%TB_CORE_POST_SYNTHESIS%"=="1" set "SCRIPT_NAME=synthesis.bat --sim"
 
@@ -26,6 +31,7 @@ if "%~1"=="" goto configure
 if /i "%~1"=="--gui" goto option_gui
 if /i "%~1"=="--gui-live" goto option_gui_live
 if /i "%~1"=="--no-wdb" goto option_no_wdb
+if /i "%~1"=="--dummy" goto option_dummy
 if /i "%~1"=="--skip-compile" goto option_skip_compile
 if defined TB_NAME goto error_args
 set "TB_NAME=%~1"
@@ -49,6 +55,11 @@ set "NO_WDB=1"
 shift /1
 goto options
 
+:option_dummy
+set "DUMMY=1"
+shift /1
+goto options
+
 :option_skip_compile
 set "SKIP_COMPILE=1"
 shift /1
@@ -63,6 +74,10 @@ if defined GUI_STATIC if defined GUI_LIVE goto error_args
 if not defined TB_NAME set "TB_NAME=tb_core"
 if /i "%TB_NAME%"=="tb_core" set "TB_NAME=tb_core"
 if /i "%TB_NAME%"=="tb_axi_bottleneck" set "TB_NAME=tb_axi_bottleneck"
+if /i "%TB_NAME%"=="tb_axi_bottleneck_partial" set "TB_NAME=tb_axi_bottleneck_partial"
+if "%TB_NAME%"=="tb_axi_bottleneck" set "AXI_TB=1"
+if "%TB_NAME%"=="tb_axi_bottleneck_partial" set "AXI_TB=1"
+if defined DUMMY if not "%TB_NAME%"=="tb_axi_bottleneck_partial" goto error_args
 set "TB_PATH=%ROOT%\tb\%TB_NAME%"
 set "TB_FILES=%TB_PATH%\%TB_NAME%.f"
 set "WAVE_CONFIG="
@@ -71,9 +86,21 @@ set "WAVE_DIR=%TB_PATH%\.log"
 set "WDB_PATH=%WAVE_DIR%\behav_tb.wdb"
 set "PATH_LOG=%ROOT%\.log\sim\%TB_NAME%"
 set "ELAB_TARGETS=%TB_NAME%"
-if "%TB_NAME%"=="tb_axi_bottleneck" (
+if defined AXI_TB (
     set "UVM_FLAGS=-L uvm"
-    set "COMPILE_FLAGS=-d TB_AXI_BOTTLENECK_USE_RTL"
+    if not defined DUMMY set "COMPILE_FLAGS=-d TB_AXI_BOTTLENECK_USE_RTL"
+)
+set "WAVE_SETUP=%ROOT%\scripts\wave_setup.tcl"
+if "%TB_NAME%"=="tb_axi_bottleneck_partial" (
+    set SHARED_TB_INCLUDE=-i "%ROOT:\=/%/tb/tb_axi_bottleneck"
+    if not defined DUMMY set "WAVE_SETUP=%TB_PATH%\wave_setup.tcl"
+)
+if defined DUMMY (
+    set "WAVE_CONFIG="
+    set "WAVE_DIR=%TB_PATH%\.log\dummy"
+    set "WDB_PATH=%TB_PATH%\.log\dummy\behav_tb.wdb"
+    set "PATH_LOG=%PATH_LOG%_dummy"
+    set "DPI_FLAGS=-sv_lib dpi"
 )
 if "%TB_CORE_POST_SYNTHESIS%"=="1" (
     if not "%TB_NAME%"=="tb_core" goto error_args
@@ -99,9 +126,18 @@ for %%T in (xvlog.bat xelab.bat xsim.bat) do (
         exit /b 1
     )
 )
+if defined DUMMY (
+    where /q xsc.bat
+    if errorlevel 1 (
+        echo [ ERROR ] xsc.bat not found. Add Vivado bin to PATH. 1>&2
+        exit /b 1
+    )
+)
 if not exist "%TB_FILES%" goto error_sources
 
-if "%TB_NAME%"=="tb_core" (
+if "%TB_NAME%"=="tb_core" set "NEEDS_PYTHON=1"
+if "%TB_NAME%"=="tb_axi_bottleneck_partial" set "NEEDS_PYTHON=1"
+if defined NEEDS_PYTHON (
     if defined PYTHON set "PYTHON_CMD=%PYTHON%"
     for %%P in (python3 python python3.14) do (
         if not defined PYTHON_CMD (
@@ -137,6 +173,11 @@ if "%TB_NAME%"=="tb_core" (
     if errorlevel 1 goto error_vectors
 )
 
+if "%TB_NAME%"=="tb_axi_bottleneck_partial" (
+    "%PYTHON_CMD%" -B "%TB_PATH%\generate_fixture.py" --out vectors
+    if errorlevel 1 goto error_vectors
+)
+
 rem ----------------------------------------------------------------
 rem compile and elaborate
 rem ----------------------------------------------------------------
@@ -144,7 +185,7 @@ echo ----------------------------------------------------------------
 echo [1/3] Compiling HDL...
 echo ----------------------------------------------------------------
 
-call xvlog.bat -prj sources.prj -i "%TB_PATH:\=/%" -i "%TB_PATH:\=/%/include" %UVM_FLAGS% %COMPILE_FLAGS% -log compile.log
+call xvlog.bat -prj sources.prj -i "%TB_PATH:\=/%" -i "%TB_PATH:\=/%/include" %SHARED_TB_INCLUDE% %UVM_FLAGS% %COMPILE_FLAGS% -log compile.log
 if errorlevel 1 goto error_compile
 
 echo ----------------------------------------------------------------
@@ -153,7 +194,11 @@ echo ----------------------------------------------------------------
 
 set "DEBUG_FLAGS=-debug typical"
 if defined NO_WDB if not defined GUI_LIVE set "DEBUG_FLAGS="
-call xelab.bat %ELAB_TARGETS% %UVM_FLAGS% -s behav_tb %DEBUG_FLAGS% -timescale 1ns/1ps -log elaborate.log
+if defined DUMMY (
+    call xsc.bat "%ROOT:\=/%/tb/tb_axi_bottleneck/resnet20/resnet20_compute.c"
+    if errorlevel 1 goto error_elaborate
+)
+call xelab.bat %ELAB_TARGETS% %UVM_FLAGS% %DPI_FLAGS% -s behav_tb %DEBUG_FLAGS% -timescale 1ns/1ps -log elaborate.log
 if errorlevel 1 goto error_elaborate
 goto simulate
 
@@ -175,6 +220,11 @@ for %%F in (xsimk.exe xsim.mem) do (
 )
 if "%TB_NAME%"=="tb_core" (
     for %%F in (layers.txt input_q5_10.hex reference_logits_float.txt) do (
+        if not exist "vectors\%%F" goto error_snapshot
+    )
+)
+if "%TB_NAME%"=="tb_axi_bottleneck_partial" (
+    for %%F in (input_q5_10.hex reference_logits_float.txt) do (
         if not exist "vectors\%%F" goto error_snapshot
     )
 )
@@ -210,7 +260,7 @@ if "%TB_NAME%"=="tb_core" if defined INPUT_GAP (
     > simulate_args.f echo -testplusarg "input_gap=%INPUT_GAP%"
     set "SIM_FLAGS=-f simulate_args.f"
 )
-if "%TB_NAME%"=="tb_axi_bottleneck" (
+if defined AXI_TB (
     > simulate_args.f echo -testplusarg "TB_DIR=%TB_PATH:\=/%"
     set "SIM_FLAGS=-f simulate_args.f"
 )
@@ -222,7 +272,7 @@ if defined GUI_LIVE (
     if errorlevel 1 goto error_simulate
     if exist "behav_tb.wdb" del /q "behav_tb.wdb"
 ) else (
-    call xsim.bat behav_tb -log simulate.log %SIM_FLAGS% -wdb "%WDB_PATH:\=/%" -onfinish stop -tclbatch "%ROOT:\=/%/scripts/wave_setup.tcl"
+    call xsim.bat behav_tb -log simulate.log %SIM_FLAGS% -wdb "%WDB_PATH:\=/%" -onfinish stop -tclbatch "%WAVE_SETUP:\=/%"
     if errorlevel 1 goto error_simulate
     findstr /b /l /c:"ERROR: Wave capture setup failed:" simulate.log >nul
     if not errorlevel 1 goto error_simulate
@@ -240,7 +290,7 @@ if "%TB_NAME%"=="tb_core" (
     findstr /l /c:"[ PASS ] ALL TESTS PASSED" simulate.log >nul
     if errorlevel 1 goto error_simulate
 )
-if "%TB_NAME%"=="tb_axi_bottleneck" (
+if defined AXI_TB (
     set "UVM_ERROR_COUNT="
     set "UVM_FATAL_COUNT="
     for /f "tokens=1,2 delims=: " %%A in ('findstr /r /c:"^UVM_ERROR *:" /c:"^UVM_FATAL *:" simulate.log') do (
@@ -250,6 +300,10 @@ if "%TB_NAME%"=="tb_axi_bottleneck" (
     )
     if not defined UVM_ERROR_COUNT goto error_simulate
     if not defined UVM_FATAL_COUNT goto error_simulate
+    if "%TB_NAME%"=="tb_axi_bottleneck_partial" (
+        findstr /l /c:"[LOGIT_SNR] PASS:" simulate.log >nul
+        if errorlevel 1 goto error_simulate
+    )
 )
 goto finish
 
@@ -324,7 +378,7 @@ rem ----------------------------------------------------------------
 rem error
 rem ----------------------------------------------------------------
 :error_args
-echo Usage: %SCRIPT_NAME% [testbench] [--skip-compile] [--no-wdb] [--gui-live ^| --gui] 1>&2
+echo Usage: %SCRIPT_NAME% [testbench] [--dummy] [--skip-compile] [--no-wdb] [--gui-live ^| --gui] 1>&2
 echo Default: tb_core. --no-wdb ignores --gui and allows --gui-live. 1>&2
 exit /b 2
 

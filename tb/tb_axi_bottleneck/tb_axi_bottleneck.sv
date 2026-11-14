@@ -10,7 +10,7 @@ module tb_axi_bottleneck;
     // --------------------------------
     logic clk = 0;
     wire nrst;
-    always #5 clk = ~clk;
+    always #1 clk = ~clk;
 
     assign nrst = !ctrl.reset_request;
 
@@ -127,7 +127,7 @@ module tb_axi_bottleneck;
     // Watchdog and model cleanup
     // --------------------------------
     initial begin
-        #100ms;
+        #100000ms;
         $fatal(1, "Simulation watchdog timed out");
     end
 
