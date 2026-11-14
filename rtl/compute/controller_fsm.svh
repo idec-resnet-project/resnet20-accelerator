@@ -101,7 +101,7 @@ always_ff @(negedge clk or posedge nrst) begin : FSM_cstate
                 end   
             end
             OUTPUT: begin
-                if ((cnt_dma_output == len_output) & dma_result_hk) begin
+                if ((cnt_dma_output == fc) & dma_result_hk) begin
                     cstate <= IDLE;
                 end else begin
                     cstate <= OUTPUT;

@@ -146,7 +146,7 @@ module tb_axi_bottleneck_partial;
     // Watchdog
     // --------------------------------
     initial begin
-        #100000ms;
+        #10000ms;
         $fatal(1, "Simulation watchdog timed out");
     end
 
