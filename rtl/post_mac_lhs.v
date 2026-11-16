@@ -7,7 +7,7 @@ module post_mac #(
     input   wire                     clk,
     input   wire                     rst_n,
     input   wire                     valid_in,    
-    input   wire signed [ACC_W:0]  data_in,
+    input   wire signed [ACC_W:0]    data_in,
     output  reg                      valid_out,
     output  reg  signed [WORD_W-1:0] data_out
 );
@@ -28,8 +28,8 @@ module post_mac #(
     wire signed [ACC_W:0]         data_ext = {data_in[ACC_W-1], data_in};
     wire signed [Q_SCALE:0]       bias     = data_in[ACC_W-1] ? M_Q : P_Q; 
     wire signed [ACC_W-Q_SCALE:0] shifted  = (data_ext + bias) >>> Q_SCALE;
-
-    
+    reg  signed [ACC_W:0]         data;
+    reg                           done;
     always @(posedge clk or negedge rst_n) 
     begin
     //=======================================================================
@@ -39,6 +39,8 @@ module post_mac #(
             begin
                 data_out    <= {WORD_W{1'b0}};
                 valid_out   <= 0;
+                data        <= {WORD_W{1'b0}};
+                done        <= 0;
             end 
         else 
     //=======================================================================
@@ -48,22 +50,30 @@ module post_mac #(
     // when valid input is low, output is 0
     //=======================================================================
             if(valid_in)
-            begin
-                if (shifted > INT_MAX)
-                    data_out <= INT_MAX;
-                else if (shifted < INT_MIN)
-                    data_out <= INT_MIN;
+            begin                
+                if(!done)
+                    begin
+                    if (shifted > INT_MAX)
+                        data <= INT_MAX;
+                    else if (shifted < INT_MIN)
+                        data <= INT_MIN;
+                    else
+                        data <= shifted[WORD_W-1:0];
+                        done <= 1; 
+                    end
                 else
-                    data_out <= shifted[WORD_W-1:0];
-                valid_out <= 1;
+                    begin
+                        valid_out <= 1;
+                        done      <= 0;
+                        data_out  <= data;
+                    end
             end
     //=======================================================================
-    // when valid input is low, output is 0
+    // when valid input is low, valid is 0
     //=======================================================================        
             else
                 begin
-                    valid_out <= 0;
-                    data_out  <= {WORD_W{1'b0}};
+                    valid_out <= 0;                    
                 end
     end
 
