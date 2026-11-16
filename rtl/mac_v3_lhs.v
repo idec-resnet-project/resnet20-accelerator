@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module mac_mod_v3 
+module mac_v3 
 #(
     parameter integer WORD_W   = 16,
     parameter integer ACC_W    = WORD_W*2+1, 
@@ -22,7 +22,7 @@ module mac_mod_v3
     reg signed [WORD_W-1:0]    fmap;
     reg signed [WORD_W-1:0]    weight;
     reg signed [WORD_W*2-1:0]  multi;
-    reg signed [ACC_W:0]     acc;
+    reg signed [ACC_W:0]       acc;
     reg        [ITER_CNT-1:0]  iter_cnt;
     reg        [ITER_CNT-1:0]  iter_reg;
     //reg                        proc;
