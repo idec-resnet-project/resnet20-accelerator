@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module mac_mod_AI 
+module mac_mod_v3 
 #(
     parameter integer WORD_W   = 16,
     parameter integer ACC_W    = WORD_W*2+1, 
@@ -27,8 +27,14 @@ module mac_mod_AI
     reg        [ITER_CNT-1:0]  iter_reg;
     //reg                        proc;
 
+    //=======================================================================
+    // Iteration count Logic
+    //=======================================================================
     always @(posedge clk or negedge rst_n) 
         begin
+    //=======================================================================
+    // Reset Logic
+    //=======================================================================
             if (!rst_n) 
                 begin
                     iter_cnt  <= {ITER_CNT{1'b0}};
@@ -36,8 +42,15 @@ module mac_mod_AI
                     proc      <= 1'b0;
                     valid_out <= 1'b0;
                 end 
+    //=======================================================================
+    // Iteration count Logic
+    //=======================================================================
             else 
                 begin
+    //=======================================================================
+    // when valid input(enable) is high
+    // set iter_cnt to 1 and proc(processing register) to high
+    //=======================================================================
                     if (enable && !proc) 
                         begin                
                             iter_reg  <= iter;
@@ -47,11 +60,19 @@ module mac_mod_AI
                         end 
                     else if (proc) 
                         begin
+    //=======================================================================
+    // while processing, update iteration count
+    // when iter_cnt is lower than iter_reg+1, no valid output, top module output is 0
+    //=======================================================================
                             if (iter_cnt <= iter_reg+1) 
                                 begin
                                     iter_cnt  <= iter_cnt + 1'b1;
                                     valid_out <= 1'b0;
                                 end 
+    //=======================================================================
+    // when iter_cnt is higher than iter_reg+1, 
+    // processing is done, set proc to low, valid output is high
+    //=======================================================================   
                             else 
                                 begin
                                     
@@ -67,9 +88,14 @@ module mac_mod_AI
                 end
         end
 
-    
+    //=======================================================================
+    // MAC Logic
+    //=======================================================================   
     always @(posedge clk) 
     begin
+    //=======================================================================
+    // Sync Reset Logic for dsp unit
+    //=======================================================================
         if (!rst_n) 
             begin
                 fmap     <= {WORD_W{1'b0}};
@@ -78,9 +104,13 @@ module mac_mod_AI
                 acc      <= {(ACC_W+1){1'b0}};
                 data_out <= {(ACC_W+1){1'b0}};
             end 
-        
+    
         else 
             begin
+    //=======================================================================
+    // intiate MAC, load input data, multiply and accumulate
+    //=======================================================================   
+                
                 if (enable && !proc) 
                     begin
                         fmap     <= fmap_in;
@@ -89,6 +119,12 @@ module mac_mod_AI
                         acc      <= acc + multi;
                         data_out <= {(ACC_W+1){1'b0}};
                     end 
+    //=======================================================================
+    // while processing, load input data, multiply and accumulate
+    // if iter_cnt is 1 reset acc reg to 0, else accumulate
+    // when iter_cnt is higher than iter_reg+1, 
+    //output the accumulated data and reset acc and multi reg to 0
+    //=======================================================================                
                 else if (proc) 
                     begin
                         if (iter_cnt <= iter_reg+1) 
@@ -106,7 +142,9 @@ module mac_mod_AI
                                 multi    <= {(WORD_W*2){1'b0}};
                             end
                     end
-                 
+    //=======================================================================
+    // when not processing, output is 0, reset acc and multi reg to 0
+    //=======================================================================             
                 else 
                     begin
                         data_out <= {(ACC_W+1){1'b0}};

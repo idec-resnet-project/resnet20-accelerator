@@ -22,35 +22,43 @@
 
 module ReLU
 #(
-parameter integer BITWIDTH = 16
+parameter integer WORD_W = 16
 )
 (
     input wire clk,
-    input wire nrst,
+    input wire rst_n,
     input wire enable,
-    input wire in_enable,
-    input wire signed [BITWIDTH-1:0] in_data,
+    input wire signed [WORD_W-1:0] data_in,
     
-    output reg out_enable,
-    output reg signed [BITWIDTH-1:0] out_data
+    output reg valid_out,
+    output reg signed [WORD_W-1:0] data_out
     );
     
     
-    always @(posedge clk or negedge nrst)
+    always @(posedge clk or negedge rst_n)
     begin
-        if(!nrst)
+    //=======================================================================
+    // Sync Reset Logic for ReLU unit
+    //=======================================================================
+        if(!rst_n)
         begin
-            out_enable  <= 0;
-            out_data    <= 0;           
+            valid_out  <= 0;
+            data_out    <= 0;           
         end
-        else if(in_enable)
+    //=======================================================================
+    // when enable is high, check for input data sign bit
+    // if input data is negative, output is 0
+    // else output the input data
+    // when enable is low, output is 0
+    //=======================================================================
+        else if(enable)
             begin
-                out_enable <= 1;                 
-                out_data   <= (enable && in_data[BITWIDTH-1]) ? 0 : in_data;
+                valid_out <= 1;                 
+                data_out   <= (enable && data_in[WORD_W-1]) ? 0 : data_in;
                 
             end
             
          else
-            out_enable  <= 0;
+            valid_out  <= 0;
      end
 endmodule

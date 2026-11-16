@@ -21,35 +21,35 @@
 
 
 module ReLU_packed#(
-parameter integer BITWIDTH = 16
+parameter integer WORD_W = 16
 )
 (
     input  wire clk,
-    input  wire nrst,
-    input  wire enable,
-    input  wire in_enable,
-    input  wire signed [BITWIDTH-1:0] in_data,
+    input  wire rst_n,
+    input  wire enable,    
+    input  wire signed [WORD_W-1:0] data_in,
     output wire out_enable,
-    output wire signed [BITWIDTH-1:0] out_data
+    output wire signed [WORD_W-1:0] data_out    
     );
-    wire [BITWIDTH-1:0] relu_out;
+
+
+    wire [WORD_W-1:0] relu_out;
     mux uut_mux
     (
-    .orig_data(in_data),
-    .proc_data(relu_out),
+    .data_x(data_in),
+    .data_y(relu_out),
     .enable(enable),      
-    .out_data(out_data)
+    .out_data(data_out)
     );
     
     ReLU uut_ReLU
     (
     .clk(clk),                          
-    .nrst(nrst),                         
-    .enable(enable),                       
-    .in_enable(in_enable),                    
-    .in_data(in_data),                                
-    .out_enable(out_enable),                   
-    .out_data(relu_out)
+    .rst_n(rst_n),                         
+    .enable(enable),                        
+    .data_in(data_in),                                
+    .valid_out(out_enable),                   
+    .data_out(relu_out)
     );
     
 endmodule
