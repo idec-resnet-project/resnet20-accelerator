@@ -53,7 +53,7 @@ module mac_packed#(
     .data_out(data_out)  
     );
     
-    mac_mod_AI uut_mac
+    mac_v3 uut_mac
     (
     .clk(clk),                    
     .rst_n(rst_n),                   
