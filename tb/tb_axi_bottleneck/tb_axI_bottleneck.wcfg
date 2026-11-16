@@ -281,19 +281,19 @@
       <obj_property name="ElementShortName">is_bmem_in</obj_property>
       <obj_property name="ObjectShortName">is_bmem_in</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/fw" type="array">
-      <obj_property name="ElementShortName">fw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">fw[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_fw" type="array">
+      <obj_property name="ElementShortName">ctrl_fw[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_fw[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/fc" type="array">
-      <obj_property name="ElementShortName">fc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">fc[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_fc" type="array">
+      <obj_property name="ElementShortName">ctrl_fc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_fc[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/kw" type="array">
-      <obj_property name="ElementShortName">kw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">kw[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_kw" type="array">
+      <obj_property name="ElementShortName">ctrl_kw[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_kw[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/kd" type="array">
@@ -301,28 +301,28 @@
       <obj_property name="ObjectShortName">kd[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/kc" type="array">
-      <obj_property name="ElementShortName">kc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">kc[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_kc" type="array">
+      <obj_property name="ElementShortName">ctrl_kc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_kc[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ow" type="array">
-      <obj_property name="ElementShortName">ow[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ow[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_ow" type="array">
+      <obj_property name="ElementShortName">ctrl_ow[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_ow[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/oc" type="array">
-      <obj_property name="ElementShortName">oc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">oc[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_oc" type="array">
+      <obj_property name="ElementShortName">ctrl_oc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_oc[5:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/padding" type="logic">
-      <obj_property name="ElementShortName">padding</obj_property>
-      <obj_property name="ObjectShortName">padding</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_padding" type="logic">
+      <obj_property name="ElementShortName">ctrl_padding</obj_property>
+      <obj_property name="ObjectShortName">ctrl_padding</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/stride" type="logic">
-      <obj_property name="ElementShortName">stride</obj_property>
-      <obj_property name="ObjectShortName">stride</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck/dut/u_top_bottleneck/u_controller/ctrl_stride" type="logic">
+      <obj_property name="ElementShortName">ctrl_stride</obj_property>
+      <obj_property name="ObjectShortName">ctrl_stride</obj_property>
    </wvobject>
    <wvobject type="divider" fp_name="divider28">
       <obj_property name="label">controller - core</obj_property>

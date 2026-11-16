@@ -1,3 +1,10 @@
+assign len_feature =(ctrl_fw+1) * (ctrl_fw+1) * (ctrl_fc+1) - 1;
+assign len_kernel = (ctrl_kw+1) * (ctrl_kw+1) * (ctrl_kc+1) * (ctrl_fc+1) - 1;
+assign len_bias = ctrl_kc;
+assign len_output = (mac_enable) ? ((gap_enable) ? ctrl_oc : (ctrl_ow+1) * (ctrl_ow+1) * (ctrl_oc+1) - 1) : len_feature;
+
+assign cfg_response = rstate;
+
 
 always_ff @(negedge clk or posedge nrst) begin : FSM_FLAG_First_IDLE
     if (!nrst) begin
@@ -11,13 +18,13 @@ end
 
 always_ff @(negedge clk or posedge nrst) begin : FSM_FLAG_AFTER_SKIP
     if (!nrst) begin
-        is_after_skip <= '0;
-    end else if ((cstate == RUN) & is_skip) begin
-        is_after_skip <= '1;
-    end else if ((cstate == RUN) & ~cfg_is_skip & is_after_skip) begin
-        is_after_skip <= '0;
+        ctrl_is_after_skip <= '0;
+    end else if ((cstate == RUN) & ctrl_is_skip) begin
+        ctrl_is_after_skip <= '1;
+    end else if ((cstate == RUN) & ~cfg_is_skip & ctrl_is_after_skip) begin
+        ctrl_is_after_skip <= '0;
     end else begin
-        is_after_skip <= is_after_skip;
+        ctrl_is_after_skip <= ctrl_is_after_skip;
     end
 end
 
@@ -54,7 +61,7 @@ always_ff @(negedge clk or posedge nrst) begin : FSM_cstate
                 end   
             end
             DECODE: begin
-                if (input_enable) begin
+                if (ctrl_input_enable) begin
                     cstate <= IN_FEATURE;
                 end else if (mac_enable) begin
                     cstate <= IN_KERNEL;

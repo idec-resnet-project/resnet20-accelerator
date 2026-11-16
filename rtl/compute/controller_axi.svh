@@ -10,8 +10,3 @@ assign dma_bias_ready   = cstate[4];
 assign dma_result_hk    = dma_result_valid  & dma_result_ready;
 assign dma_result_valid = cstate[6];
 assign dma_result_last= (cnt_dma_output == len_output);
-
-
-
-
-

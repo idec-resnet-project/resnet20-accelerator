@@ -99,14 +99,27 @@ localparam BITWIDTH_CNT = 32;
 // core
 localparam LATENCY_RESIDUAL = 1;
 
-// --------------------------------
+// ----------------------------------------------------------------
 // wire & reg
-// --------------------------------
+// ----------------------------------------------------------------
 // FSM
-state_t     cstate; // current
-response_t  rstate; // response
+state_t                 cstate; // current
+response_t              rstate; // response
 
-reg         is_fisrt_IDLE;
+reg                     is_fisrt_IDLE;
+
+wire [BITWIDTH_CNT-1:0] len_feature;
+wire [BITWIDTH_CNT-1:0] len_kernel;
+wire [BITWIDTH_CNT-1:0] len_bias;
+wire [BITWIDTH_CNT-1:0] len_output;
+
+// counter
+reg [BITWIDTH_CNT-1:0] cnt_feature;
+reg [BITWIDTH_CNT-1:0] cnt_kernel;
+reg [BITWIDTH_CNT-1:0] cnt_bias;
+reg [BITWIDTH_CNT-1:0] cnt_run;
+reg [BITWIDTH_CNT-1:0] cnt_output;
+reg [BITWIDTH_CNT-1:0] cnt_dma_output;
 
 // configure
 wire                              cfg_input_enable;
@@ -123,92 +136,63 @@ wire [BITWIDTH_CfG_DATA-1:0]      cfg_w;
 wire [BITWIDTH_CfG_DATA-1:0]      cfg_h;       
 wire [BITWIDTH_CfG_DATA-1:0]      cfg_c;   
 
-reg                               input_enable;
-reg                               output_enable;
-reg                               is_skip;
-reg                               is_after_skip;
+reg                               ctrl_input_enable;
+reg                               ctrl_output_enable;
+reg                               ctrl_is_skip;
+reg                               ctrl_is_after_skip;
+reg [BITWIDTH_CfG_DATA-1:0]       ctrl_fw, ctrl_fc; // width == height
+reg [BITWIDTH_CfG_DATA-1:0]       ctrl_kw, ctrl_kc;
+reg [BITWIDTH_CfG_DATA-1:0]       ctrl_ow, ctrl_oc;
+reg                               ctrl_padding;
+reg                               ctrl_stride;
 
-reg [BITWIDTH_CfG_DATA-1:0]  fw, fc; // width == height
-reg [BITWIDTH_CfG_DATA-1:0]  kw, kc;
-reg [BITWIDTH_CfG_DATA-1:0]  ow, oc;
-reg                          padding;
-reg                          stride;
+wire [BITWIDTH_CfG_DATA-1:0]      ctrl_ow_next; 
 
-wire [BITWIDTH_CfG_DATA-1:0] next_ow;
+// core
+reg [5:0] addr_frow;
+reg [5:0] addr_fcol;
+reg [5:0] addr_cin;
+reg [5:0] addr_krow;
+reg [5:0] addr_kcol;
+reg [5:0] addr_cout; 
 
-// counter
-reg [BITWIDTH_CNT-1:0] cnt_feature;
-reg [BITWIDTH_CNT-1:0] cnt_kernel;
-reg [BITWIDTH_CNT-1:0] cnt_bias;
-reg [BITWIDTH_CNT-1:0] cnt_run;
-reg [BITWIDTH_CNT-1:0] cnt_output;
-reg [BITWIDTH_CNT-1:0] cnt_dma_output;
+wire [BRAM_FEATRE_CAPACITY-1:0] core_in_f_addr;
+wire [BRAM_FEATRE_CAPACITY-1:0] core_in_k_addr;
+wire [BRAM_FEATRE_CAPACITY-1:0] core_in_b_addr;
+wire [BRAM_KERNEL_CAPACITY-1:0] core_out_f_addr;
 
-wire [BITWIDTH_CNT-1:0] len_feature;
-wire [BITWIDTH_CNT-1:0] len_kernel;
-wire [BITWIDTH_CNT-1:0] len_bias;
-wire [BITWIDTH_CNT-1:0] len_output;
+wire [BRAM_FEATRE_CAPACITY-1:0] fmem_rd_addr_temp;
 
 // DMA
 wire dma_kernel_hk;
 wire dma_bias_hk;
 wire dma_feature_hk;
-wire dma_result_hk;    
+wire dma_result_hk;   
 
-// core
-reg [BITWIDTH_CNT-1:0]       len_in, len_out;
-
-// --------------------------------
+// ----------------------------------------------------------------
 // FSM
-// -------------------------------
-assign len_feature =(fw+1) * (fw+1) * (fc+1) - 1;
-assign len_kernel = (kw+1) * (kw+1) * (kc+1) * (fc+1) - 1;
-assign len_bias = kc;
-assign len_output = (mac_enable) ? ((gap_enable) ? oc : (ow+1) * (ow+1) * (oc+1) - 1) : len_feature;
+// ----------------------------------------------------------------
+`include "controller_fsm.svh"
 
-assign cfg_response = rstate;
-
-`include "controller_fsm.svh" 
-
-
-
-// --------------------------------
-// count
-// --------------------------------
+// ----------------------------------------------------------------
+// counter
+// ----------------------------------------------------------------
 `include "controller_counter.svh"
-
  
-// --------------------------------
-// core control
-// --------------------------------
-// core
-assign in_enable = (cstate == RUN) & (cnt_run != len_feature+1);
-
-assign fmem_wr_enable[0] = (is_fmem0_in) ? 0 : (out_enable | dma_feature_hk);
-assign fmem_wr_enable[1] = (is_fmem0_in) ? (out_enable | dma_feature_hk) : 0;
-assign kmem_wr_enable    = dma_kernel_hk;
-assign bmem_wr_enable    = dma_bias_hk;
-assign rmem_wr_enable    = (is_skip) ? out_enable : 0;
-
-assign mac_iteration = (kw+1)*(kw+1)*(fc+1);
-assign gap_iteration = (fw+1)*(fw+1);
-
-// config
-
-
+// ----------------------------------------------------------------
+// configure
+// ----------------------------------------------------------------
 `include "controller_configure.svh"
 
+// ----------------------------------------------------------------
+// core
+// ----------------------------------------------------------------
+`include "controller_core.svh"
 
 
-// --------------------------------
+// ----------------------------------------------------------------
 // AXI control
-// --------------------------------
+// ----------------------------------------------------------------
 `include "controller_axi.svh"
-
-// --------------------------------
-// Addressing
-// --------------------------------
-
-`include "controller_addressing.svh"
 
 endmodule
