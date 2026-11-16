@@ -28,7 +28,7 @@ parameter integer WORD_W = 16
     input  wire rst_n,
     input  wire enable,    
     input  wire signed [WORD_W-1:0] data_in,
-    output wire out_enable,
+    output wire valid_out,
     output wire signed [WORD_W-1:0] data_out    
     );
 
@@ -48,7 +48,7 @@ parameter integer WORD_W = 16
     .rst_n(rst_n),                         
     .enable(enable),                        
     .data_in(data_in),                                
-    .valid_out(out_enable),                   
+    .valid_out(valid_out),                   
     .data_out(relu_out)
     );
     
