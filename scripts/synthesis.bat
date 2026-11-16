@@ -78,7 +78,11 @@ rem ----------------------------------------------------------------
 rem simulate the existing netlist
 rem ----------------------------------------------------------------
 :simulate
-set "TB_CORE_POST_SYNTHESIS=1"
+for %%I in ("%~dp0..") do set "ROOT=%%~fI"
+set "TB_SIM_NETLIST=%ROOT%\.log\synth\tb_core\zedboard\reference_rtl\core_funcsim.v"
+set "TB_SIM_RTL_DIR=%ROOT%\tb\libs\rtl"
+set "TB_SIM_COMPILE_FLAGS=-d TB_CORE_POST_SYNTHESIS"
+set "TB_SIM_ELAB_TARGETS=glbl -L unisims_ver"
 call "%~dp0behav_sim.bat" tb_core %SKIP_COMPILE_FLAG% %NO_WDB_FLAG% %GUI_LIVE_FLAG% %GUI_STATIC_FLAG%
 exit /b %ERRORLEVEL%
 

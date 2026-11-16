@@ -46,11 +46,21 @@
             check_reset();
             seq.start(null);
             if (env.streams[RESULT].monitor.stall_cycles == 0)
-                `uvm_fatal("NO_STALL", "Full inference did not exercise result backpressure")
+                `uvm_fatal("NO_STALL", "Inference did not exercise result backpressure")
             `uvm_info("COUNTS", $sformatf("commands=%0d feature=%0d kernel=%0d bias=%0d result=%0d",
                 env.scoreboard.checked_commands, env.scoreboard.total[FEATURE],
                 env.scoreboard.total[KERNEL], env.scoreboard.total[BIAS],
                 env.scoreboard.total[RESULT]), UVM_LOW)
             phase.drop_objection(this);
         endtask
+        function void final_phase(uvm_phase phase);
+            uvm_report_server server;
+            super.final_phase(phase);
+            server = uvm_report_server::get_server();
+            if (cfg.commands.size() == 0 || env.scoreboard.checked_commands != cfg.commands.size())
+                `uvm_error("COMMAND_COUNT", "The command plan did not complete")
+            if (server.get_severity_count(UVM_ERROR) == 0 &&
+                server.get_severity_count(UVM_FATAL) == 0)
+                $display("[ PASS ] ALL TESTS PASSED");
+        endfunction
     endclass

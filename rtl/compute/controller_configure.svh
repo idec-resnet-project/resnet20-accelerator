@@ -79,7 +79,7 @@ always_ff @(negedge clk or posedge nrst) begin : calc_CNN_size
                 fc      <= oc;
                 kw      <= cfg_w;
                 kc      <= cfg_c;
-                ow      <= next_ow;
+                ow      <= (cfg_w) ? next_ow : 1;
                 oc      <= cfg_c;
                 padding <= cfg_padding;
                 stride  <= cfg_stride;  

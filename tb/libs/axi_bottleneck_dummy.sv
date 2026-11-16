@@ -1,4 +1,4 @@
-module axi_bottleneck_dummy (
+module axi_bottleneck_dummy #(parameter int OUTPUT_FRAC_BITS = 10) (
     input  logic         s_axi_aclk,
     input  logic         s_axi_aresetn,
 
@@ -77,7 +77,13 @@ module axi_bottleneck_dummy (
     logic        have_w;
 
     // One model command can receive three input streams in parallel.
+    import model_backend_pkg::*;
     model_backend backend;
+
+    initial backend = build_model_backend(OUTPUT_FRAC_BITS);
+    final begin
+        if (backend != null) backend.close();
+    end
     logic        active;
     int          wanted[3];
     int          received[3];
@@ -90,9 +96,6 @@ module axi_bottleneck_dummy (
     int          result_index;
     logic [15:0] result_data;
 
-    function void set_backend(model_backend selected);
-        backend = selected;
-    endfunction
 
     // --------------------------------
     // Bus handshakes

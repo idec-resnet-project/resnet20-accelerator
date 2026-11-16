@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 
 module tb_core;
+    import model_pkg::*;
+    string data_dir;
     localparam int SKIP_DELAY_CYCLES = 1;
     localparam int OUTPUT_FRAC_BITS  = 10;
     // Five registered datapath stages with two clocks per stage.
@@ -65,22 +67,22 @@ module tb_core;
     // --------------------------------
     // Model, schedule, and checking
     // --------------------------------
-    `include "resnet20_model.svh"
+    `include "core_model.svh"
     `include "data_schedule.svh"
-    `include "resnet20_scoreboard.svh"
-    `include "resnet20_driver.svh"
+    `include "core_scoreboard.svh"
+    `include "core_driver.svh"
 
     // --------------------------------
     // Inference sequence
     // --------------------------------
-    task automatic run_resnet20;
+    task automatic run_model;
         layer_t layer;
 
         for (int i = 0; i < LAYER_COUNT; i++) begin
             layer = layers[i];
             case (layer.op)
                 OP_INPUT: begin
-                    read_hex("vectors/input_q5_10.hex", layer.width * layer.height * layer.cin,
+                    read_tensor_hex({data_dir, "/input_q5_10.hex"}, layer.width * layer.height * layer.cin,
                              feature);
                 end
 
@@ -103,9 +105,11 @@ module tb_core;
     // Test entry point
     // --------------------------------
     initial begin : test
-        string weight_path;
+        string weight_path, tb_dir;
+        if (!$value$plusargs("TB_DIR=%s", tb_dir)) tb_dir = ".";
+        data_dir = model_data_dir(tb_dir);
         if (!$value$plusargs("weight_path=%s", weight_path))
-            weight_path = "../../../verification/resnet20/weight.bin";
+            weight_path = {data_dir, "/weight.bin"};
         if ($value$plusargs("input_gap=%d", input_gap) && input_gap < 0)
             $fatal(1, "input_gap must be nonnegative");
         if (SKIP_DELAY_CYCLES < 1)
@@ -125,7 +129,7 @@ module tb_core;
         repeat (3) @(negedge clk);
         nrst = 1;
         check_arithmetic();
-        run_resnet20();
+        run_model();
         $write("[ INFO ] Q%0d.%0d logits:", 15 - OUTPUT_FRAC_BITS, OUTPUT_FRAC_BITS);
         for (int i = 0; i < LOGIT_COUNT; i++) begin
             feature[i] = format_logit(feature[i]);

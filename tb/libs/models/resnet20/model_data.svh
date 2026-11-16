@@ -1,7 +1,6 @@
     // --------------------------------
     // Model data files
     // --------------------------------
-    localparam string MODEL_DATA_SUBDIR = "resnet20/data";
 
     function automatic int read_word(int fd, string path);
         int lo, hi;
@@ -35,13 +34,12 @@
         model_run_config cfg = new;
         model_command command;
         instruction_t inst;
-        string path;
         int fd, words_read;
+        string weight_path = {data_dir, "/weight.bin"};
 
         cfg.output_frac_bits = output_frac_bits;
-        path = {data_dir, "/weight.bin"};
-        fd = $fopen(path, "rb");
-        if (!fd) $fatal(1, "Cannot open %s", path);
+        fd = $fopen(weight_path, "rb");
+        if (!fd) $fatal(1, "Cannot open %s", weight_path);
         words_read = 0;
         for (int i = 0; i < $size(PROGRAM); i++) begin
             command = new;
@@ -56,7 +54,7 @@
                                                         stream_words(inst, FEATURE));
             for (int s = KERNEL; s <= BIAS; s++) begin
                 for (int j = 0; j < command.payload[s].words.size(); j++) begin
-                    command.payload[s].words[j] = read_word(fd, path);
+                    command.payload[s].words[j] = read_word(fd, weight_path);
                     words_read++;
                 end
             end
@@ -65,7 +63,7 @@
             cfg.commands.push_back(command);
         end
         if (words_read != 271690 || $fgetc(fd) >= 0)
-            $fatal(1, "Expected exactly 543380 bytes in %s", path);
+            $fatal(1, "Expected exactly 543380 bytes in %s", weight_path);
         $fclose(fd);
         return cfg;
     endfunction

@@ -88,18 +88,18 @@ wire                                  out_enable;
 wire [BITWIDTH-1:0]                   out_data;
 
 // buffer switch
-wire is_bmem0_in;
+wire is_fmem0_in;
 
 // --------------------------------
 // controll
 // --------------------------------
 // ping-pong datapath 
-assign in_data          = fmem_rd_data[is_bmem0_in]; 
-assign fmem_wr_data[0]  = (is_bmem0_in) ? out_data         : dma_feature_data;
-assign fmem_wr_data[1]  = (is_bmem0_in) ? dma_feature_data : out_data;
+assign in_data          = fmem_rd_data[is_fmem0_in]; 
+assign fmem_wr_data[0]  = (is_fmem0_in) ? out_data         : dma_feature_data;
+assign fmem_wr_data[1]  = (is_fmem0_in) ? dma_feature_data : out_data;
 
 // DMA datapath
-assign dma_result_data  = fmem_rd_data[~is_bmem0_in];
+assign dma_result_data  = fmem_rd_data[~is_fmem0_in];
 assign kmem_wr_data     = dma_kernel_data;
 assign bmem_wr_data     = dma_bias_data;
 
@@ -198,7 +198,7 @@ controller #(
     .gap_enable        (gap_enable),
     .gap_iteration     (gap_iteration),
     // control
-    .is_bmem0_in       (is_bmem0_in),
+    .is_fmem0_in       (is_fmem0_in),
     // I/O
     .in_enable         (in_enable),
     .out_enable        (out_enable),

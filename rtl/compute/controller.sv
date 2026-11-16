@@ -29,7 +29,8 @@ module controller #(
     input  wire                                  out_enable,
 
     // top control
-    output reg                                   is_bmem0_in,
+    output reg                                   is_fmem0_in,
+    output reg                                   is_zero,
     
     // DMA feature
     input  wire                                  dma_feature_valid,
@@ -103,11 +104,9 @@ localparam LATENCY_RESIDUAL = 1;
 // --------------------------------
 // FSM
 state_t     cstate; // current
-state_t     nstate; // next
 response_t  rstate; // response
 
 reg         is_fisrt_IDLE;
-reg         is_bmem_in;    // core in
 
 // configure
 wire                              cfg_input_enable;
@@ -185,8 +184,8 @@ assign cfg_response = rstate;
 // core
 assign in_enable = (cstate == RUN) & (cnt_run != len_feature+1);
 
-assign fmem_wr_enable[0] = (is_bmem_in) ? 0 : (out_enable | dma_feature_hk);
-assign fmem_wr_enable[1] = (is_bmem_in) ? (out_enable | dma_feature_hk) : 0;
+assign fmem_wr_enable[0] = (is_fmem0_in) ? 0 : (out_enable | dma_feature_hk);
+assign fmem_wr_enable[1] = (is_fmem0_in) ? (out_enable | dma_feature_hk) : 0;
 assign kmem_wr_enable    = dma_kernel_hk;
 assign bmem_wr_enable    = dma_bias_hk;
 assign rmem_wr_enable    = (is_skip) ? out_enable : 0;
@@ -209,9 +208,6 @@ assign gap_iteration = (fw+1)*(fw+1);
 // --------------------------------
 // Addressing
 // --------------------------------
-reg [5:0] feature_row, feature_col,in_channel;
-reg [5:0] kernel_row, kernel_col,  out_channel; 
-wire in_addr; 
 
 `include "controller_addressing.svh"
 

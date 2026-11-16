@@ -4,7 +4,7 @@ import re
 import sys
 from pathlib import Path
 
-RESNET = Path(__file__).resolve().parents[2] / "resnet20"
+RESNET = Path(__file__).resolve().parents[2] / "models" / "resnet20"
 sys.path.insert(0, str(RESNET))
 from float_reference import write_fixture
 

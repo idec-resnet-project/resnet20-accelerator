@@ -109,7 +109,7 @@
         real reference, error_value, signal_power, error_power, snr_db;
         string extra;
 
-        fd = $fopen("vectors/reference_logits_float.txt", "r");
+        fd = $fopen({data_dir, "/reference_logits_float.txt"}, "r");
         if (!fd) $fatal(1, "Cannot open float reference logits");
         signal_power = 0.0;
         error_power = 0.0;

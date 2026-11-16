@@ -3,10 +3,6 @@
 import argparse
 import math
 from pathlib import Path
-import sys
-
-REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "verification" / "resnet20"))
 
 from float_reference import SCALE, WeightReader, block, conv, fixture_input, relu
 
@@ -19,8 +15,7 @@ def quantize(value):
     return max(-32768, min(32767, rounded))
 
 
-def write_fixture(output):
-    weight_path = (REPO / "tb" / "tb_axi_bottleneck" / "resnet20" / "data" / "weight.bin")
+def write_fixture(output, weight_path):
     weights = WeightReader(weight_path)
     feature = fixture_input()
     channels = [[word / SCALE for word in feature[c::3]] for c in range(3)]
@@ -58,4 +53,6 @@ def write_fixture(output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    write_fixture(parser.parse_args().out)
+    parser.add_argument("--weights", type=Path, default=Path(__file__).with_name("weight.bin"))
+    args = parser.parse_args()
+    write_fixture(args.out, args.weights)

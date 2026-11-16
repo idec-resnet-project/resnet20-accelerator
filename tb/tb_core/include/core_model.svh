@@ -1,12 +1,7 @@
     // --------------------------------
     // Model dimensions and opcodes
     // --------------------------------
-    localparam int LAYER_COUNT = 30;
-    localparam int LOGIT_COUNT = 10;
-    localparam int WEIGHT_WORDS = 271690;
-    localparam int MAX_TENSOR_WORDS = 32 * 32 * 16;
-    localparam int OP_INPUT = 1, OP_SKIP = 128, OP_PROJECTION = 192;
-    localparam int OP_FC_OUT = 66;
+    localparam int OP_SKIP = 128, OP_PROJECTION = 192;
     localparam int FLAG_RESIDUAL = 32, FLAG_RELU = 16, FLAG_GAP = 4;
 
     typedef logic signed [15:0] word_t;
@@ -31,8 +26,8 @@
         int fd, lo, hi, offset;
         string name, extra;
         layer_t layer;
-        fd = $fopen("vectors/layers.txt", "r");
-        if (!fd) $fatal(1, "Cannot open vectors/layers.txt");
+        fd = $fopen({data_dir, "/layers.txt"}, "r");
+        if (!fd) $fatal(1, "Cannot open model layers.txt");
         offset = 0;
         for (int i = 0; i < LAYER_COUNT; i++) begin
             if ($fscanf(fd, "%s %d %d %d %d %d %d %d %d %d", name, layer.op,
@@ -64,7 +59,7 @@
     // --------------------------------
     // Tensor vector loader
     // --------------------------------
-    task automatic read_hex(input string path, input int count,
+    task automatic read_tensor_hex(input string path, input int count,
                             output word_t target[0:MAX_TENSOR_WORDS-1]);
         int fd;
         logic [31:0] value;

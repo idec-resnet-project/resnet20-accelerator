@@ -13,7 +13,7 @@ module axi_bottleneck #(
     parameter [31:0]   CONFIG_DEFAULT             = '0,
     // Buffer address widths. Each RAM stores 2**width words.
     parameter integer BRAM_FEATRE_CAPACITY        = 14,
-    parameter integer BRAM_KERNEL_CAPACITY        = 16,
+    parameter integer BRAM_KERNEL_CAPACITY        = 14,
     parameter integer BRAM_BIAS_CAPACITY          = 6
 )(
     input  wire                             s_axi_aclk,

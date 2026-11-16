@@ -41,17 +41,17 @@ typedef struct {
 // --------------------------------
 // Model lifetime
 // --------------------------------
-void *resnet20_create(void)
+void *model_create(void)
 {
     return calloc(1, sizeof(Model));
 }
 
-void resnet20_destroy(void *handle)
+void model_destroy(void *handle)
 {
     free(handle);
 }
 
-void resnet20_reset(void *handle)
+void model_reset(void *handle)
 {
     Model *model = handle;
     model->feature_count = 0;
@@ -74,7 +74,7 @@ static int to_word(float value, int frac_bits)
     return (int)rounded;
 }
 
-void resnet20_store(void *handle, int stream, int index, int word)
+void model_store(void *handle, int stream, int index, int word)
 {
     Model *model = handle;
     switch (stream) {
@@ -117,7 +117,7 @@ static float convolve(const Model *model, const float *kernel, int w, int h, int
 }
 
 /* Returns zero on success. All intermediate activations stay in float. */
-int resnet20_step(void *handle, int op, int w, int h, int cin, int cout,
+int model_step(void *handle, int op, int w, int h, int cin, int cout,
                   int k, int stride, int pad)
 {
     Model *model = handle;
@@ -184,7 +184,7 @@ int resnet20_step(void *handle, int op, int w, int h, int cin, int cout,
     return 0;
 }
 
-int resnet20_logit(void *handle, int channel, int frac_bits)
+int model_logit(void *handle, int channel, int frac_bits)
 {
     const Model *model = handle;
     return to_word(model->logits[channel], frac_bits);

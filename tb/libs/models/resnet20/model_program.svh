@@ -12,7 +12,7 @@
     // --------------------------------
     // Model command table
     // --------------------------------
-    // Matches resnet20_instruction_set in verification/resnet20/resnet20.c.
+    // Matches resnet20_instruction_set in verification/models/resnet20/resnet20.c.
     localparam instruction_t PROGRAM[30] = '{
         '{1, 32, 32, 3, 0, 0, 1, 0},
         '{80, 32, 32, 3, 16, 3, 1, 1},

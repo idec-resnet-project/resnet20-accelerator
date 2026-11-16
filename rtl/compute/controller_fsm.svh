@@ -33,11 +33,11 @@ end
 
 always_ff @(negedge clk or posedge nrst) begin : fmem_select
     if (!nrst) begin
-        is_bmem0_in <= 1;
+        is_fmem0_in <= 1;
     end else if (cstate == DECODE) begin
-        is_bmem0_in <= ~is_bmem0_in;
+        is_fmem0_in <= ~is_fmem0_in;
     end else begin
-        is_bmem0_in <= is_bmem0_in;
+        is_fmem0_in <= is_fmem0_in;
     end
 end
 
@@ -101,7 +101,7 @@ always_ff @(negedge clk or posedge nrst) begin : FSM_cstate
                 end   
             end
             OUTPUT: begin
-                if ((cnt_dma_output == fc) & dma_result_hk) begin
+                if ((cnt_dma_output == len_output) & dma_result_hk) begin
                     cstate <= IDLE;
                 end else begin
                     cstate <= OUTPUT;
