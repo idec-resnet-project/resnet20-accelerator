@@ -174,6 +174,8 @@ rem simulate
 rem ----------------------------------------------------------------
 :simulate
 type nul > simulate.log
+if exist "uvm_test_passed" del /q "uvm_test_passed"
+if exist "uvm_test_passed" goto error_simulate
 if not defined NO_WDB (
     if not exist "%WAVE_DIR%\" mkdir "%WAVE_DIR%"
     if not exist "%WAVE_DIR%\" goto error_wave_config
@@ -213,6 +215,7 @@ if not errorlevel 1 goto error_simulate
 for /f "tokens=1,2 delims=: " %%A in ('findstr /r /c:"^UVM_ERROR *:" /c:"^UVM_FATAL *:" simulate.log') do (
     if not "%%B"=="0" goto error_simulate
 )
+if exist "uvm_test_passed" goto finish
 rem FOR /F reads complete lines in both LF and CRLF XSim logs.
 for /f "delims=" %%L in ('findstr /b /l /c:"[ PASS ] ALL TESTS PASSED" simulate.log') do (
     if "%%L"=="[ PASS ] ALL TESTS PASSED" goto finish

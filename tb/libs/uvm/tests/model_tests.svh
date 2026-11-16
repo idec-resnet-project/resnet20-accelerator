@@ -9,12 +9,16 @@
         model_run_seq seq;
         function new(string name, uvm_component parent);
             super.new(name, parent);
+            uvm_top.set_report_severity_id_action(UVM_INFO, "RNTST", UVM_NO_ACTION);
+            uvm_top.set_report_severity_id_action(UVM_INFO, "UVM/COMP/NAMECHECK", UVM_NO_ACTION);
+            uvm_top.set_report_severity_id_action(UVM_INFO, "TEST_DONE", UVM_NO_ACTION);
+            uvm_top.set_report_severity_id_action(UVM_INFO, "UVM/REPORT/SERVER", UVM_NO_ACTION);
         endfunction
 
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(model_run_config)::get(this, "", "run_cfg", cfg))
-                `uvm_fatal("NOCFG", "Missing model_run_config")
+                test_fatal("NOCFG", "Missing model_run_config");
             env = bottleneck_env::type_id::create("env", this);
         endfunction
 
@@ -37,7 +41,7 @@
         task check_reset();
             bit [31:0] state;
             seq.read_status(state);
-            if (state != 0) `uvm_fatal("RESET", $sformatf("Unexpected status %08h", state))
+            if (state != 0) test_fatal("RESET", $sformatf("Unexpected status %08h", state));
         endtask
 
         task run_phase(uvm_phase phase);
@@ -46,21 +50,23 @@
             check_reset();
             seq.start(null);
             if (env.streams[RESULT].monitor.stall_cycles == 0)
-                `uvm_fatal("NO_STALL", "Inference did not exercise result backpressure")
-            `uvm_info("COUNTS", $sformatf("commands=%0d feature=%0d kernel=%0d bias=%0d result=%0d",
-                env.scoreboard.checked_commands, env.scoreboard.total[FEATURE],
-                env.scoreboard.total[KERNEL], env.scoreboard.total[BIAS],
-                env.scoreboard.total[RESULT]), UVM_LOW)
+                test_fatal("NO_STALL", "Inference did not exercise result backpressure");
             phase.drop_objection(this);
         endtask
         function void final_phase(uvm_phase phase);
             uvm_report_server server;
+            int status_file;
             super.final_phase(phase);
             server = uvm_report_server::get_server();
             if (cfg.commands.size() == 0 || env.scoreboard.checked_commands != cfg.commands.size())
-                `uvm_error("COMMAND_COUNT", "The command plan did not complete")
-            if (server.get_severity_count(UVM_ERROR) == 0 &&
-                server.get_severity_count(UVM_FATAL) == 0)
-                $display("[ PASS ] ALL TESTS PASSED");
+                test_error("COMMAND_COUNT", "The command plan did not complete");
+            if (!test_failed && server.get_severity_count(UVM_ERROR) == 0 &&
+                server.get_severity_count(UVM_FATAL) == 0) begin
+                status_file = $fopen("uvm_test_passed", "w");
+                if (status_file)
+                    $fclose(status_file);
+                else
+                    test_error("STATUS_FILE", "Cannot create uvm_test_passed");
+            end
         endfunction
     endclass

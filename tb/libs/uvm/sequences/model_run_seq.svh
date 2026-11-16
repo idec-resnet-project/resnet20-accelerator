@@ -26,7 +26,7 @@
             transfer.request = item;
             transfer.start(env.ctrl.sequencer);
             if (item.resp !== expected_resp)
-                `uvm_fatal("AXI_RESP", $sformatf("Response %0h for address %08h", item.resp, address))
+                test_fatal("AXI_RESP", $sformatf("Response %0h for address %08h", item.resp, address));
             data = item.data;
         endtask
 
@@ -76,7 +76,7 @@
             item = source_request(cmd, stream);
             transfer_stream(stream, item);
             if (item.timed_out || item.aborted)
-                `uvm_fatal("TX_FAILED", $sformatf("%s transfer did not finish", stream.name()))
+                test_fatal("TX_FAILED", $sformatf("%s transfer did not finish", stream.name()));
         endtask
 
         // --------------------------------
@@ -90,7 +90,7 @@
             if (index == 0) begin
                 read_status(state);
                 if (state & (cfg.done_mask | cfg.error_mask))
-                    `uvm_fatal("STALE_STATUS", "New INPUT retained old status before receiving data")
+                    test_fatal("STALE_STATUS", "New INPUT retained old status before receiving data");
             end
             // The feature, kernel, and bias DMA channels are independent.
             fork
@@ -100,8 +100,8 @@
             join
             wait_status(state, timed_out, cfg.timeout_cycles / 4);
             if (timed_out || (state & cfg.error_mask) || !(state & cfg.done_mask))
-                `uvm_fatal("COMMAND_FAILED", $sformatf("command[%0d] state=%08h timeout=%0b",
-                                                       index, state, timed_out))
+                test_fatal("COMMAND_FAILED", $sformatf("command[%0d] state=%08h timeout=%0b",
+                                                       index, state, timed_out));
         endtask
 
         task execute_command(model_command cmd, int index);
@@ -121,7 +121,7 @@
                     end
                 join
                 if (receive_item.timed_out || receive_item.aborted)
-                    `uvm_fatal("RX_FAILED", "Result transfer did not finish")
+                    test_fatal("RX_FAILED", "Result transfer did not finish");
             end else begin
                 send_and_check(cmd, index);
             end

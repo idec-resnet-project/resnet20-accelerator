@@ -45,12 +45,12 @@
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(virtual axis_if)::get(this, "", "vif", vif))
-                `uvm_fatal("NOVIF", "Missing AXI-Stream interface")
+                test_fatal("NOVIF", "Missing AXI-Stream interface");
         endfunction
 
         task drive(axis_item item);
             int beat, gap, stall;
-            bit accepted;
+            bit accepted, final_beat;
             beat = 0;
             stall = 0;
             gap = item.initial_delay;
@@ -61,14 +61,18 @@
                     item.aborted = 1;
                     break;
                 end
-                if (sink) vif.tready = gap == 0;
-                else begin
+                final_beat = beat == item.count - 1;
+                if (sink) begin
+                    // Leave the final beat pending until the DUT asserts TLAST.
+                    vif.tready = gap == 0 && (!final_beat || vif.tlast === 1'b1);
+                end else begin
                     vif.tvalid = gap == 0;
                     vif.tdata = item.words[beat][15:0];
-                    vif.tlast = beat == item.count - 1;
+                    vif.tlast = final_beat;
                 end
                 @(posedge vif.clk);
-                accepted = vif.nrst && vif.tvalid && vif.tready;
+                accepted = vif.nrst && vif.tvalid && vif.tready &&
+                           (!sink || !final_beat || vif.tlast === 1'b1);
                 @(negedge vif.clk);
                 if (accepted) begin
                     beat++;
@@ -133,7 +137,7 @@
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(virtual axis_if)::get(this, "", "vif", vif))
-                `uvm_fatal("NOVIF", "Missing AXI-Stream monitor interface")
+                test_fatal("NOVIF", "Missing AXI-Stream monitor interface");
         endfunction
 
         task run_phase(uvm_phase phase);
@@ -149,7 +153,7 @@
                 // A pending transfer must keep its payload and TVALID stable.
                 if (stalled && (vif.tvalid !== 1'b1 ||
                     {vif.tdata, vif.tkeep, vif.tlast} !== held))
-                    `uvm_error("AXIS_STALL", "TVALID or payload changed before handshake")
+                    test_error("AXIS_STALL", "TVALID or payload changed before handshake");
                 stalled = vif.tvalid && !vif.tready;
                 if (stalled) begin
                     stall_cycles++;

@@ -44,7 +44,7 @@
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(virtual axi_lite_if)::get(this, "", "vif", vif))
-                `uvm_fatal("NOVIF", "Missing AXI-Lite interface")
+                test_fatal("NOVIF", "Missing AXI-Lite interface");
         endfunction
 
         task drive_aw(axi_lite_item item);
@@ -59,7 +59,7 @@
                     return;
                 end
             end
-            `uvm_fatal("AXI_TIMEOUT", "AW timeout")
+            test_fatal("AXI_TIMEOUT", "AW timeout");
         endtask
 
         task drive_w(axi_lite_item item);
@@ -74,7 +74,7 @@
                     return;
                 end
             end
-            `uvm_fatal("AXI_TIMEOUT", "W timeout")
+            test_fatal("AXI_TIMEOUT", "W timeout");
         endtask
 
         task drive_write(axi_lite_item item);
@@ -93,7 +93,7 @@
                     return;
                 end
             end
-            `uvm_fatal("AXI_TIMEOUT", "B timeout")
+            test_fatal("AXI_TIMEOUT", "B timeout");
         endtask
 
         task drive_read(axi_lite_item item);
@@ -117,7 +117,7 @@
                 @(negedge vif.clk);
                 if (accepted) vif.arvalid = 0;
             end
-            `uvm_fatal("AXI_TIMEOUT", "AR/R timeout")
+            test_fatal("AXI_TIMEOUT", "AR/R timeout");
         endtask
 
         task run_phase(uvm_phase phase);
@@ -157,7 +157,7 @@
         function void build_phase(uvm_phase phase);
             super.build_phase(phase);
             if (!uvm_config_db#(virtual axi_lite_if)::get(this, "", "vif", vif))
-                `uvm_fatal("NOVIF", "Missing AXI-Lite monitor interface")
+                test_fatal("NOVIF", "Missing AXI-Lite monitor interface");
         endfunction
 
         task run_phase(uvm_phase phase);

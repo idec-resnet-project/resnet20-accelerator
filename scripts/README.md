@@ -41,7 +41,7 @@ tb/
 
 모든 TB에 `TB_DIR` plusarg로 TB의 절대 경로를 전달합니다. 모델 패키지의 `model_data_dir(tb_dir)`로 사전 생성 데이터 경로를 얻습니다. 실행 중 작업 디렉터리는 `.log/sim/<tb_name>`입니다. 데이터가 누락되면 모델 로더가 파일 경로와 함께 실패를 보고합니다.
 
-새 TB도 `.f`와 같은 이름의 top으로 실행할 수 있습니다. 검증 완료 후 오류가 없을 때 정확히 `[ PASS ] ALL TESTS PASSED`를 한 줄로 출력해야 합니다. 실행기는 도구 종료 코드, fatal/error와 UVM 오류 집계, 이 성공 문구를 검사합니다. 공용 UVM 테스트는 final phase에서 성공을 출력합니다.
+새 TB도 `.f`와 같은 이름의 top으로 실행할 수 있습니다. 실행기는 도구 종료 코드와 시뮬레이션 오류를 검사합니다. 공용 UVM 테스트는 검증에 성공하면 final phase에서 `uvm_test_passed` 파일을 생성합니다. 일반 SV TB는 검증 완료 후 `[ PASS ] ALL TESTS PASSED`를 한 줄로 출력해 성공을 알립니다.
 
 ## 모델과 DUT 선택
 

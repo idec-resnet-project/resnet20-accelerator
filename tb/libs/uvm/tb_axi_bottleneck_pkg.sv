@@ -4,6 +4,19 @@ package tb_axi_bottleneck_pkg;
 
     `include "uvm_macros.svh"
 
+    bit test_failed;
+
+    function automatic void test_error(string id, string message);
+        test_failed = 1;
+        $display("[ ERROR ] [%s] %s", id, message);
+    endfunction
+
+    function automatic void test_fatal(string id, string message);
+        test_failed = 1;
+        $display("[ FATAL ] [%s] %s", id, message);
+        $finish;
+    endfunction
+
     // Bus agents
     `include "uvm/axi_lite/axi_lite_agent.svh"
     `include "uvm/axis/axis_agent.svh"
