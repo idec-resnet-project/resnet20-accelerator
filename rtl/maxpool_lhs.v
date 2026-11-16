@@ -4,7 +4,7 @@
 // 
 // Create Date: 2026/11/10 12:54:19
 // Design Name: 
-// Module Name: mac
+// Module Name: maxpool
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -22,7 +22,7 @@
 
 module maxpool #(
     parameter integer WORD_W = 16, 
-    parameter integer ACC_W = 64, 
+    parameter integer ACC_W = WORD_W*2+1, 
     parameter integer ITER_CNT = 5   
 )(
     input wire clk, 
@@ -31,11 +31,11 @@ module maxpool #(
     input wire [ITER_CNT-1:0] iter,  
                                   
 
-    input wire [WORD_W-1:0] data_in,      
+    input wire signed [WORD_W-1:0] data_in,      
     
 
-    output reg valid_out,   
-    output reg [WORD_W-1:0] data_out 
+    output reg              valid_out,   
+    output reg signed [WORD_W-1:0] data_out 
     );
     
     reg [ITER_CNT-1:0] iter_cnt;
@@ -51,16 +51,26 @@ module maxpool #(
         end
         else 
         begin
-            if(enable && !(iter_cnt == iter))
+            if(enable && (iter_cnt == 0))
             begin
-                iter_cnt = iter_cnt + 1;
-                max <= (max < data_in) ? data_in : max; 
+                iter_cnt    <= 1;
+                max         <=  data_in; 
                 valid_out   <= 0;           
             end
+            else if( iter_cnt < iter)
+            begin
+                iter_cnt    <= iter_cnt + 1;
+                max         <= (max < data_in) ? data_in : max; 
+            end
+
             else if(iter_cnt == iter)
             begin
                 data_out    <= max;
                 valid_out   <= 1;
+            end
+            else
+            begin
+                valid_out   <= 0;
             end   
         end
     end
