@@ -1,12 +1,14 @@
 module controller #(
     // bitwidth 
     parameter integer CONFIG_BITWIDTH            = 32,
+    parameter integer CONFIG_DATA_BITWIDTH      = 6,
     parameter integer BITWIDTH_MAC_ITERATION     = 16,
     parameter integer BITWIDTH_POOLING_ITERATION = 16,
     parameter integer BITWIDTH_GAP_ITERATION     = 16,
     parameter integer BRAM_FEATRE_CAPACITY       = 14,
     parameter integer BRAM_KERNEL_CAPACITY       = 16,
-    parameter integer BRAM_BIAS_CAPACITY         = 6
+    parameter integer BRAM_BIAS_CAPACITY         = 6,
+    parameter integer ADDR_BITWIDTH             = 3
 )(
     input  wire                                  clk,
     input  wire                                  nrst,
@@ -90,9 +92,6 @@ typedef enum reg [3:0] {
     RESP_ERROR    = 4'b1000
 } response_t;
 
-// configure
-localparam BITWIDTH_CfG_DATA = 6;
-
 // counter
 localparam BITWIDTH_CNT = 32;
 
@@ -132,29 +131,29 @@ wire                              cfg_gap_enable;
 wire                              cfg_is_skip;    
 wire                              cfg_stride;     
 wire                              cfg_padding;    
-wire [BITWIDTH_CfG_DATA-1:0]      cfg_w;    
-wire [BITWIDTH_CfG_DATA-1:0]      cfg_h;       
-wire [BITWIDTH_CfG_DATA-1:0]      cfg_c;   
+wire [CONFIG_DATA_BITWIDTH-1:0]   cfg_w;
+wire [CONFIG_DATA_BITWIDTH-1:0]   cfg_h;
+wire [CONFIG_DATA_BITWIDTH-1:0]   cfg_c;
 
 reg                               ctrl_input_enable;
 reg                               ctrl_output_enable;
 reg                               ctrl_is_skip;
 reg                               ctrl_is_after_skip;
-reg [BITWIDTH_CfG_DATA-1:0]       ctrl_fw, ctrl_fc; // width == height
-reg [BITWIDTH_CfG_DATA-1:0]       ctrl_kw, ctrl_kc;
-reg [BITWIDTH_CfG_DATA-1:0]       ctrl_ow, ctrl_oc;
+reg [CONFIG_DATA_BITWIDTH-1:0]    ctrl_fw, ctrl_fc; // width == height
+reg [CONFIG_DATA_BITWIDTH-1:0]    ctrl_kw, ctrl_kc;
+reg [CONFIG_DATA_BITWIDTH-1:0]    ctrl_ow, ctrl_oc;
 reg                               ctrl_padding;
 reg                               ctrl_stride;
 
-wire [BITWIDTH_CfG_DATA-1:0]      ctrl_ow_next; 
+wire [CONFIG_DATA_BITWIDTH-1:0]   ctrl_ow_next;
 
 // core
-reg [5:0] addr_frow;
-reg [5:0] addr_fcol;
-reg [5:0] addr_cin;
-reg [5:0] addr_krow;
-reg [5:0] addr_kcol;
-reg [5:0] addr_cout; 
+reg [ADDR_BITWIDTH-1:0] addr_frow;
+reg [ADDR_BITWIDTH-1:0] addr_fcol;
+reg [ADDR_BITWIDTH-1:0] addr_cin;
+reg [ADDR_BITWIDTH-1:0] addr_krow;
+reg [ADDR_BITWIDTH-1:0] addr_kcol;
+reg [ADDR_BITWIDTH-1:0] addr_cout; 
 
 wire [BRAM_FEATRE_CAPACITY-1:0] core_in_f_addr;
 wire [BRAM_FEATRE_CAPACITY-1:0] core_in_k_addr;

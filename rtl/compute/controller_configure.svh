@@ -75,12 +75,21 @@ always_ff @(negedge clk or posedge nrst) begin : calc_CNN_size
                 ctrl_oc      <= cfg_c;
                 ctrl_padding <= cfg_padding;
                 ctrl_stride  <= cfg_stride;  
+            end else if (cfg_gap_enable) begin
+                ctrl_fw      <= ctrl_ow;
+                ctrl_fc      <= ctrl_oc;
+                ctrl_kw      <= cfg_w;
+                ctrl_kc      <= cfg_c;
+                ctrl_ow      <= 0;
+                ctrl_oc      <= cfg_c;
+                ctrl_padding <= cfg_padding;
+                ctrl_stride  <= cfg_stride;
             end else begin
                 ctrl_fw      <= ctrl_ow;
                 ctrl_fc      <= ctrl_oc;
                 ctrl_kw      <= cfg_w;
                 ctrl_kc      <= cfg_c;
-                ctrl_ow      <= (cfg_w) ? ctrl_ow_next : 0;
+                ctrl_ow      <= ctrl_ow_next;
                 ctrl_oc      <= cfg_c;
                 ctrl_padding <= cfg_padding;
                 ctrl_stride  <= cfg_stride;  

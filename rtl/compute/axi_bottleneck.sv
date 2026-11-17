@@ -1,6 +1,7 @@
 module axi_bottleneck #(
     // bitwidth 
     localparam integer BITWIDTH                   = 16,
+    parameter integer  CONFIG_DATA_BITWIDTH      = 6,
     parameter integer  BITWIDTH_MAC_ITERATION     = 16,
     parameter integer  BITWIDTH_POOLING_ITERATION = 16,
     parameter integer  BITWIDTH_GAP_ITERATION     = 16,
@@ -14,7 +15,8 @@ module axi_bottleneck #(
     // Buffer address widths. Each RAM stores 2**width words.
     parameter integer BRAM_FEATRE_CAPACITY        = 14,
     parameter integer BRAM_KERNEL_CAPACITY        = 14,
-    parameter integer BRAM_BIAS_CAPACITY          = 6
+    parameter integer BRAM_BIAS_CAPACITY          = 6,
+    parameter integer ADDR_BITWIDTH              = 3
 )(
     input  wire                             s_axi_aclk,
     input  wire                             s_axi_aresetn,
@@ -122,7 +124,9 @@ top_bottleneck #(
     .PARALLEL_PF                (PARALLEL_PF),
     .BRAM_FEATRE_CAPACITY       (BRAM_FEATRE_CAPACITY),
     .BRAM_KERNEL_CAPACITY       (BRAM_KERNEL_CAPACITY),
-    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY)
+    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY),
+    .CONFIG_DATA_BITWIDTH        (CONFIG_DATA_BITWIDTH),
+    .ADDR_BITWIDTH               (ADDR_BITWIDTH)
 ) u_top_bottleneck (
     .clk               (s_axi_aclk),
     .nrst              (s_axi_aresetn),

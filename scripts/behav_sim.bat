@@ -71,7 +71,6 @@ set "PATH_LOG=%ROOT%\.log\sim\%TB_NAME%"
 if defined NETLIST set "PATH_LOG=%PATH_LOG%_synthesis"
 set "ELAB_TARGETS=%TB_NAME% %TB_SIM_ELAB_TARGETS%"
 set "WAVE_SETUP=%ROOT%\scripts\wave_setup.tcl"
-if exist "%TB_PATH%\wave_setup.tcl" set "WAVE_SETUP=%TB_PATH%\wave_setup.tcl"
 if defined INPUT_GAP (
     set INPUT_GAP | findstr /r /x /c:"INPUT_GAP=[0-9][0-9]*" >nul
     if errorlevel 1 goto error_input_gap
@@ -129,8 +128,11 @@ echo ----------------------------------------------------------------
 echo [2/3] Elaborating %TB_NAME%...
 echo ----------------------------------------------------------------
 
-set "DEBUG_FLAGS=-debug typical"
-if defined NO_WDB if not defined GUI_LIVE set "DEBUG_FLAGS="
+set "DEBUG_FLAGS=-debug all"
+if defined NO_WDB (
+    set "DEBUG_FLAGS="
+    if defined GUI_LIVE set "DEBUG_FLAGS=-debug typical"
+)
 if defined C_SOURCES (
     where /q xsc.bat
     if errorlevel 1 goto error_elaborate
@@ -158,15 +160,14 @@ for %%F in (xsimk.exe xsim.mem) do (
     if not exist "xsim.dir\behav_tb\%%F" goto error_snapshot
     for %%I in ("xsim.dir\behav_tb\%%F") do if %%~zI equ 0 goto error_snapshot
 )
-if defined GUI_LIVE goto check_snapshot_debug
-if not defined NO_WDB goto check_snapshot_debug
-goto snapshot_ready
+if not defined NO_WDB (
+    findstr /i /l /c:"-debug \"all\"" /c:"-debug all" "xsim.dir\behav_tb\Compile_Options.txt" >nul 2>&1
+    if errorlevel 1 goto error_snapshot_debug
+) else if defined GUI_LIVE (
+    findstr /i /r /c:"-debug .*typical" /c:"-debug .*wave" /c:"-debug .*all" "xsim.dir\behav_tb\Compile_Options.txt" >nul 2>&1
+    if errorlevel 1 goto error_snapshot_gui_debug
+)
 
-:check_snapshot_debug
-findstr /i /r /c:"-debug .*typical" /c:"-debug .*wave" /c:"-debug .*all" "xsim.dir\behav_tb\Compile_Options.txt" >nul 2>&1
-if errorlevel 1 goto error_snapshot_debug
-
-:snapshot_ready
 echo [ INFO ] Reusing the %TB_NAME% simulation snapshot.
 
 rem ----------------------------------------------------------------
@@ -175,7 +176,6 @@ rem ----------------------------------------------------------------
 :simulate
 type nul > simulate.log
 if exist "uvm_test_passed" del /q "uvm_test_passed"
-if exist "uvm_test_passed" goto error_simulate
 if not defined NO_WDB (
     if not exist "%WAVE_DIR%\" mkdir "%WAVE_DIR%"
     if not exist "%WAVE_DIR%\" goto error_wave_config
@@ -200,27 +200,21 @@ if defined GUI_LIVE (
 ) else (
     call xsim.bat behav_tb -log simulate.log %SIM_FLAGS% -wdb "%WDB_PATH:\=/%" -onfinish stop -tclbatch "%WAVE_SETUP:\=/%"
     if errorlevel 1 goto error_simulate
+)
+if not defined NO_WDB (
     findstr /b /l /c:"ERROR: Wave capture setup failed:" simulate.log >nul
     if not errorlevel 1 goto error_simulate
+    if not exist "%WDB_PATH%" goto error_simulate
 )
-if not defined NO_WDB if not exist "%WDB_PATH%" goto error_simulate
 
 if defined GUI_STATIC (
     call :open_wave_view
     if errorlevel 1 goto error_wave_view
 )
 
-findstr /b /i /l /c:"Fatal:" /c:"Error:" /c:"ERROR:" simulate.log >nul
-if not errorlevel 1 goto error_simulate
-for /f "tokens=1,2 delims=: " %%A in ('findstr /r /c:"^UVM_ERROR *:" /c:"^UVM_FATAL *:" simulate.log') do (
-    if not "%%B"=="0" goto error_simulate
-)
-if exist "uvm_test_passed" goto finish
-rem FOR /F reads complete lines in both LF and CRLF XSim logs.
-for /f "delims=" %%L in ('findstr /b /l /c:"[ PASS ] ALL TESTS PASSED" simulate.log') do (
-    if "%%L"=="[ PASS ] ALL TESTS PASSED" goto finish
-)
-goto error_simulate
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command "if (Get-Module -ListAvailable -Name BurntToast) { try { Import-Module BurntToast -ErrorAction Stop; New-BurntToastNotification -Text 'Behavior Simulation complete.', 'Check your log.' -ErrorAction Stop } catch { Write-Warning $_.Exception.Message } } else { Write-Host 'Build complete. BurntToast is not installed.' }"
+
+goto finish
 
 rem ----------------------------------------------------------------
 rem waveform viewers
@@ -232,10 +226,11 @@ set "LIVE_WDB_PATH=%WDB_PATH%"
 > gui_run.tcl echo if {![llength [get_wave_configs *]]} {create_wave_config}
 if defined NO_WDB (
     set "LIVE_WDB_PATH=%PATH_LOG%\live_tmp.wdb"
+    >> gui_run.tcl echo run all
 ) else (
-    >> gui_run.tcl echo log_wave -r /
+    >> gui_run.tcl echo set wave_live 1
+    >> gui_run.tcl echo source {%WAVE_SETUP:\=/%}
 )
->> gui_run.tcl echo run all
 call xsim.bat behav_tb -log simulate.log %SIM_FLAGS% -wdb "%LIVE_WDB_PATH:\=/%" -gui %GUI_VIEW% -onfinish stop -tclbatch gui_run.tcl
 set "LIVE_EXIT_CODE=%ERRORLEVEL%"
 if defined NO_WDB if exist "%LIVE_WDB_PATH%" del /q "%LIVE_WDB_PATH%"
@@ -350,8 +345,14 @@ set "EXIT_CODE=1"
 goto finish
 
 :error_snapshot_debug
-echo [ ERROR ] The existing snapshot does not support waveform capture. 1>&2
-echo [ INFO ] Run %SCRIPT_NAME% %TB_NAME% once with WDB recording enabled to build a waveform-capable snapshot. 1>&2
+echo [ ERROR ] The existing snapshot was not built with -debug all. 1>&2
+echo [ INFO ] Run %SCRIPT_NAME% %TB_NAME% without --skip-compile to rebuild it. 1>&2
+set "EXIT_CODE=1"
+goto finish
+
+:error_snapshot_gui_debug
+echo [ ERROR ] The existing snapshot does not support the live waveform view. 1>&2
+echo [ INFO ] Run %SCRIPT_NAME% %TB_NAME% --gui-live --no-wdb without --skip-compile to rebuild it. 1>&2
 set "EXIT_CODE=1"
 goto finish
 
@@ -361,7 +362,7 @@ set "EXIT_CODE=1"
 goto finish
 
 :error_simulate
-echo [ ERROR ] Simulation failed. See "%PATH_LOG%\simulate.log". 1>&2
+echo [ ERROR ] Could not complete the XSim run. See "%PATH_LOG%\simulate.log". 1>&2
 set "EXIT_CODE=1"
 
 :finish

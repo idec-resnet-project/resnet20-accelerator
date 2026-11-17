@@ -34,7 +34,21 @@ module tb_axi_bottleneck_toy;
     // --------------------------------
     // Select the DUT here. The dummy initializes its model backend internally.
     // axi_bottleneck_dummy #(.OUTPUT_FRAC_BITS(OUTPUT_FRAC_BITS)) dut (
-    axi_bottleneck dut (
+    axi_bottleneck #(
+        .CONFIG_DATA_BITWIDTH      (6),
+        .BITWIDTH_MAC_ITERATION     (16),
+        .BITWIDTH_POOLING_ITERATION (16),
+        .BITWIDTH_GAP_ITERATION     (16),
+        .PARALLEL_PC                (1),
+        .PARALLEL_PF                (1),
+        .AXI_LITE_ADDR_WIDTH        (32),
+        .AXI_LITE_DATA_WIDTH        (32),
+        .CONFIG_DEFAULT             ('0),
+        .BRAM_FEATRE_CAPACITY       (9),
+        .BRAM_KERNEL_CAPACITY       (12),
+        .BRAM_BIAS_CAPACITY         (3),
+        .ADDR_BITWIDTH               (3)
+    ) dut (
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),
 

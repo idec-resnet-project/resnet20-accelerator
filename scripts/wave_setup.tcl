@@ -3,4 +3,6 @@ if {[catch {log_wave -r /} message]} {
     quit
 }
 run all
-quit
+if {![info exists wave_live]} {
+    quit
+}

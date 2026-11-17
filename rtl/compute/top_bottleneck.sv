@@ -1,6 +1,7 @@
 module top_bottleneck #(
     // bitwidth 
     parameter integer BITWIDTH                   = 16,
+    parameter integer CONFIG_DATA_BITWIDTH      = 6,
     parameter integer CONFIG_BITWIDTH            = 32,
     parameter integer BITWIDTH_MAC_ITERATION     = 16,
     parameter integer BITWIDTH_POOLING_ITERATION = 16,
@@ -11,7 +12,8 @@ module top_bottleneck #(
     // Buffer address widths. Each RAM stores 2**width words.
     parameter integer BRAM_FEATRE_CAPACITY       = 14,
     parameter integer BRAM_KERNEL_CAPACITY       = 16,
-    parameter integer BRAM_BIAS_CAPACITY         = 6
+    parameter integer BRAM_BIAS_CAPACITY         = 6,
+    parameter integer ADDR_BITWIDTH             = 3
 )(
     input  wire                       clk,
     input  wire                       nrst,
@@ -181,7 +183,9 @@ controller #(
     .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION),
     .BRAM_FEATRE_CAPACITY       (BRAM_FEATRE_CAPACITY),
     .BRAM_KERNEL_CAPACITY       (BRAM_KERNEL_CAPACITY),
-    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY)
+    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY),
+    .CONFIG_DATA_BITWIDTH        (CONFIG_DATA_BITWIDTH),
+    .ADDR_BITWIDTH               (ADDR_BITWIDTH)
 ) u_controller (
     .clk               (clk),
     .nrst              (nrst),

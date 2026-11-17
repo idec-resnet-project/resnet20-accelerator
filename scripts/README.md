@@ -3,8 +3,8 @@
 저장소 루트에서 Windows 명령 프롬프트로 실행합니다.
 
 ```bat
-scripts\behav_sim.bat tb_axi_bottleneck_partial --no-wdb
-scripts\behav_sim.bat tb_axi_bottleneck_toy --no-wdb
+scripts\behav_sim.bat tb_axi_bottleneck_partial
+scripts\behav_sim.bat tb_axi_bottleneck_toy
 ```
 
 | 옵션 | 동작 |
@@ -13,6 +13,8 @@ scripts\behav_sim.bat tb_axi_bottleneck_toy --no-wdb
 | `--gui` | 완료 후 저장된 파형 열기 |
 | `--gui-live` | 라이브 파형 창에서 실행 |
 | `--skip-compile` | 기존 스냅샷 재사용. 소스·DUT·파일 목록 변경 후에는 새로 컴파일 |
+
+Windows 실행기는 XSim이 기록할 수 있는 전체 계층의 신호를 `tb/<tb_name>/.log/behav_tb.wdb`에 저장합니다. 파형을 저장하면서 `--skip-compile`을 사용하려면 `-debug all`로 빌드한 스냅샷이 필요합니다. `--no-wdb`를 지정하면 결과 WDB를 저장하지 않습니다.
 
 ## 폴더와 파일 목록
 
@@ -31,7 +33,6 @@ tb/
     <tb_name>.sv                 # top module 이름도 동일
     <tb_name>.f
     <tb_name>.wcfg               # 선택
-    wave_setup.tcl              # 선택
     include/                    # 선택
 ```
 
