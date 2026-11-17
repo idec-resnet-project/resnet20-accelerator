@@ -24,57 +24,64 @@ module post_mac #(
     // Shift and Round Logic    
     // bias: 반올림 위한 소수비트
     // shifted: bias를 더한 후 Q_SCALE만큼 오른쪽으로 시프트
-    //=======================================================================
-    wire signed [ACC_W:0]         data_ext = {data_in[ACC_W-1], data_in};
-    wire signed [Q_SCALE:0]       bias     = data_in[ACC_W-1] ? M_Q : P_Q; 
-    wire signed [ACC_W-Q_SCALE:0] shifted  = (data_ext + bias) >>> Q_SCALE;
-    reg  signed [ACC_W:0]         data;
-    reg                           done;
-    always @(posedge clk or negedge rst_n) 
+    //=======================================================================    
+    
+    reg     signed [ACC_W+1:0]        data_ext;// = {data_in[ACC_W-1], data_in};
+    reg     signed [Q_SCALE:0]        bias;//     = data_in[ACC_W-1] ? M_Q : P_Q; 
+    reg     signed [ACC_W+1-Q_SCALE:0]shifted;//  = (data_ext + bias) >>> Q_SCALE;
+    reg     signed [WORD_W-1:0]       data;
+    reg                               done;
+    reg                               proc;
+    reg                               shift_load;  
+    
+    always @(posedge clk or negedge rst_n)
+    if(!rst_n)
     begin
-    //=======================================================================
-    // Sync Reset Logic for post_mac unit   
-    //=======================================================================
-        if (!rst_n) 
+        data        <= {WORD_W{1'b0}};
+        done        <= 0;
+        shifted     <= 0;
+        data_ext    <= 0;
+        bias        <= 0;
+        shift_load  <= 0;
+        data_out    <= {WORD_W{1'b0}};
+        valid_out   <= 0; 
+        proc        <= 0;
+    end
+    
+    else
+    begin        
+        if(valid_in && !done) 
+        begin              
+            proc <= 1;   
+            data_ext  <= {data_in[ACC_W], data_in};
+            bias      <= data_in[ACC_W] ? M_Q : P_Q;            
+        end    
+        if(proc && !done)
+        begin
+            shifted    <= (data_ext + bias) >>> Q_SCALE;    
+            shift_load <= 1; 
+            if(shift_load)
             begin
-                data_out    <= {WORD_W{1'b0}};
-                valid_out   <= 0;
-                data        <= {WORD_W{1'b0}};
-                done        <= 0;
-            end 
-        else 
-    //=======================================================================
-    // when valid input(valid_out from mac) is high, check for overflow and underflow
-    // if overflow or underflow, output max or min value
-    // else output the shifted value
-    // when valid input is low, output is 0
-    //=======================================================================
-            if(valid_in)
-            begin                
-                if(!done)
-                    begin
-                    if (shifted > INT_MAX)
-                        data <= INT_MAX;
-                    else if (shifted < INT_MIN)
-                        data <= INT_MIN;
-                    else
-                        data <= shifted[WORD_W-1:0];
-                        done <= 1; 
-                    end
+                if (shifted > INT_MAX)
+                    data <= INT_MAX;
+                else if (shifted < INT_MIN)
+                    data <= INT_MIN;
                 else
-                    begin
-                        valid_out <= 1;
-                        done      <= 0;
-                        data_out  <= data;
-                    end
+                    data <= shifted[WORD_W-1:0];
+                done <= 1;
             end
-    //=======================================================================
-    // when valid input is low, valid is 0
-    //=======================================================================        
-            else
-                begin
-                    valid_out <= 0;                    
-                end
+        end
+        else if(done)
+        begin
+            data_out    <= data;
+            valid_out   <= 1;
+            proc        <= 0;            
+            shifted     <= 0;
+            shift_load  <= 0;
+            done        <= 0;
+        end
+        else
+            valid_out <= 0;
     end
 
 endmodule
