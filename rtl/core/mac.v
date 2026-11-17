@@ -1,209 +1,146 @@
 `timescale 1ns/1ps
 
+// Five registered stages: multiply, accumulate, round, saturate, output.
+// One input product per clock; one completed MAC result per iteration group.
+// Keep iteration stable while a group is being accumulated.
 module mac #(
     parameter integer BITWIDTH = 16,
     parameter integer BITWIDTH_MAC_ITERATION = 16
 )(
-    input  wire                                     clk,
-    input  wire                                     nrst,
-    input  wire                                     enable,
-    input  wire        [BITWIDTH_MAC_ITERATION-1:0] iteration,
-    input  wire                                     in_enable,
-    input  wire signed [BITWIDTH-1:0]               in_data,
-    input  wire signed [BITWIDTH-1:0]               kernel_data,
-    output reg                                      out_enable,
-    output reg signed [BITWIDTH-1:0]                out_data
+    input  wire clk,
+    input  wire nrst,
+    input  wire enable,
+    input  wire [BITWIDTH_MAC_ITERATION-1:0] iteration,
+    input  wire in_enable,
+    input  wire signed [BITWIDTH-1:0] in_data,
+    input  wire signed [BITWIDTH-1:0] kernel_data,
+    output reg out_enable,
+    output reg signed [BITWIDTH-1:0] out_data
 );
-
-    //===============================
-    // Parameters
-    //===============================
     localparam integer FRAC_BITS = 8;
-    localparam integer ACTIVATION_DIVISOR = 1 << FRAC_BITS;
+    // Maximum sum of 2**ITER_WIDTH signed products requires
+    // 2*BITWIDTH + ITER_WIDTH bits (including the sign bit).
+    localparam integer ACC_WIDTH = 2*BITWIDTH + BITWIDTH_MAC_ITERATION;
+    localparam signed [ACC_WIDTH-1:0] HALF_LSB =
+        {{(ACC_WIDTH-1){1'b0}},1'b1} <<< (FRAC_BITS-1);
+    localparam signed [ACC_WIDTH-1:0] MAX_VALUE =
+        ({{(ACC_WIDTH-1){1'b0}},1'b1} <<< (BITWIDTH-1)) - 1'b1;
+    localparam signed [ACC_WIDTH-1:0] MIN_VALUE =
+        -({{(ACC_WIDTH-1){1'b0}},1'b1} <<< (BITWIDTH-1));
 
-    //===============================
-    // Internal registers
-    //===============================
-
-    // Multiply
-    reg signed [2*BITWIDTH-1:0] product;
-    reg signed [BITWIDTH-1:0] bypass_data;
-    reg mul_valid;
-    reg mul_enable;
-
-    // Accumulate
-    reg signed [63:0] accumulator;
-    reg [BITWIDTH_MAC_ITERATION-1:0] input_count;
-
-    reg signed [63:0] acc_result;
-    reg acc_valid;
-    reg acc_bypass;
-
-    // Fixed-point conversion
-    reg signed [BITWIDTH-1:0] converted_data;
-    reg conv_valid;
-
-    // Accumulation result
-    wire signed [63:0] extended_product = $signed(product);
-    wire signed [63:0] total = accumulator + extended_product;
-
-    //===============================
-    // Fixed-point functions
-    //===============================
-
-    // Saturate to signed BITWIDTH range
-    function automatic signed [BITWIDTH-1:0] saturate;
-        input signed [63:0] value;
-        reg signed [63:0] limit;
-        begin
-            limit = 64'sd1 <<< (BITWIDTH-1);
-
-            if (value >= limit)
-                saturate = limit - 1;
-            else if (value < -limit)
-                saturate = -limit;
-            else
-                saturate = value;
-        end
-    endfunction
-
-    // Round to nearest, ties away from zero
-    function automatic signed [63:0] rounded_divide;
-        input signed [63:0] value;
-        input integer divisor;
-        begin
-            if (value < 0)
-                rounded_divide =
-                    -((-value + divisor/2) / divisor);
-            else
-                rounded_divide =
-                    (value + divisor/2) / divisor;
-        end
-    endfunction
-
-    //===============================
-    // Multiply
-    //===============================
+    // Stage 1: DSP multiplication and bypass alignment.
+    reg signed [2*BITWIDTH-1:0] product_r;
+    reg signed [BITWIDTH-1:0] bypass_r;
+    reg valid_r, mode_r;
     always @(posedge clk or negedge nrst) begin
-        // Reset
         if (!nrst) begin
-            product     <= 0;
-            bypass_data <= 0;
-            mul_valid   <= 0;
-            mul_enable  <= 0;
-        end
-        else begin
-            mul_valid <= in_enable;
-
+            product_r <= 0;
+            bypass_r <= 0;
+            valid_r <= 0;
+            mode_r <= 0;
+        end else begin
+            valid_r <= in_enable;
             if (in_enable) begin
-                mul_enable <= enable;
-
-                if (enable) begin
-                    // Q7.8 x Q7.8 = Q14.16
-                    product <= in_data * kernel_data;
-                end
-                else begin
-                    // Bypass multiplication
-                    bypass_data <= in_data;
-                end
+                mode_r <= enable;
+                if (enable) product_r <= in_data * kernel_data;
+                else bypass_r <= in_data;
             end
         end
     end
 
-    //===============================
-    // Accumulate
-    //===============================
+    // Stage 2: feedback accumulator. Keep this stage at one addition.
+    reg signed [ACC_WIDTH-1:0] accumulator;
+    reg [BITWIDTH_MAC_ITERATION-1:0] count;
+    reg signed [ACC_WIDTH-1:0] sum_r;
+    reg signed [BITWIDTH-1:0] bypass_s2;
+    reg complete_r, bypass_mode_s2;
+    wire signed [ACC_WIDTH-1:0] product_ext =
+        {{(ACC_WIDTH-2*BITWIDTH){product_r[2*BITWIDTH-1]}},product_r};
+    wire signed [ACC_WIDTH-1:0] sum_next = accumulator + product_ext;
     always @(posedge clk or negedge nrst) begin
-        // Reset
         if (!nrst) begin
             accumulator <= 0;
-            input_count <= 0;
-            acc_result  <= 0;
-            acc_valid   <= 0;
-            acc_bypass  <= 0;
-        end
-        else begin
-            // Default: no completed result
-            acc_valid <= 0;
-
-            if (mul_valid) begin
-                if (!mul_enable) begin
-                    // Bypass MAC operation
+            count <= 0;
+            sum_r <= 0;
+            bypass_s2 <= 0;
+            complete_r <= 0;
+            bypass_mode_s2 <= 0;
+        end else begin
+            complete_r <= 0;
+            if (valid_r) begin
+                if (!mode_r) begin
                     accumulator <= 0;
-                    input_count <= 0;
-
-                    acc_result <= $signed(bypass_data);
-                    acc_valid  <= 1;
-                    acc_bypass <= 1;
-                end
-                else if (iteration != 0) begin
-                    if (input_count == iteration - 1'b1) begin
-                        // Final accumulation
-                        acc_result <= total;
-                        acc_valid  <= 1;
-                        acc_bypass <= 0;
-
-                        // Reset for next MAC operation
+                    count <= 0;
+                    bypass_s2 <= bypass_r;
+                    bypass_mode_s2 <= 1;
+                    complete_r <= 1;
+                end else if (iteration != 0) begin
+                    if (count == iteration - 1'b1) begin
+                        sum_r <= sum_next;
                         accumulator <= 0;
-                        input_count <= 0;
-                    end
-                    else begin
-                        // Continue accumulation
-                        accumulator <= total;
-                        input_count <= input_count + 1'b1;
+                        count <= 0;
+                        bypass_mode_s2 <= 0;
+                        complete_r <= 1;
+                    end else begin
+                        accumulator <= sum_next;
+                        count <= count + 1'b1;
                     end
                 end
             end
         end
     end
 
-    //===============================
-    // Fixed-point conversion
-    //===============================
+    // Stage 3: round-to-nearest, ties away from zero.
+    // Division by 2**FRAC_BITS becomes a constant shift.
+    wire signed [ACC_WIDTH-1:0] rounded_positive =
+        (sum_r + HALF_LSB) >>> FRAC_BITS;
+    wire signed [ACC_WIDTH-1:0] rounded_negative =
+        -(((-sum_r) + HALF_LSB) >>> FRAC_BITS);
+    reg signed [ACC_WIDTH-1:0] rounded_r;
+    reg signed [BITWIDTH-1:0] bypass_s3;
+    reg valid_s3, bypass_mode_s3;
     always @(posedge clk or negedge nrst) begin
-        // Reset
         if (!nrst) begin
-            converted_data <= 0;
-            conv_valid      <= 0;
-        end
-        else begin
-            conv_valid <= acc_valid;
-
-            if (acc_valid) begin
-                if (acc_bypass) begin
-                    // Preserve original Q7.8 input
-                    converted_data <= acc_result[BITWIDTH-1:0];
-                end
-                else begin
-                    // Q14.16 -> Q7.8
-                    // Rounding and saturation
-                    converted_data <= saturate(
-                        rounded_divide(
-                            acc_result,
-                            ACTIVATION_DIVISOR
-                        )
-                    );
-                end
+            rounded_r <= 0;
+            bypass_s3 <= 0;
+            valid_s3 <= 0;
+            bypass_mode_s3 <= 0;
+        end else begin
+            valid_s3 <= complete_r;
+            if (complete_r) begin
+                rounded_r <= sum_r < 0 ? rounded_negative : rounded_positive;
+                bypass_s3 <= bypass_s2;
+                bypass_mode_s3 <= bypass_mode_s2;
             end
         end
     end
 
-    //===============================
-    // Output
-    //===============================
+    // Stage 4: saturate and select bypass.
+    reg signed [BITWIDTH-1:0] converted_r;
+    reg valid_s4;
     always @(posedge clk or negedge nrst) begin
-        // Reset
+        if (!nrst) begin
+            converted_r <= 0;
+            valid_s4 <= 0;
+        end else begin
+            valid_s4 <= valid_s3;
+            if (valid_s3) begin
+                if (bypass_mode_s3) converted_r <= bypass_s3;
+                else if (rounded_r > MAX_VALUE) converted_r <= MAX_VALUE[BITWIDTH-1:0];
+                else if (rounded_r < MIN_VALUE) converted_r <= MIN_VALUE[BITWIDTH-1:0];
+                else converted_r <= rounded_r[BITWIDTH-1:0];
+            end
+        end
+    end
+
+    // Stage 5: registered output.
+    always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
             out_enable <= 0;
-            out_data   <= 0;
-        end
-        else begin
-            out_enable <= conv_valid;
-
-            if (conv_valid) begin
-                out_data <= converted_data;
-            end
+            out_data <= 0;
+        end else begin
+            out_enable <= valid_s4;
+            if (valid_s4) out_data <= converted_r;
         end
     end
-
 endmodule

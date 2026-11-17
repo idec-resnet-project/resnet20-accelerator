@@ -127,7 +127,7 @@ module tb_mac;
         else begin
             cycle_count = cycle_count + 1;
 
-            if (cycle_count >= MAX_CYCLES-3)
+            if (cycle_count >= MAX_CYCLES-4)
                 $fatal(1, "[FAIL] Scoreboard capacity exceeded");
 
             // Process the input captured one edge earlier.
@@ -139,8 +139,8 @@ module tb_mac;
                     model_sum = 0;
                     model_count = 0;
 
-                    expected_valid[cycle_count+2] = 1;
-                    expected_data[cycle_count+2] = model_input;
+                    expected_valid[cycle_count+3] = 1;
+                    expected_data[cycle_count+3] = model_input;
                 end
                 else if (iteration != 0) begin
                     model_sum = model_sum
@@ -150,8 +150,8 @@ module tb_mac;
                     model_count = model_count + 1;
 
                     if (model_count == iteration) begin
-                        expected_valid[cycle_count+2] = 1;
-                        expected_data[cycle_count+2] =
+                        expected_valid[cycle_count+3] = 1;
+                        expected_data[cycle_count+3] =
                             mac_ref(model_sum);
 
                         model_sum = 0;
@@ -248,7 +248,7 @@ module tb_mac;
     task automatic drain;
         begin
             send_input(1, 0, 0, 0);
-            repeat (5) @(negedge clk);
+            repeat (6) @(negedge clk);
         end
     endtask
 
@@ -257,7 +257,7 @@ module tb_mac;
     // ==========================================
     initial begin
         $display("====================================");
-        $display(" MAC 4-Stage Pipeline Simulation");
+        $display(" MAC 5-Stage Pipeline Simulation");
         $display(" Clock: 100 MHz");
         $display(" Fixed-point: Q7.8");
         $display("====================================");

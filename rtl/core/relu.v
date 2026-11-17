@@ -1,52 +1,37 @@
 `timescale 1ns/1ps
-// Same-clock, valid-only stream. Configuration stays stable until drained.
+
 module relu #(parameter integer BITWIDTH = 16)(
-    input wire clk,
-    input wire nrst,
-    input wire enable,
-    input wire in_enable,
-    input wire signed [BITWIDTH-1:0] in_data,
+    input  wire clk,
+    input  wire nrst,
+    input  wire enable,
+    input  wire in_enable,
+    input  wire signed [BITWIDTH-1:0] in_data,
     output wire out_enable,
     output wire signed [BITWIDTH-1:0] out_data
 );
+    reg stage1_valid;
+    reg signed [BITWIDTH-1:0] stage1_data;
+    reg stage2_valid;
+    reg signed [BITWIDTH-1:0] stage2_data;
 
-    //===============================
-    // Stage 1: ReLU
-    //===============================
-    reg pending_enable;
-    reg signed [BITWIDTH-1:0] pending_data;
+    wire zero_negative = enable & in_data[BITWIDTH-1];
+    wire signed [BITWIDTH-1:0] relu_value =
+        in_data & {BITWIDTH{~zero_negative}};
 
-    //===============================
-    // Stage 2: Output
-    //===============================
-    reg valid;
-    reg signed [BITWIDTH-1:0] data;
-
-    assign out_enable = valid;
-    assign out_data   = data;
+    assign out_enable = stage2_valid;
+    assign out_data   = stage2_data;
 
     always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
-            pending_enable <= 1'b0;
-            pending_data   <= {BITWIDTH{1'b0}};
-            valid          <= 1'b0;
-            data           <= {BITWIDTH{1'b0}};
-        end
-        else begin
-            // Stage 1
-            pending_enable <= in_enable;
-
-            if (in_enable) begin
-                pending_data <= (enable && in_data[BITWIDTH-1]) ? {BITWIDTH{1'b0}} : in_data;
-            end
-
-            // Stage 2
-            valid <= pending_enable;
-
-            if (pending_enable) begin
-                data <= pending_data;
-            end
+            stage1_valid <= 1'b0;
+            stage1_data  <= {BITWIDTH{1'b0}};
+            stage2_valid <= 1'b0;
+            stage2_data  <= {BITWIDTH{1'b0}};
+        end else begin
+            stage1_valid <= in_enable;
+            stage1_data  <= relu_value;
+            stage2_valid <= stage1_valid;
+            stage2_data  <= stage1_data;
         end
     end
-
 endmodule
