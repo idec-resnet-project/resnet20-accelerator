@@ -24,22 +24,22 @@ module ReLU_packed#(
 parameter integer WORD_W = 16
 )
 (
-    input  wire clk,
-    input  wire rst_n,
-    input  wire enable,    
+    input  wire                     clk,
+    input  wire                     rst_n,
+    input  wire                     enable,    
     input  wire signed [WORD_W-1:0] data_in,
-    output wire valid_out,
+    
     output wire signed [WORD_W-1:0] data_out    
     );
 
-
+    wire              valid_out;
     wire [WORD_W-1:0] relu_out;
     mux uut_mux
     (
     .data_x(data_in),
     .data_y(relu_out),
-    .enable(enable),      
-    .out_data(data_out)
+    .enable(valid_out),      
+    .data_out(data_out)
     );
     
     ReLU uut_ReLU
