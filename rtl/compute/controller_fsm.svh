@@ -97,7 +97,7 @@ always_ff @(negedge clk or posedge nrst) begin : FSM_cstate
                 end   
             end
             RUN: begin
-                if (cnt_output == len_output) begin
+                if (cnt_output == len_output & out_enable) begin
                     if (cfg_output_enable) begin
                         cstate <= OUTPUT;
                     end else begin

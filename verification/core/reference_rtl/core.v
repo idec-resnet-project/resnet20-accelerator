@@ -57,7 +57,7 @@ module core #(
     wire signed [BITWIDTH-1:0] residual_main = mac_held_valid ? mac_held_data : mac_data;
     wire signed [BITWIDTH-1:0] residual_skip = skip_held_valid ? skip_held_data : in_data;
 
-    always @(posedge clk or negedge nrst) begin
+    always @(negedge clk or negedge nrst) begin
         if (!nrst) begin
             waiting_for_skip <= 0;
             mac_held_valid <= 0;

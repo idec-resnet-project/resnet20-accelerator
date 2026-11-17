@@ -27,7 +27,7 @@ module controller #(
     output reg  [BITWIDTH_GAP_ITERATION-1:0]     gap_iteration,
     
     // core input
-    output wire                                  in_enable,
+    output reg                                   in_enable,
     input  wire                                  out_enable,
 
     // top control
@@ -97,6 +97,7 @@ localparam BITWIDTH_CNT = 32;
 
 // core
 localparam LATENCY_RESIDUAL = 1;
+localparam LATENCY_CORE = 1;
 
 // ----------------------------------------------------------------
 // wire & reg
@@ -154,11 +155,14 @@ reg [ADDR_BITWIDTH-1:0] addr_cin;
 reg [ADDR_BITWIDTH-1:0] addr_krow;
 reg [ADDR_BITWIDTH-1:0] addr_kcol;
 reg [ADDR_BITWIDTH-1:0] addr_cout; 
+reg [ADDR_BITWIDTH-1:0] addr_orow;
+reg [ADDR_BITWIDTH-1:0] addr_ocol;
+reg [ADDR_BITWIDTH-1:0] addr_oc; 
 
 wire [BRAM_FEATRE_CAPACITY-1:0] core_in_f_addr;
-wire [BRAM_FEATRE_CAPACITY-1:0] core_in_k_addr;
-wire [BRAM_FEATRE_CAPACITY-1:0] core_in_b_addr;
-wire [BRAM_KERNEL_CAPACITY-1:0] core_out_f_addr;
+wire [BRAM_KERNEL_CAPACITY-1:0] core_in_k_addr;
+wire [BRAM_BIAS_CAPACITY-1:0] core_in_b_addr;
+wire [BRAM_FEATRE_CAPACITY-1:0] core_out_f_addr;
 
 wire [BRAM_FEATRE_CAPACITY-1:0] fmem_rd_addr_temp;
 

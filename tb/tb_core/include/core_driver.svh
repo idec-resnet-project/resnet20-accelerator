@@ -3,7 +3,7 @@
     // --------------------------------
     task automatic idle(input int cycles);
         repeat (cycles) begin
-            @(negedge clk);
+            @(posedge clk);
             in_enable = 0;
         end
     endtask
@@ -17,13 +17,13 @@
     endtask
 
     task automatic send_word(input word_t value, kernel, bias, input int index);
-        @(negedge clk);
+        @(posedge clk);
         drive(value, kernel, bias, index);
     endtask
 
     task automatic send_skip(input word_t value, input int index);
         idle(SKIP_DELAY_CYCLES - 1);
-        @(negedge clk);
+        @(posedge clk);
         drive(value, 0, 0, index);
     endtask
 

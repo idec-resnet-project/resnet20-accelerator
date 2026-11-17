@@ -17,7 +17,7 @@ module relu #(parameter integer BITWIDTH = 16)(
     assign out_enable = valid;
     assign out_data = data;
 
-    always @(posedge clk or negedge nrst) begin
+    always @(negedge clk or negedge nrst) begin
         if (!nrst) begin
             pending_enable <= 0;
             pending_data <= 0;

@@ -1,21 +1,24 @@
 // core configure
-assign in_enable = (cstate == RUN) & (cnt_run != len_feature+1);
+always_ff @(negedge clk or negedge nrst) begin
+    if (!nrst) in_enable <= '0;
+    else in_enable <= (cstate == RUN) & (cnt_run != len_feature+1);
+end
 
 assign mac_iteration = (ctrl_kw+1)*(ctrl_kw+1)*(ctrl_fc+1);
 assign gap_iteration = (ctrl_fw+1)*(ctrl_fw+1);
 
-assign core_in_f_addr  = {addr_cin, addr_frow, addr_fcol};
-assign core_in_k_addr  = {addr_krow, addr_kcol, addr_cin, addr_cout};
-assign core_in_b_addr  = {addr_cin};
+assign core_in_f_addr  = {addr_cin, addr_fcol, addr_frow};
+assign core_in_k_addr  = {addr_cout, addr_cin, addr_kcol, addr_krow};
+assign core_in_b_addr  = {addr_cout};
+assign core_out_f_addr = {addr_oc, addr_ocol, addr_orow};
 
 // fmem
 assign fmem_rd_addr_temp = addr_frow + ctrl_fw * (addr_fcol + ctrl_fw * addr_cin);
 
-
-assign fmem_wr_enable[0] = (is_fmem0_in) ? 0 : (out_enable | dma_feature_hk);
-assign fmem_wr_enable[1] = (is_fmem0_in) ? (out_enable | dma_feature_hk) : 0;
-assign fmem_wr_addr[0]   =  (is_fmem0_in) ? core_in_f_addr : '0;
-assign fmem_wr_addr[1]   =  (~is_fmem0_in) ? core_in_f_addr : '0;
+assign fmem_wr_enable[0] = (is_fmem0_in)  ? 0 : (out_enable | dma_feature_hk);
+assign fmem_wr_enable[1] = (is_fmem0_in)  ? (out_enable | dma_feature_hk) : 0;
+assign fmem_wr_addr[0]   = (is_fmem0_in)  ? core_in_f_addr : core_out_f_addr;
+assign fmem_wr_addr[1]   = (~is_fmem0_in) ? core_in_f_addr : core_out_f_addr;
 assign fmem_rd_addr[0]   = core_in_f_addr;
 assign fmem_rd_addr[1]   = core_in_f_addr;
 
@@ -40,6 +43,9 @@ reg [ADDR_BITWIDTH-1:0] addr_cin_next;
 reg [ADDR_BITWIDTH-1:0] addr_krow_next;
 reg [ADDR_BITWIDTH-1:0] addr_kcol_next;
 reg [ADDR_BITWIDTH-1:0] addr_cout_next;
+reg [ADDR_BITWIDTH-1:0] addr_orow_next;
+reg [ADDR_BITWIDTH-1:0] addr_ocol_next;
+reg [ADDR_BITWIDTH-1:0] addr_oc_next;
 
 wire  addr_frow_carry;
 wire  addr_fcol_carry;
@@ -80,9 +86,10 @@ assign addr_krow_carry  = addr_krow  == ctrl_kw;
 assign addr_kcol_carry  = addr_kcol  == ctrl_kw;
 assign addr_cout_carry  = addr_cout  == ctrl_kc;
 
-assign addr_orow_carry  = addr_frow == ctrl_ow;
-assign addr_ocol_carry  = addr_fcol == ctrl_ow;
-assign addr_oc_carry    = addr_cin == ctrl_kc;
+assign addr_orow_carry  = addr_orow == ctrl_ow;
+assign addr_ocol_carry  = addr_ocol == ctrl_ow;
+assign addr_oc_carry    = addr_oc == ctrl_kc;
+
 
 always_comb begin
     case (cstate)
@@ -94,6 +101,9 @@ always_comb begin
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end else begin
                 addr_frow_next  = addr_frow; 
                 addr_fcol_next  = addr_fcol;
@@ -101,6 +111,9 @@ always_comb begin
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end
         end
         IN_KERNEL : begin
@@ -111,6 +124,9 @@ always_comb begin
                 addr_krow_next  = (addr_krow_carry)         ? '0 : addr_krow + 1;
                 addr_kcol_next  = (addr_krkc_carry)         ? '0 : addr_kcol + addr_krow_carry;
                 addr_cout_next  = (addr_krkccincout_carry)  ? '0 : addr_cout + addr_krkccin_carry;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end else begin
                 addr_frow_next  = addr_frow; 
                 addr_fcol_next  = addr_fcol;
@@ -118,16 +134,22 @@ always_comb begin
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end
         end
         IN_BIAS : begin
             if (dma_bias_hk) begin
                 addr_frow_next  = addr_frow;
                 addr_fcol_next  = addr_fcol;
-                addr_cin_next   = (addr_cin_carry) ? '0 : addr_cin + 1;
+                addr_cin_next   = addr_cin;
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
-                addr_cout_next  = addr_cout;
+                addr_cout_next  = (addr_cout_carry) ? '0 : addr_cout + 1;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end else begin
                 addr_frow_next  = addr_frow; 
                 addr_fcol_next  = addr_fcol;
@@ -135,6 +157,9 @@ always_comb begin
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end
         end
         RUN : begin
@@ -144,6 +169,9 @@ always_comb begin
             addr_krow_next  = (addr_krow_carry)            ? '0 : addr_krow + 1;
             addr_kcol_next  = (addr_krkc_carry)            ? '0 : addr_kcol + addr_krow_carry;
             addr_cout_next  = (addr_krkccinfrfccout_carry) ? '0 : addr_cout + addr_krkccinfrfc_carry;
+            addr_orow_next  = (addr_orow_carry   & out_enable)? '0 : addr_orow + out_enable;
+            addr_ocol_next  = (addr_oroc_carry   & out_enable)            ? '0 : addr_ocol + (addr_orow_carry & out_enable);
+            addr_oc_next    = (addr_orococ_carry & out_enable)          ? '0 : addr_oc   + (addr_oroc_carry & out_enable);
         end
         OUTPUT : begin
             if (dma_result_hk) begin
@@ -153,6 +181,9 @@ always_comb begin
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end else begin
                 addr_frow_next  = addr_frow; 
                 addr_fcol_next  = addr_fcol;
@@ -160,6 +191,9 @@ always_comb begin
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
+                addr_orow_next  = addr_orow;
+                addr_ocol_next  = addr_ocol;
+                addr_oc_next    = addr_oc;
             end
         end
         default : begin
@@ -169,6 +203,9 @@ always_comb begin
                 addr_krow_next  = '0;
                 addr_kcol_next  = '0;
                 addr_cout_next  = '0;
+                addr_orow_next  = '0;
+                addr_ocol_next  = '0;
+                addr_oc_next    = '0;
         end 
     endcase
 end
@@ -188,5 +225,8 @@ always_ff @(negedge clk or posedge nrst) begin : FEATURE_ROW
         addr_krow <= addr_krow_next;
         addr_kcol <= addr_kcol_next;
         addr_cout <= addr_cout_next;
+        addr_orow <= addr_orow_next;        
+        addr_ocol <= addr_ocol_next;
+        addr_oc   <= addr_oc_next;        
     end        
 end 

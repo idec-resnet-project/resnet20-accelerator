@@ -13,7 +13,7 @@
 
     task automatic begin_compare(input string name, input int width, channels, count,
                                  input longint cycle_budget, input bit directed = 0);
-        @(negedge clk);
+        @(posedge clk);
         in_enable = 0;
         compare_name = name;
         compare_width = width;
@@ -39,7 +39,7 @@
     // --------------------------------
     // Output sampling and diagnostics
     // --------------------------------
-    always @(posedge clk) begin : observe_output
+    always @(negedge clk) begin : observe_output
         int index, y, x, oc;
         if (nrst) begin
             if (comparing) begin
@@ -72,7 +72,7 @@
 
     task automatic finish_compare;
         repeat (CORE_PIPELINE_CYCLES + 1) begin
-            @(negedge clk);
+            @(posedge clk);
             in_enable = 0;
         end
         if (received != expected_count || queued != expected_count)

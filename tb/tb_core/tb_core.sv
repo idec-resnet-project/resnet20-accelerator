@@ -124,9 +124,9 @@ module tb_core;
         check_schedule();
 `ifdef TB_CORE_POST_SYNTHESIS
         // The Vivado global startup reset holds the primitives for 100 ns.
-        repeat (11) @(posedge clk);
+        repeat (11) @(negedge clk);
 `endif
-        repeat (3) @(negedge clk);
+        repeat (3) @(posedge clk);
         nrst = 1;
         check_arithmetic();
         run_model();

@@ -29,7 +29,7 @@ module residual #(parameter integer BITWIDTH = 16)(
     wire signed [63:0] main_extended = $signed(in_data);
     wire signed [63:0] skip_extended = $signed(skip_data);
 
-    always @(posedge clk or negedge nrst) begin
+    always @(negedge clk or negedge nrst) begin
         if (!nrst) begin
             pending_enable <= 0;
             pending_data <= 0;

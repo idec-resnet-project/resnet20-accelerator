@@ -133,6 +133,8 @@
                 snr_text = $sformatf("%.2f dB", snr_db);
                 if (snr_db < cfg.min_logit_snr_db) begin
                     snr_status = "FAIL";
+                    test_error("LOGIT_SNR", $sformatf("SNR %.2f dB is below %.2f dB",
+                                                      snr_db, cfg.min_logit_snr_db));
                 end
             end
             $display("");

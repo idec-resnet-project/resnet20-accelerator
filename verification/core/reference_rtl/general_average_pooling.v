@@ -44,7 +44,7 @@ module general_average_pooling #(
     wire signed [63:0] extended_input = $signed(in_data);
     wire signed [63:0] total = accumulator + extended_input;
 
-    always @(posedge clk or negedge nrst) begin
+    always @(negedge clk or negedge nrst) begin
         if (!nrst) begin
             accumulator <= 0;
             input_count <= 0;

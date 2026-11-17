@@ -97,7 +97,7 @@ module mac_accumulate #(
     wire signed [63:0] total = base_sum + extended_product;
     assign last_input = enable && in_enable && input_count == iteration - 1'b1;
 
-    always @(posedge clk or negedge nrst) begin
+    always @(negedge clk or negedge nrst) begin
         if (!nrst) begin
             pending_enable <= 0;
             pending_data <= 0;
