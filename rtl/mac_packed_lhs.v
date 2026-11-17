@@ -53,7 +53,12 @@ module mac_packed#(
     .data_out(data_out)  
     );
     
-    mac_v3 uut_mac
+    mac_v3
+    #(
+    .WORD_W(WORD_W),
+    .ITER_CNT(ITER_CNT)
+    )
+     uut_mac
     (
     .clk(clk),                    
     .rst_n(rst_n),                   
