@@ -40,7 +40,7 @@ module avgpool #(
     
     reg signed  [ACC_W-1:0] sum;
     reg         [ITER_CNT-1:0] iter_cnt;
-    reg signed  [WORD_W-1:0] avg_result;
+    //reg signed  [WORD_W-1:0] avg_result;
     reg         [ITER_CNT-1:0] divisor;
     //=======================================================================
     // iteration count is 2's power, divisor = log2(iteration count)
@@ -50,10 +50,10 @@ module avgpool #(
     begin
         divisor = {ITER_CNT{1'd0}};
         case(iter)
-            {4'b0000}:  divisor = {ITER_CNT{1'd0}};
-            {4'b0010}:  divisor = {ITER_CNT{1'd1}};
-            {4'b0100}:  divisor = {ITER_CNT{2'd2}};
-            {4'b1000}:  divisor = {ITER_CNT{2'd3}};
+            {4'b0000}:  divisor = 4'd0;
+            {4'b0010}:  divisor = 4'd1;
+            {4'b0100}:  divisor = 4'd2;
+            {4'b1000}:  divisor = 4'd3;
             //{ITER_CNT{'d16}}: divisor = {ITER_CNT{1'd4}};
             default: divisor = {ITER_CNT{1'd0}};
             

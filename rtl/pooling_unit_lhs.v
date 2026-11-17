@@ -3,14 +3,15 @@
 module pooling_unit #(
     parameter integer WORD_W = 16,          
     parameter integer ACC_W = WORD_W*2+1, 
-    parameter integer ITER_CNT = 5   
+    parameter integer MAX_ITER_CNT = 5,
+    parameter integer AVG_ITER_CNT = 5 
 )(
     input wire clk, 
     input wire rst_n,
     input wire enable_avg,                      
     input wire enable_max,
-    input wire [ITER_CNT-1:0] iter,         
-                                            
+    input wire [MAX_ITER_CNT-1:0] max_iter,         
+    input wire [AVG_ITER_CNT-1:0] avg_iter,                                          
 
     input wire signed [WORD_W-1:0] data_in, 
     
@@ -32,12 +33,12 @@ module pooling_unit #(
     avgpool #(
         .WORD_W(WORD_W),
         .ACC_W(ACC_W),
-        .ITER_CNT(ITER_CNT)
+        .ITER_CNT(AVG_ITER_CNT)
     ) uut_avgpool (
         .clk(clk),
         .rst_n(rst_n),
         .enable(enable_avg),
-        .iter(iter),
+        .iter(avg_iter),
         .data_in(data_in),
         .valid_out(valid_out_avg),
         .data_out(data_out_avg)
@@ -46,12 +47,12 @@ module pooling_unit #(
     maxpool #(
         .WORD_W(WORD_W),
         .ACC_W(ACC_W),
-        .ITER_CNT(ITER_CNT)
+        .ITER_CNT(MAX_ITER_CNT)
     ) uut_maxpool (
         .clk(clk),
         .rst_n(rst_n),
         .enable(enable_max),
-        .iter(iter),
+        .iter(max_iter),
         .data_in(data_in),
         .valid_out(valid_out_max),
         .data_out(data_out_max)
