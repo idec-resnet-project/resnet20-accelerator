@@ -40,82 +40,88 @@ module avgpool #(
     
     reg signed  [ACC_W-1:0] sum;
     reg         [ITER_CNT-1:0] iter_cnt;
+    reg         [ITER_CNT-1:0] iter_reg;
     //reg signed  [WORD_W-1:0] avg_result;
     reg         [ITER_CNT-1:0] divisor;
+    reg                        proc;
     //=======================================================================
     // iteration count is 2's power, divisor = log2(iteration count)
     // iteration count is odd number, divisor = 0   
     //=======================================================================
-    always @(*)
-    begin
-        divisor = {ITER_CNT{1'd0}};
-        case(iter)
-            {4'b0000}:  divisor = 4'd0;
-            {4'b0010}:  divisor = 4'd1;
-            {4'b0100}:  divisor = 4'd2;
-            {4'b1000}:  divisor = 4'd3;
-            //{ITER_CNT{'d16}}: divisor = {ITER_CNT{1'd4}};
-            default: divisor = {ITER_CNT{1'd0}};
-            
-        endcase
-    end
-    
-    always @ (posedge clk or negedge rst_n)
-    begin
-        //=======================================================================
-        // Async Reset Logic for avgpool unit
-        //=======================================================================
-        if(!rst_n)
+        always @(*)
         begin
-            valid_out   <= 0;
-            data_out    <= 0;
-            sum         <= 0;  
-            iter_cnt    <= 0;          
+            divisor = {ITER_CNT{1'd0}};
+            case(iter_reg)
+                {16'b00000000}:  divisor = 4'd0;
+                {16'b00000010}:  divisor = 4'd1;
+                {16'b00000100}:  divisor = 4'd2;
+                {16'b00001000}:  divisor = 4'd3;
+                {16'b00010000}:  divisor = 4'd4;
+                {16'b00100000}:  divisor = 4'd5;
+                {16'b01000000}:  divisor = 4'd6;
+                {16'b10000000}:  divisor = 4'd7;
+                //{ITER_CNT{'d16}}: divisor = {ITER_CNT{1'd4}};
+                default: divisor = {ITER_CNT{1'd0}};                
+            endcase
         end
         
-        else 
+        always @ (posedge clk or negedge rst_n)
         begin
-        //=======================================================================
-        // when enable is high and iteration count is 0,
-        // set sum to data_in and iteration count to 1
-        //=======================================================================
-            if(enable && (iter_cnt == 0))
+            //=======================================================================
+            // Async Reset Logic for avgpool unit
+            //=======================================================================
+            if(!rst_n)
             begin
-                 sum        <= data_in;
-                 iter_cnt   <= 1;
-                 valid_out  <= 0;             
+                valid_out   <= 0;
+                data_out    <= 0;
+                sum         <= 0;  
+                iter_cnt    <= 0;
+                iter_reg    <= 0;   
+                proc        <= 0;       
             end
-        //=======================================================================
-        // when enable is high and iteration count is less than iter,
-        // add data_in to sum and increment iteration count
-        //=======================================================================
-            else if(enable && (iter_cnt < iter))
-            begin
-                sum        <= sum + data_in;
-                iter_cnt   <= iter_cnt + 1;                             
-            end
-        //=======================================================================
-        // when iteration count is equal to iter,
-        // output is sum/iter when iter is odd number
-        // output is sum >>> iter when iter is 2's power
-        //=======================================================================       
+            
             else 
             begin
-                if(iter_cnt == iter)
+            //=======================================================================
+            // when enable is high and iteration count is 0,
+            // set sum to data_in and iteration count to 1
+            //=======================================================================
+                if(enable && (iter_cnt == 0))
                 begin
-            //=======================================================================
-            // when iteration count is odd number, output is sum/iter ==> not implemented
-            // when iteration count is 2's power, output is sum >>> clog2(iter)=divisor
-            //=======================================================================
-                    /*if(iter[0])
-                        avg_result <= sum / iter;
-                    else     */               
-                        data_out <= (sum >>> divisor);       //need arangements             
-                    end
-                    //data_out   <= avg_result;                    
-                    valid_out  <= 1;
-                    iter_cnt   <= 0;                    
+                    sum        <= data_in;
+                    iter_cnt   <= 1;
+                    valid_out  <= 0;       
+                    proc       <= 1;   
+                    iter_reg   <= iter;   
                 end
+            //=======================================================================
+            // when enable is high and iteration count is less than iter,
+            // add data_in to sum and increment iteration count
+            //=======================================================================
+                else if(proc && (iter_cnt < iter_reg))
+                begin
+                    sum        <= sum + data_in;
+                    iter_cnt   <= iter_cnt + 1;                             
+                end
+            //=======================================================================
+            // when iteration count is equal to iter,
+            // output is sum/iter when iter is odd number
+            // output is sum >>> iter when iter is 2's power
+            //=======================================================================       
+                else if(proc && iter_cnt == iter_reg)
+                begin
+                //=======================================================================
+                // when iteration count is odd number, output is sum/iter ==> not implemented
+                // when iteration count is 2's power, output is sum >>> clog2(iter)=divisor
+                //=======================================================================                                  
+                    data_out <= (sum >>> divisor);       //need arangements                                           
+                    valid_out  <= 1;
+                    iter_cnt   <= 0;          
+                    iter_reg   <= 0; 
+                    proc       <= 0;                             
+                 end
+                 else if(valid_out)
+                    valid_out <= 0;
             end
         end
 endmodule

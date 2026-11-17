@@ -41,7 +41,10 @@ parameter integer WORD_W = 16
     wire    [WORD_W-1:0]    resi_data;
     wire                    valid_mux;
     
-    residual_unit uut_residual
+    residual_unit 
+    #(
+    .WORD_W(WORD_W)
+    )uut_residual
     (
         .clk(clk),      
         .rst_n(rst_n),    
@@ -53,7 +56,11 @@ parameter integer WORD_W = 16
         .data_out(resi_data)      
     );
     
-    mux uut_mux
+    mux 
+    #(
+    .WORD_W(WORD_W)
+    )
+    uut_mux
     (
         .data_x(data_in), 
         .data_y(resi_data), 

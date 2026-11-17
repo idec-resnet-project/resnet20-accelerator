@@ -11,6 +11,12 @@
 //                  ideal = sum(x*w) / 2^8  (반올림·포화가 없는 실수 결과, 출력 LSB 단위)
 //                  -> 반올림(양자화) 오차와 포화 오차가 모두 noise 로 반영됨
 //  * 실행 방법   : Vivado Tcl 콘솔에서  run all
+//
+//  [웨이브폼 디버그 신호]
+//    err_mism / err_timeout : 오류 검출 시 다음 클럭에 1클럭 펄스,  err_any = OR
+//    dbg_tc                 : 현재 테스트 케이스 번호 (1부터)
+//    dbg_exp / dbg_got      : 마지막 mismatch 의 기대값 / 실제값
+//    -> Tcl: add_wave {{/tb_mac_packed/err_*}} {{/tb_mac_packed/dbg_*}}
 //                  Behavioral / Post-Synthesis / Post-Implementation 시뮬레이션 공용
 //
 //  타이밍 (RTL 분석 결과)
@@ -43,14 +49,14 @@ module tb_mac_packed;
     // ------------------------------------------------------------------
     localparam integer WORD_W      = 16;
     localparam integer ACC_W       = WORD_W*2+1;
-    localparam integer ITER_CNT    = 5;
+    localparam integer ITER_CNT    = 16;      // mac_packed 기본값과 같게 유지
     localparam integer Q_SCALE     = 8;
     localparam integer HALF        = 1 << (Q_SCALE-1);
     localparam integer DIV         = 1 << Q_SCALE;
     localparam integer CLK_PERIOD  = 10;
     localparam integer LAT_OFS     = 6;       // 예상 latency = N + LAT_OFS (출력 표시용)
-    localparam integer MAX_N       = 29;      // iter_cnt(5bit) 구조상 정상 종료되는 최대 iter
-    localparam integer TIMEOUT_CYC = 64;
+    localparam integer MAX_N       = 576;     // TB 최대 누산 길이 = ResNet-20 최대 (3x3x64)
+    localparam integer TIMEOUT_CYC = MAX_N + 64;
     localparam integer OUT_MAX     =  (1 << (WORD_W-1)) - 1;
     localparam integer OUT_MIN     = -(1 << (WORD_W-1));
     localparam integer FULL        =  (1 << (WORD_W-1));   // 풀스케일 랜덤 진폭
@@ -104,6 +110,27 @@ module tb_mac_packed;
             cap_data = data_out;
             cap_cnt  = cap_cnt + 1;
         end
+    end
+
+    // ------------------------------------------------------------------
+    // FAIL 1클럭 펄스 (웨이브폼용) : 이벤트 카운터가 바뀌면 다음 posedge 에서 1클럭 동안 1
+    // ------------------------------------------------------------------
+    integer                  mism_ev     = 0;
+    integer                  to_ev       = 0;
+    integer                  mism_seen   = 0;
+    integer                  to_seen     = 0;
+    reg                      err_mism    = 1'b0;
+    reg                      err_timeout = 1'b0;
+    wire                     err_any     = err_mism | err_timeout;
+    integer                  dbg_tc      = 0;
+    reg  signed [WORD_W-1:0] dbg_exp     = {WORD_W{1'b0}};
+    reg  signed [WORD_W-1:0] dbg_got     = {WORD_W{1'b0}};
+
+    always @(posedge clk) begin
+        err_mism    <= (mism_ev != mism_seen);
+        err_timeout <= (to_ev   != to_seen);
+        mism_seen   <= mism_ev;
+        to_seen     <= to_ev;
     end
 
     // ------------------------------------------------------------------
@@ -206,6 +233,7 @@ module tb_mac_packed;
         input integer          n;
         begin
             r_name[tc_id] = name;
+            dbg_tc        = tc_id + 1;
             tc_n          = n;
             tc_trials     = 0;
             tc_mism       = 0;
@@ -240,9 +268,12 @@ module tb_mac_packed;
             tc_trials  = tc_trials + 1;
             if (((^hw) === 1'bx) || (hwi != gold)) begin
                 tc_mism = tc_mism + 1;
+                mism_ev = mism_ev + 1;
+                dbg_exp = gold;
+                dbg_got = hw;
                 if (tc_mism <= MAX_LOG)
-                    $display("    [MISMATCH] TC%0d #%0d : expected=%0d, got=%0d (ideal=%.3f)",
-                             tc_id + 1, tag, gold, hw, ideal);
+                    $display("    [MISMATCH] TC%0d #%0d : expected=%0d, got=%0d (ideal=%.3f)  t=%0t",
+                             tc_id + 1, tag, gold, hw, ideal, $time);
             end
         end
     endtask
@@ -409,8 +440,9 @@ module tb_mac_packed;
             do_mac(n, hw, lat, to);
             if (to) begin
                 tc_timeout = tc_timeout + 1;
-                $display("    [TIMEOUT ] TC%0d #%0d : no valid within %0d cycles -> reset",
-                         tc_id + 1, tag, TIMEOUT_CYC);
+                to_ev      = to_ev + 1;
+                $display("    [TIMEOUT ] TC%0d #%0d : no valid within %0d cycles -> reset  t=%0t",
+                         tc_id + 1, tag, TIMEOUT_CYC, $time);
                 apply_reset;
             end else begin
                 note_lat(lat);
@@ -581,12 +613,14 @@ module tb_mac_packed;
                     end
                     if (got < ops) begin
                         tc_timeout = tc_timeout + (ops - got);
+                        to_ev      = to_ev + 1;
                         $display("    [TIMEOUT ] TC%0d only %0d/%0d results received", tc_id + 1, got, ops);
                     end
                 end
             join
             if ((intv_min != intv_max) || (intv_max != n + 3)) begin   // throughput 불일치도 FAIL
                 tc_mism = tc_mism + 1;
+                mism_ev = mism_ev + 1;
                 $display("    [MISMATCH] TC%0d result interval %0d~%0d (expected %0d)",
                          tc_id + 1, intv_min, intv_max, n + 3);
             end
@@ -630,6 +664,7 @@ module tb_mac_packed;
             spurious = cap_cnt - c0;
             if (spurious > 0) begin
                 tc_mism = tc_mism + 1;
+                mism_ev = mism_ev + 1;
                 $display("    [MISMATCH] TC%0d spurious valid after reset (%0d)", tc_id + 1, spurious);
             end
 
@@ -678,7 +713,9 @@ module tb_mac_packed;
         tc_random  ("iter=9  3x3 conv, typical",              9,  1024,   256,  300);  // fmap +-4.0, w +-1.0
         tc_random  ("iter=9  3x3 conv, small signal",         9,    64,    64,  300);  // fmap / w +-0.25
         tc_random  ("iter=27 3x3x3 conv (RGB input)",        27,  1024,   256,  200);
-        tc_random  ("iter=29 max supported N",            MAX_N,  1024,   256,  200);
+        tc_random  ("iter=144 3x3x16 (ResNet-20 L1)",       144,  1024,   256,  100);
+        tc_random  ("iter=288 3x3x32 (ResNet-20 L2)",       288,  1024,   256,   50);
+        tc_random  ("iter=576 3x3x64 (ResNet-20 L3)",       576,  1024,   256,   50);
         tc_random  ("iter=4  full-scale random (clipping)",   4,  FULL,  FULL,  200);
         tc_stream  ("Back-to-back (no gap between ops)",      9,  1024,   256,   50);
         tc_reset_mid(9, 50);

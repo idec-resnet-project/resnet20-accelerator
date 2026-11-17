@@ -34,7 +34,10 @@ parameter integer WORD_W = 16
 
     wire              valid_out;
     wire [WORD_W-1:0] relu_out;
-    mux uut_mux
+    mux 
+    #(
+    .WORD_W(WORD_W)
+    )uut_mux
     (
     .data_x(data_in),
     .data_y(relu_out),
@@ -42,7 +45,10 @@ parameter integer WORD_W = 16
     .data_out(data_out)
     );
     
-    ReLU uut_ReLU
+    ReLU
+    #(
+    .WORD_W(WORD_W)
+    ) uut_ReLU
     (
     .clk(clk),                          
     .rst_n(rst_n),                         

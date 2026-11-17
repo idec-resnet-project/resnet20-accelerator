@@ -23,8 +23,8 @@
 module pooling_packed #(
     parameter integer WORD_W = 16,          
     parameter integer ACC_W = WORD_W*2+1, 
-    parameter integer MAX_ITER_CNT = 5,
-    parameter integer AVG_ITER_CNT = 5
+    parameter integer MAX_ITER_CNT = 16,
+    parameter integer AVG_ITER_CNT = 16
 )(
     input wire                          clk, 
     input wire                          rst_n,

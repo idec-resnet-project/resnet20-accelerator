@@ -22,7 +22,7 @@
 module mac_packed#(
     parameter integer WORD_W   = 16, //input data size = 16
     parameter integer ACC_W    = WORD_W*2+1,
-    parameter integer ITER_CNT = 5 
+    parameter integer ITER_CNT = 16 
 )(
     input   wire                            clk, 
     input   wire                            rst_n,
@@ -53,12 +53,13 @@ module mac_packed#(
     .data_out(data_out)  
     );
     
-    mac_v3
+    mac_v3 
     #(
     .WORD_W(WORD_W),
+    .ACC_W(ACC_W),
     .ITER_CNT(ITER_CNT)
     )
-     uut_mac
+    uut_mac
     (
     .clk(clk),                    
     .rst_n(rst_n),                   
@@ -72,7 +73,12 @@ module mac_packed#(
     );
     
     
-    post_mac uut_post_mac
+    post_mac 
+    #(
+    .WORD_W(WORD_W),
+    .ACC_W(ACC_W)
+    )
+    uut_post_mac
     (
     .clk(clk),     
     .rst_n(rst_n),    
