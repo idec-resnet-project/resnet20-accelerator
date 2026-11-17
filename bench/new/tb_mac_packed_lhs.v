@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Module Name : tb_mac_packed
-// Description : mac_packed (mux + mac_mod_AI + post_mac) 검증용 self-checking TB
+// Description : mac_packed (mux + mac_v3 + post_mac[4-stage]) 검증용 self-checking TB
 //               (Verilog-2001, SystemVerilog 문법 미사용)
 //
 //  * 데이터 포맷 : Q7.8 (fmap / weight / data_out 모두 16bit, 소수 8bit)
@@ -21,7 +21,10 @@
 //               (계속 1이면 T(N+3) 에서 다음 연산이 바로 시작됨)
 //    - iter   : 연산 시작부터 결과가 나올 때까지 값 유지
 //    - 데이터 구간 밖 fmap/weight : IDLE_JUNK=1 이면 난수(무시되는지 검증), 0 이면 0
-//    Tn+3     : 결과가 data_out 에 1클럭 동안 출력 (dut.valid_out_post_mac = 1)
+//    Tn+2     : mac_v3 valid_out (누산 결과)
+//    Tn+3~5   : post_mac  load -> shift/round -> saturate
+//    Tn+6     : 결과가 data_out 에 1클럭 동안 출력 (dut.valid_out_post_mac = 1)
+//               -> latency = N+6, 연속 동작 시 결과 간격(throughput) = N+3
 //  top 에 valid 포트가 없으므로 dut.valid_out_post_mac 를 계층 참조로 관찰한다.
 //
 //  구동 / 샘플 시점 (타이밍 시뮬레이션 대응)
@@ -45,6 +48,7 @@ module tb_mac_packed;
     localparam integer HALF        = 1 << (Q_SCALE-1);
     localparam integer DIV         = 1 << Q_SCALE;
     localparam integer CLK_PERIOD  = 10;
+    localparam integer LAT_OFS     = 6;       // 예상 latency = N + LAT_OFS (출력 표시용)
     localparam integer MAX_N       = 29;      // iter_cnt(5bit) 구조상 정상 종료되는 최대 iter
     localparam integer TIMEOUT_CYC = 64;
     localparam integer OUT_MAX     =  (1 << (WORD_W-1)) - 1;
@@ -654,7 +658,11 @@ module tb_mac_packed;
 
         $display("");
         $display("====================================================================================================================================");
-        $display(" tb_mac_packed : Q7.8 MAC + requantizer self-check  (seed=%0d, IN_DLY=%0.2fns, SMP_DLY=%0.2fns)", seed, IN_DLY, SMP_DLY);
+        $display(" tb_mac_packed : Q7.8 MAC (mac_v3) + post_mac self-check");
+        $display("   WORD_W=%0d  ACC_W=%0d (acc %0d bit)  ITER_CNT=%0d  Q_SCALE=%0d  MAX_N=%0d", WORD_W, ACC_W, ACC_W+1, ITER_CNT, Q_SCALE, MAX_N);
+        $display("   CLK=%0d ns (%0d MHz)  IN_DLY=%0.2f ns  SMP_DLY=%0.2f ns  IDLE_JUNK=%0d  seed=%0d",
+                 CLK_PERIOD, 1000 / CLK_PERIOD, IN_DLY, SMP_DLY, IDLE_JUNK, seed);
+        $display("   expected latency = N+%0d cycles, back-to-back interval = N+3 cycles", LAT_OFS);
         $display(" PASS = bit-exact vs golden (round-half-away-from-zero, saturate) / SNR = vs ideal real result (no rounding, no clipping)");
         $display("====================================================================================================================================");
 
