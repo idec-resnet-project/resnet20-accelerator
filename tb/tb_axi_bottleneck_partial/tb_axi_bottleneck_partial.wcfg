@@ -124,29 +124,29 @@
       <obj_property name="ElementShortName">rstate[3:0]</obj_property>
       <obj_property name="ObjectShortName">rstate[3:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/fc" type="array">
-      <obj_property name="ElementShortName">fc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">fc[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ctrl_fc" type="array">
+      <obj_property name="ElementShortName">ctrl_fc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_fc[5:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/fw" type="array">
-      <obj_property name="ElementShortName">fw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">fw[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ctrl_fw" type="array">
+      <obj_property name="ElementShortName">ctrl_fw[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_fw[5:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/oc" type="array">
-      <obj_property name="ElementShortName">oc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">oc[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ctrl_oc" type="array">
+      <obj_property name="ElementShortName">ctrl_oc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_oc[5:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ow" type="array">
-      <obj_property name="ElementShortName">ow[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ow[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ctrl_ow" type="array">
+      <obj_property name="ElementShortName">ctrl_ow[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_ow[5:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/kw" type="array">
-      <obj_property name="ElementShortName">kw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">kw[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ctrl_kw" type="array">
+      <obj_property name="ElementShortName">ctrl_kw[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_kw[5:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/kc" type="array">
-      <obj_property name="ElementShortName">kc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">kc[5:0]</obj_property>
+   <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/ctrl_kc" type="array">
+      <obj_property name="ElementShortName">ctrl_kc[5:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_kc[5:0]</obj_property>
    </wvobject>
    <wvobject fp_name="/tb_axi_bottleneck_partial/dut/u_top_bottleneck/u_controller/cnt_feature" type="array">
       <obj_property name="ElementShortName">cnt_feature[31:0]</obj_property>

@@ -27,51 +27,51 @@
       <obj_property name="ElementShortName">nrst</obj_property>
       <obj_property name="ObjectShortName">nrst</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/mac_in_enable" type="logic">
+   <wvobject fp_name="/tb_core/dut/u_mac/in_enable" type="logic">
       <obj_property name="ElementShortName">mac_in_enable</obj_property>
       <obj_property name="ObjectShortName">mac_in_enable</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/mac_in_data" type="array">
+   <wvobject fp_name="/tb_core/dut/u_mac/in_data" type="array">
       <obj_property name="ElementShortName">mac_in_data[15:0]</obj_property>
       <obj_property name="ObjectShortName">mac_in_data[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/mac_out_enable" type="logic">
+   <wvobject fp_name="/tb_core/dut/mac_valid" type="logic">
       <obj_property name="ElementShortName">mac_out_enable</obj_property>
       <obj_property name="ObjectShortName">mac_out_enable</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/mac_out_data" type="array">
+   <wvobject fp_name="/tb_core/dut/mac_data" type="array">
       <obj_property name="ElementShortName">mac_out_data[15:0]</obj_property>
       <obj_property name="ObjectShortName">mac_out_data[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/residual_out_enable" type="logic">
+   <wvobject fp_name="/tb_core/dut/residual_valid" type="logic">
       <obj_property name="ElementShortName">residual_out_enable</obj_property>
       <obj_property name="ObjectShortName">residual_out_enable</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/residual_out_data" type="array">
+   <wvobject fp_name="/tb_core/dut/residual_data" type="array">
       <obj_property name="ElementShortName">residual_out_data[15:0]</obj_property>
       <obj_property name="ObjectShortName">residual_out_data[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/relu_out_enable" type="logic">
+   <wvobject fp_name="/tb_core/dut/relu_valid" type="logic">
       <obj_property name="ElementShortName">relu_out_enable</obj_property>
       <obj_property name="ObjectShortName">relu_out_enable</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/relu_out_data" type="array">
+   <wvobject fp_name="/tb_core/dut/relu_data" type="array">
       <obj_property name="ElementShortName">relu_out_data[15:0]</obj_property>
       <obj_property name="ObjectShortName">relu_out_data[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/pooling_out_enable" type="logic">
+   <wvobject fp_name="/tb_core/dut/pooling_valid" type="logic">
       <obj_property name="ElementShortName">pooling_out_enable</obj_property>
       <obj_property name="ObjectShortName">pooling_out_enable</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/pooling_out_data" type="array">
+   <wvobject fp_name="/tb_core/dut/pooling_data" type="array">
       <obj_property name="ElementShortName">pooling_out_data[15:0]</obj_property>
       <obj_property name="ObjectShortName">pooling_out_data[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/gap_out_data" type="array">
+   <wvobject fp_name="/tb_core/dut/gap_data" type="array">
       <obj_property name="ElementShortName">gap_out_data[15:0]</obj_property>
       <obj_property name="ObjectShortName">gap_out_data[15:0]</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_core/gap_out_enable" type="logic">
+   <wvobject fp_name="/tb_core/dut/gap_valid" type="logic">
       <obj_property name="ElementShortName">gap_out_enable</obj_property>
       <obj_property name="ObjectShortName">gap_out_enable</obj_property>
    </wvobject>

@@ -1,10 +1,9 @@
 module tb_axi_bottleneck_partial;
+    localparam int OUTPUT_FRAC_BITS = 10;
     import uvm_pkg::*;
     import model_contract_pkg::*;
     import tb_axi_bottleneck_pkg::*;
-    import resnet20_pkg::*;
-
-    `include "partial_data.svh"
+    import model_pkg::*;
 
     // --------------------------------
     // Clock and reset
@@ -32,11 +31,9 @@ module tb_axi_bottleneck_partial;
     // --------------------------------
     // DUT port map
     // --------------------------------
-`ifdef TB_AXI_BOTTLENECK_USE_RTL
+    // Select the DUT here. The dummy initializes its model backend internally.
+    // axi_bottleneck_dummy #(.OUTPUT_FRAC_BITS(OUTPUT_FRAC_BITS)) dut (
     axi_bottleneck dut (
-`else
-    axi_bottleneck_dummy dut (
-`endif
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),
 
@@ -99,39 +96,12 @@ module tb_axi_bottleneck_partial;
     // Model setup and UVM configuration
     // --------------------------------
 
-`ifndef TB_AXI_BOTTLENECK_USE_RTL
-    class partial_resnet20_backend extends resnet20_backend;
-        function new(int output_frac_bits);
-            super.new(output_frac_bits);
-        endfunction
-
-        virtual function bit describe(bit [31:0] instruction);
-            if (next_command == 0)
-                inst = partial_input_instruction();
-            else if (FIRST_BLOCK_COMMAND + next_command - 1 < $size(PROGRAM))
-                inst = PROGRAM[FIRST_BLOCK_COMMAND + next_command - 1];
-            else
-                return 0;
-            return pack_instruction(inst) == instruction;
-        endfunction
-    endclass
-
-    partial_resnet20_backend backend;
-    final begin
-        if (backend != null) backend.close();
-    end
-`endif
-
     initial begin : configure_test
         model_run_config cfg;
         string tb_dir;
 
         if (!$value$plusargs("TB_DIR=%s", tb_dir)) tb_dir = ".";
-        cfg = build_partial_config(tb_dir, "vectors");
-`ifndef TB_AXI_BOTTLENECK_USE_RTL
-        backend = new(cfg.output_frac_bits);
-        dut.set_backend(backend);
-`endif
+        cfg = build_model_config(model_data_dir(tb_dir), OUTPUT_FRAC_BITS);
 
         uvm_config_db#(model_run_config)::set(null, "uvm_test_top", "run_cfg", cfg);
         uvm_config_db#(virtual axi_lite_if)::set(null, "uvm_test_top.env.ctrl*", "vif", ctrl);
@@ -146,7 +116,7 @@ module tb_axi_bottleneck_partial;
     // Watchdog
     // --------------------------------
     initial begin
-        #100000ms;
+        #10000ms;
         $fatal(1, "Simulation watchdog timed out");
     end
 
