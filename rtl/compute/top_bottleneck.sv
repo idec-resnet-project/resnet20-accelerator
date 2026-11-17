@@ -17,7 +17,9 @@ module top_bottleneck #(
     input  wire                       nrst,
     
     // config
+    input  wire                       cfg_enable,
     input  wire [CONFIG_BITWIDTH-1:0] cfg,
+    output wire [3:0]                 cfg_response,
     
     // IDMA feature
     input  wire                       dma_feature_valid,
@@ -71,7 +73,7 @@ wire [BITWIDTH-1:0]             rmem_wr_data;
 wire [BRAM_FEATRE_CAPACITY-1:0] rmem_rd_addr;
 wire [BITWIDTH-1:0]             rmem_rd_data;
 
-// control
+// core
 wire                                  mac_enable;
 wire [BITWIDTH_MAC_ITERATION-1:0]     mac_iteration;
 wire                                  residual_enable;
@@ -81,12 +83,25 @@ wire [BITWIDTH_POOLING_ITERATION-1:0] pooling_iteration;
 wire                                  gap_enable;
 wire [BITWIDTH_GAP_ITERATION-1:0]     gap_iteration;
 wire                                  in_enable;
+wire [BITWIDTH-1:0]                   in_data;
 wire                                  out_enable;
+wire [BITWIDTH-1:0]                   out_data;
+
+// buffer switch
+wire is_fmem0_in;
 
 // --------------------------------
 // controll
 // --------------------------------
+// ping-pong datapath 
+assign in_data          = fmem_rd_data[is_fmem0_in]; 
+assign fmem_wr_data[0]  = (is_fmem0_in) ? out_data         : dma_feature_data;
+assign fmem_wr_data[1]  = (is_fmem0_in) ? dma_feature_data : out_data;
 
+// DMA datapath
+assign dma_result_data  = fmem_rd_data[~is_fmem0_in];
+assign kmem_wr_data     = dma_kernel_data;
+assign bmem_wr_data     = dma_bias_data;
 
 // --------------------------------
 // Buffer
@@ -163,13 +178,17 @@ controller #(
     .CONFIG_BITWIDTH            (CONFIG_BITWIDTH),
     .BITWIDTH_MAC_ITERATION     (BITWIDTH_MAC_ITERATION),
     .BITWIDTH_POOLING_ITERATION (BITWIDTH_POOLING_ITERATION),
-    .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION)
+    .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION),
+    .BRAM_FEATRE_CAPACITY       (BRAM_FEATRE_CAPACITY),
+    .BRAM_KERNEL_CAPACITY       (BRAM_KERNEL_CAPACITY),
+    .BRAM_BIAS_CAPACITY          (BRAM_BIAS_CAPACITY)
 ) u_controller (
     .clk               (clk),
     .nrst              (nrst),
     // config
+    .cfg_enable        (cfg_enable),
     .cfg               (cfg),
-    // control
+    .cfg_response      (cfg_response),
     .mac_enable        (mac_enable),
     .mac_iteration     (mac_iteration),
     .residual_enable   (residual_enable),
@@ -178,6 +197,8 @@ controller #(
     .pooling_iteration (pooling_iteration),
     .gap_enable        (gap_enable),
     .gap_iteration     (gap_iteration),
+    // control
+    .is_fmem0_in       (is_fmem0_in),
     // I/O
     .in_enable         (in_enable),
     .out_enable        (out_enable),
@@ -193,7 +214,21 @@ controller #(
     .dma_bias_last     (dma_bias_last),
     .dma_result_valid  (dma_result_valid),
     .dma_result_ready  (dma_result_ready),
-    .dma_result_last   (dma_result_last)
+    .dma_result_last   (dma_result_last),
+    // mem control
+    .fmem_wr_enable    (fmem_wr_en),
+    .fmem_wr_addr      (fmem_wr_addr),
+    .fmem_rd_addr      (fmem_rd_addr),
+    .kmem_wr_enable    (kmem_wr_en),
+    .kmem_wr_addr      (kmem_wr_addr),
+    .kmem_rd_addr      (kmem_rd_addr),
+    .bmem_wr_enable    (bmem_wr_en),
+    .bmem_wr_addr      (bmem_wr_addr),
+    .bmem_rd_addr      (bmem_rd_addr),
+    .rmem_wr_enable    (rmem_wr_en),
+    .rmem_wr_addr      (rmem_wr_addr),
+    .rmem_rd_addr      (rmem_rd_addr)
+
 );
 
 // --------------------------------
@@ -220,12 +255,12 @@ core #(
     .gap_iteration     (gap_iteration),
     // input
     .in_enable         (in_enable),         
-    .in_data           (),
-    .kernel_data       (),                  
-    .bias_data         (),
+    .in_data           (in_data),
+    .kernel_data       (kmem_rd_data),                  
+    .bias_data         (bmem_rd_data),
     // output
     .out_enable        (out_enable),        
-    .out_data          ()
+    .out_data          (out_data)
 );
 
 endmodule
