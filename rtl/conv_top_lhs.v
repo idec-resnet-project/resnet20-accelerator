@@ -60,8 +60,19 @@ module conv_top
     wire    [PARALLEL_PC*WORD_W-1:0]    ReLU_out;
     wire    [PARALLEL_PC*WORD_W-1:0]    pooling_out;
     wire    [PARALLEL_PC*WORD_W-1:0]    residual_out;
-    
-    
+
+    wire                                mac_valid_out;
+    wire                                relu_valid_out;
+    wire                                pooling_valid_out;
+    wire                                gap_valid_out;
+    wire                                residual_valid_out;
+
+    wire                                mac_valid_in;
+    wire                                relu_valid_in;
+    wire                                pooling_valid_in;
+    wire                                gap_valid_in;
+    wire                                residual_valid_in;
+
     always @(posedge clk or negedge nrst)
     begin
         if(!nrst)
@@ -93,9 +104,11 @@ module conv_top
     .clk        (clk),                                                
     .rst_n      (nrst),                                              
     .enable     (mac_enable),                                                    
-    .iter       (mac_iteration),   
+    .iter       (mac_iteration), 
+    .valid_in   (),  
     .fmap_in    (in_data[i*WORD_W+:WORD_W]),                          
-    .weight_in  (kernel_data[i*WORD_W+:WORD_W]),               
+    .weight_in  (kernel_data[i*WORD_W+:WORD_W]),  
+    .valid_out  (mac_valid_out),             
     .data_out   (mac_out[i*WORD_W+:WORD_W])             
      );
     
