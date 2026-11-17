@@ -13,7 +13,7 @@ module axi_bottleneck #(
     parameter [31:0]   CONFIG_DEFAULT             = '0,
     // Buffer address widths. Each RAM stores 2**width words.
     parameter integer BRAM_FEATRE_CAPACITY        = 14,
-    parameter integer BRAM_KERNEL_CAPACITY        = 16,
+    parameter integer BRAM_KERNEL_CAPACITY        = 14,
     parameter integer BRAM_BIAS_CAPACITY          = 6
 )(
     input  wire                             s_axi_aclk,
@@ -74,6 +74,8 @@ assign m_axis_output_tkeep = '1;
 // axi-lite register
 // ----------------------------------------
 wire [AXI_LITE_DATA_WIDTH-1:0] cfg;
+wire                           cfg_enable;
+wire [3:0]                     cfg_response;
 
 axi_lite_reg #(
     .AXI_LITE_ADDR_WIDTH (AXI_LITE_ADDR_WIDTH),
@@ -101,7 +103,9 @@ axi_lite_reg #(
     .s_axi_rresp   (s_axi_rresp),
     .s_axi_rvalid  (s_axi_rvalid),
     .s_axi_rready  (s_axi_rready),
-    .cfg_data      (cfg)
+    .cfg_data      (cfg),
+    .cfg_data_enable (cfg_enable),
+    .cfg_response    (cfg_response)
 );
 
 // ----------------------------------------
@@ -122,7 +126,9 @@ top_bottleneck #(
 ) u_top_bottleneck (
     .clk               (s_axi_aclk),
     .nrst              (s_axi_aresetn),
+    .cfg_enable        (cfg_enable),
     .cfg               (cfg),
+    .cfg_response      (cfg_response),
     .dma_feature_valid (s_axis_feature_tvalid),
     .dma_feature_ready (s_axis_feature_tready),
     .dma_feature_last  (s_axis_feature_tlast),
