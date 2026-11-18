@@ -32,9 +32,7 @@ parameter integer WORD_W = 16
     
     output reg valid_out,
     output reg signed [WORD_W-1:0] data_out
-    );
-    
-    
+    );    
     always @(posedge clk or negedge rst_n)
     begin
     //=======================================================================

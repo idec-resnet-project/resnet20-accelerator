@@ -8,10 +8,12 @@ module residual_unit
     input  wire                     clk,
     input  wire                     rst_n,
     input  wire                     enable,
-    //input  wire                     valid_in,
+    input  wire                     valid_in,
     input  wire signed [WORD_W-1:0] data_in,
     input  wire signed [WORD_W-1:0] data_skip,
-
+    
+    output reg                      done,
+    output reg                      proc,
     output reg                      valid_out,
     output reg  signed [WORD_W-1:0] data_out
 );
@@ -25,8 +27,8 @@ module residual_unit
     reg signed [WORD_W-1:0] data_x;
     reg signed [WORD_W-1:0] data_y;
     reg signed [WORD_W:0]   data_add;
-    reg                     proc;
-    reg                     done;
+    //reg                     proc;
+    //reg                     done;
 
     always @(posedge clk or negedge rst_n) 
     begin
@@ -43,8 +45,8 @@ module residual_unit
         else
         begin
             // stage 1 : 입력 저장
-            proc <= enable /*&& valid_in*/;
-            if (enable /*&& valid_in*/)
+            proc <= enable && valid_in;
+            if (enable && valid_in)
             begin
                 data_x <= data_in;
                 data_y <= data_skip;

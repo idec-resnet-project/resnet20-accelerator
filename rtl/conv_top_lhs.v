@@ -60,7 +60,15 @@ module conv_top
     wire    [PARALLEL_PC*WORD_W-1:0]    ReLU_out;
     wire    [PARALLEL_PC*WORD_W-1:0]    pooling_out;
     wire    [PARALLEL_PC*WORD_W-1:0]    residual_out;
-    
+    wire                                valid_out_mac;
+    wire                                valid_out_relu;
+    wire                                valid_out_residual;
+
+    reg                                 mac_enable_reg;
+    reg                                 relu_enable_reg;
+    reg                                 residual_enable_reg;
+    reg                                 pooling_enable_reg;    
+    reg                                 gap_enable_reg;
     
     always @(posedge clk or negedge nrst)
     begin
@@ -68,6 +76,11 @@ module conv_top
         begin
             out_data    <= 0;
             out_enable  <= 0;
+            mac_enable_reg <= 0;
+            relu_enable_reg <= 0;
+            residual_enable_reg <= 0;
+            pooling_enable_reg <= 0;
+            gap_enable_reg <= 0;
         end
         
         else
@@ -92,7 +105,9 @@ module conv_top
     (
     .clk        (clk),                                                
     .rst_n      (nrst),                                              
-    .enable     (mac_enable),                                                    
+    .enable     (mac_enable_reg),    
+    .valid_in   (), 
+    .valid_out  (valid_out_mac),                                               
     .iter       (mac_iteration),   
     .fmap_in    (in_data[i*WORD_W+:WORD_W]),                          
     .weight_in  (kernel_data[i*WORD_W+:WORD_W]),               
@@ -107,9 +122,10 @@ module conv_top
     (
     .clk        (clk),      
     .rst_n      (nrst),    
-    .enable     (relu_enable),   
+    .enable     (relu_enable_reg),   
+    .valid_in   (),
     .data_in    (mac_out[i*WORD_W+:WORD_W]),  
-    //.valid_out(),
+    .valid_out  (valid_out_relu),
     .data_out   (ReLU_out[i*WORD_W+:WORD_W])
     );
     
@@ -121,8 +137,9 @@ module conv_top
     (
     .clk        (clk),        
     .rst_n      (nrst),      
-    .enable     (residual_enable),     
-    //.valid_in(),   
+    .enable     (residual_enable_reg),     
+    .valid_in   (),   
+    .valid_out  (valid_out_residual),
     .data_in    (ReLU_out[i*WORD_W+:WORD_W]),    
     .data_skip  (bias_data[i*WORD_W+:WORD_W]),
     .data_out   (residual_out[i*WORD_W+:WORD_W])       
@@ -131,21 +148,22 @@ module conv_top
     endgenerate
     pooling_packed
     #(
-    .WORD_W(WORD_W),
-    .ACC_W(WORD_W*2+1),
+    .WORD_W      (WORD_W),
+    .ACC_W       (WORD_W*2+1),
     .MAX_ITER_CNT(BITWIDTH_POOLING_ITERATION),
     .AVG_ITER_CNT(BITWIDTH_GAP_ITERATION)
     )
     uut_pooling
     (
-    .clk(clk),          
-    .rst_n(nrst),        
-    .enable_avg(gap_enable),   
-    .enable_max(pooling_enable),   
-    .max_iter(pooling_iteration),
-    .avg_iter(gap_iteration),     
-    .data_in(residual_out),
-    .data_out(pooling_out)          
+    .clk        (clk),          
+    .rst_n      (nrst),        
+    .enable_avg (gap_enable_reg),   
+    .enable_max (pooling_enable_reg),   
+    .valid_in   (),
+    .max_iter   (pooling_iteration),
+    .avg_iter   (gap_iteration),     
+    .data_in    (residual_out),
+    .data_out   (pooling_out)          
     );
     
     
