@@ -5,6 +5,7 @@ package model_pkg;
     localparam int IN_CHANNELS = 2;
     localparam int OUT_CHANNELS = 2;
     localparam int KERNEL_SIZE = 3;
+    localparam int STRIDE = 1;
     localparam int PADDING = 1;
     localparam bit RELU_ENABLE = 1;
     localparam bit SEQUENTIAL_PAYLOADS = 0;

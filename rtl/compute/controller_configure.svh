@@ -15,7 +15,7 @@ assign cfg_c                = cfg[27:22];
 
 assign ctrl_ow_next              = ((((ctrl_is_after_skip) ? ctrl_fw : ctrl_ow) - cfg_w + {cfg_padding, 1'b0}) >> cfg_stride);
 
-always_ff @(negedge clk or posedge nrst) begin : update_config
+always_ff @(negedge clk or negedge nrst) begin : update_config
     if (!nrst) begin
         ctrl_input_enable    <= '0;
         ctrl_output_enable   <= '0;
@@ -45,7 +45,7 @@ always_ff @(negedge clk or posedge nrst) begin : update_config
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : calc_CNN_size
+always_ff @(negedge clk or negedge nrst) begin : calc_CNN_size
     if (!nrst) begin
         ctrl_fw      <= '0;
         ctrl_fc      <= '0;

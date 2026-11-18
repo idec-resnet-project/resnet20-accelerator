@@ -13,7 +13,8 @@ module top_bottleneck #(
     parameter integer BRAM_FEATRE_CAPACITY       = 14,
     parameter integer BRAM_KERNEL_CAPACITY       = 16,
     parameter integer BRAM_BIAS_CAPACITY         = 6,
-    parameter integer ADDR_BITWIDTH             = 3
+    parameter integer ADDR_BITWIDTH             = 3,
+    parameter integer OUTPUT_FRAC_BITS         = 10
 )(
     input  wire                       clk,
     input  wire                       nrst,
@@ -42,7 +43,7 @@ module top_bottleneck #(
     input  wire [BITWIDTH-1:0]        dma_bias_data,
     
     // ODMA output
-    output wire                       dma_result_valid,
+    output reg                        dma_result_valid,
     input  wire                       dma_result_ready,
     output wire                       dma_result_last,
     output wire [BITWIDTH-1:0]        dma_result_data
@@ -91,17 +92,35 @@ wire [BITWIDTH-1:0]                   out_data;
 
 // buffer switch
 wire is_fmem0_in;
+wire is_feature_in;
+
+// dma output 
+reg [BITWIDTH-1:0] dma_result_data_buf;
+wire [BITWIDTH-1:0] dma_result_data_temp;
+wire output_init_flag;
+
+always @(negedge clk or negedge nrst) begin
+    if (!nrst) begin
+        dma_result_data_buf <= 0;
+    end else if ((dma_result_valid & dma_result_ready) | output_init_flag) begin
+        dma_result_data_buf <= dma_result_data_temp;
+    end else begin
+        dma_result_data_buf <= dma_result_data_buf;
+    end
+end
+
 
 // --------------------------------
 // controll
 // --------------------------------
 // ping-pong datapath 
-assign in_data          = fmem_rd_data[is_fmem0_in]; 
-assign fmem_wr_data[0]  = (~is_fmem0_in) ? out_data         : dma_feature_data;
-assign fmem_wr_data[1]  = (~is_fmem0_in) ? dma_feature_data : out_data;
+assign in_data          = fmem_rd_data[~is_fmem0_in]; 
+assign fmem_wr_data[0]  = (is_feature_in) ? dma_feature_data : out_data;
+assign fmem_wr_data[1]  = (is_feature_in) ? dma_feature_data : out_data;
 
 // DMA datapath
-assign dma_result_data  = fmem_rd_data[~is_fmem0_in];
+assign dma_result_data = dma_result_data_buf; 
+assign dma_result_data_temp  = fmem_rd_data[is_fmem0_in];
 assign kmem_wr_data     = dma_kernel_data;
 assign bmem_wr_data     = dma_bias_data;
 
@@ -203,6 +222,8 @@ controller #(
     .gap_iteration     (gap_iteration),
     // control
     .is_fmem0_in       (is_fmem0_in),
+    .is_feature_in     (is_feature_in),
+    .output_init_flag  (output_init_flag),
     // I/O
     .in_enable         (in_enable),
     .out_enable        (out_enable),
@@ -240,6 +261,7 @@ controller #(
 // --------------------------------
 core #(
     .BITWIDTH                   (BITWIDTH),
+    .OUTPUT_FRAC_BITS           (OUTPUT_FRAC_BITS),
     .BITWIDTH_MAC_ITERATION     (BITWIDTH_MAC_ITERATION),
     .BITWIDTH_POOLING_ITERATION (BITWIDTH_POOLING_ITERATION),
     .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION),

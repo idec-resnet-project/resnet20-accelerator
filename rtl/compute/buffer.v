@@ -23,14 +23,14 @@ initial begin
     end
 end
 
-always @(posedge clka) begin
+always @(negedge clka) begin
     if (wea) begin
         mem[addra] <= dina;
     end
 end
 
 // With independent clocks, avoid overlapping reads and writes to the same address.
-always @(posedge clkb) begin
+always @(negedge clkb) begin
     doutb <= mem[addrb];
 end
 

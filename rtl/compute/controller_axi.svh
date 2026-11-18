@@ -8,5 +8,5 @@ assign dma_bias_hk      = dma_bias_valid    & dma_bias_ready;
 assign dma_bias_ready   = cstate[4];
 
 assign dma_result_hk    = dma_result_valid  & dma_result_ready;
-assign dma_result_valid = cstate[6];
-assign dma_result_last= (cnt_dma_output == len_output);
+assign dma_result_valid = cstate[6] & (cnt_dma_output != 0 & cnt_dma_output != 1);
+assign dma_result_last= (cnt_dma_output == len_output+2);

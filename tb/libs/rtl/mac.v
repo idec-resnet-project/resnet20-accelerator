@@ -40,11 +40,12 @@ module mac #(
     end
 endmodule
 
-// The reference core supplies the bias and uses Q5.10 at the same MAC stage.
+// Input and bias use INPUT_FRAC_BITS. MAC output uses OUTPUT_FRAC_BITS.
 module mac_accumulate #(
     parameter integer BITWIDTH = 16,
     parameter integer BITWIDTH_MAC_ITERATION = 16,
-    parameter integer INPUT_FRAC_BITS = 10
+    parameter integer INPUT_FRAC_BITS = 10,
+    parameter integer OUTPUT_FRAC_BITS = INPUT_FRAC_BITS
 )(
     input wire clk,
     input wire nrst,
@@ -59,7 +60,16 @@ module mac_accumulate #(
     output reg signed [BITWIDTH-1:0] out_data
 );
 
-    localparam integer ACTIVATION_DIVISOR = 1 << INPUT_FRAC_BITS;
+    localparam integer OUTPUT_SHIFT = 2 * INPUT_FRAC_BITS - OUTPUT_FRAC_BITS;
+    localparam integer ACTIVATION_DIVISOR = 1 << OUTPUT_SHIFT;
+
+    // synthesis translate_off
+    initial begin
+        if (OUTPUT_FRAC_BITS < 0 || OUTPUT_FRAC_BITS >= BITWIDTH ||
+            OUTPUT_FRAC_BITS > 2 * INPUT_FRAC_BITS)
+            $fatal(1, "OUTPUT_FRAC_BITS exceeds the supported MAC precision");
+    end
+    // synthesis translate_on
 
     // ------------------------------------
     // Fixed-point arithmetic

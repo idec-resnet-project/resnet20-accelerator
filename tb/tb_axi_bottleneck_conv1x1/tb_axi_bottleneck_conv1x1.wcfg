@@ -3,7 +3,7 @@
    <wave_state>
    </wave_state>
    <db_ref_list>
-      <db_ref path="C:/Users/idec/Desktop/chohyunkeon/github/resnet20-accelerator/.log/wave_viewer/298-27049-18243/behav_tb.wdb" id="1">
+      <db_ref path="C:/Users/idec/Desktop/chohyunkeon/github/resnet20-accelerator/.log/wave_viewer/30955-7649-20460/behav_tb.wdb" id="1">
          <top_modules>
             <top_module name="model_contract_pkg" />
             <top_module name="model_pkg" />
@@ -15,15 +15,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
-      <ZoomEndTime time="4,845.001 ns"></ZoomEndTime>
-      <Cursor1Time time="722.000 ns"></Cursor1Time>
+      <ZoomStartTime time="2,198.725 ns"></ZoomStartTime>
+      <ZoomEndTime time="2,273.144 ns"></ZoomEndTime>
+      <Cursor1Time time="2,234.000 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="239"></NameColumnWidth>
-      <ValueColumnWidth column_width="68"></ValueColumnWidth>
+      <NameColumnWidth column_width="204"></NameColumnWidth>
+      <ValueColumnWidth column_width="71"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="51" />
+   <WVObjectSize size="50" />
    <wvobject type="divider" fp_name="divider24">
       <obj_property name="label">Configure</obj_property>
       <obj_property name="DisplayName">label</obj_property>
@@ -91,6 +91,10 @@
    <wvobject type="divider" fp_name="divider6">
       <obj_property name="label">top_DMA</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
    </wvobject>
    <wvobject fp_name="group29" type="group">
       <obj_property name="label">DMAs</obj_property>
@@ -181,16 +185,19 @@
             <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
          </wvobject>
       </wvobject>
-      <wvobject type="divider" fp_name="divider6">
-         <obj_property name="label">Buffer</obj_property>
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="BkColor">#00FF00</obj_property>
-      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider6">
+      <obj_property name="label">top_DMA</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
    </wvobject>
    <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/cstate" type="array">
       <obj_property name="ElementShortName">cstate[7:0]</obj_property>
       <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/is_feature_in" type="logic">
+      <obj_property name="ElementShortName">is_feature_in</obj_property>
+      <obj_property name="ObjectShortName">is_feature_in</obj_property>
    </wvobject>
    <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/is_fmem0_in" type="logic">
       <obj_property name="ElementShortName">is_fmem0_in</obj_property>
@@ -314,18 +321,22 @@
       <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/bmem_wr_addr" type="array">
          <obj_property name="ElementShortName">bmem_wr_addr[2:0]</obj_property>
          <obj_property name="ObjectShortName">bmem_wr_addr[2:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       </wvobject>
       <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/bmem_wr_data" type="array">
          <obj_property name="ElementShortName">bmem_wr_data[15:0]</obj_property>
          <obj_property name="ObjectShortName">bmem_wr_data[15:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       </wvobject>
       <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/bmem_rd_addr" type="array">
          <obj_property name="ElementShortName">bmem_rd_addr[2:0]</obj_property>
          <obj_property name="ObjectShortName">bmem_rd_addr[2:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       </wvobject>
       <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/bmem_rd_data" type="array">
          <obj_property name="ElementShortName">bmem_rd_data[15:0]</obj_property>
          <obj_property name="ObjectShortName">bmem_rd_data[15:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       </wvobject>
    </wvobject>
    <wvobject type="divider" fp_name="divider6">
@@ -337,112 +348,125 @@
       <obj_property name="ElementShortName">clk</obj_property>
       <obj_property name="ObjectShortName">clk</obj_property>
    </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/is_fmem0_in" type="logic">
+      <obj_property name="ElementShortName">is_fmem0_in</obj_property>
+      <obj_property name="ObjectShortName">is_fmem0_in</obj_property>
+   </wvobject>
    <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/cstate" type="array">
       <obj_property name="ElementShortName">cstate[7:0]</obj_property>
       <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_frow" type="array">
-      <obj_property name="ElementShortName">addr_frow[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_frow[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   <wvobject fp_name="group1663" type="group">
+      <obj_property name="label">addr</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_frow" type="array">
+         <obj_property name="ElementShortName">addr_frow[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_frow[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_fcol" type="array">
+         <obj_property name="ElementShortName">addr_fcol[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_fcol[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_cin" type="array">
+         <obj_property name="ElementShortName">addr_cin[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_cin[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_krow" type="array">
+         <obj_property name="ElementShortName">addr_krow[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_krow[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_kcol" type="array">
+         <obj_property name="ElementShortName">addr_kcol[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_kcol[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_cout" type="array">
+         <obj_property name="ElementShortName">addr_cout[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_cout[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/out_enable" type="logic">
+         <obj_property name="ElementShortName">out_enable</obj_property>
+         <obj_property name="ObjectShortName">out_enable</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_orow" type="array">
+         <obj_property name="ElementShortName">addr_orow[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_orow[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_ocol" type="array">
+         <obj_property name="ElementShortName">addr_ocol[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_ocol[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_oc" type="array">
+         <obj_property name="ElementShortName">addr_oc[2:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_oc[2:0]</obj_property>
+         <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
+         <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
+         <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_fcol" type="array">
-      <obj_property name="ElementShortName">addr_fcol[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_fcol[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_cin" type="array">
-      <obj_property name="ElementShortName">addr_cin[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_cin[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_krow" type="array">
-      <obj_property name="ElementShortName">addr_krow[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_krow[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_kcol" type="array">
-      <obj_property name="ElementShortName">addr_kcol[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_kcol[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_cout" type="array">
-      <obj_property name="ElementShortName">addr_cout[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_cout[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/out_enable" type="logic">
-      <obj_property name="ElementShortName">out_enable</obj_property>
-      <obj_property name="ObjectShortName">out_enable</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_orow" type="array">
-      <obj_property name="ElementShortName">addr_orow[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_orow[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
-      <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
-      <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_ocol" type="array">
-      <obj_property name="ElementShortName">addr_ocol[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_ocol[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_oc" type="array">
-      <obj_property name="ElementShortName">addr_oc[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_oc[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_fw" type="array">
-      <obj_property name="ElementShortName">ctrl_fw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_fw[5:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_fc" type="array">
-      <obj_property name="ElementShortName">ctrl_fc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_fc[5:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_kw" type="array">
-      <obj_property name="ElementShortName">ctrl_kw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_kw[5:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_kc" type="array">
-      <obj_property name="ElementShortName">ctrl_kc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_kc[5:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_ow" type="array">
-      <obj_property name="ElementShortName">ctrl_ow[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_ow[5:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_oc" type="array">
-      <obj_property name="ElementShortName">ctrl_oc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_oc[5:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   <wvobject fp_name="group1664" type="group">
+      <obj_property name="label">ctrl</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_fw" type="array">
+         <obj_property name="ElementShortName">ctrl_fw[5:0]</obj_property>
+         <obj_property name="ObjectShortName">ctrl_fw[5:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_fc" type="array">
+         <obj_property name="ElementShortName">ctrl_fc[5:0]</obj_property>
+         <obj_property name="ObjectShortName">ctrl_fc[5:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_kw" type="array">
+         <obj_property name="ElementShortName">ctrl_kw[5:0]</obj_property>
+         <obj_property name="ObjectShortName">ctrl_kw[5:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_kc" type="array">
+         <obj_property name="ElementShortName">ctrl_kc[5:0]</obj_property>
+         <obj_property name="ObjectShortName">ctrl_kc[5:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_ow" type="array">
+         <obj_property name="ElementShortName">ctrl_ow[5:0]</obj_property>
+         <obj_property name="ObjectShortName">ctrl_ow[5:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/ctrl_oc" type="array">
+         <obj_property name="ElementShortName">ctrl_oc[5:0]</obj_property>
+         <obj_property name="ObjectShortName">ctrl_oc[5:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
    </wvobject>
    <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/addr_frow_carry" type="logic">
       <obj_property name="ElementShortName">addr_frow_carry</obj_property>
@@ -473,6 +497,7 @@
    <wvobject fp_name="group101" type="group">
       <obj_property name="label">setup</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
       <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/mac_enable" type="logic">
          <obj_property name="ElementShortName">mac_enable</obj_property>
          <obj_property name="ObjectShortName">mac_enable</obj_property>
@@ -580,5 +605,57 @@
       <obj_property name="ElementShortName">core_out_f_addr[8:0]</obj_property>
       <obj_property name="ObjectShortName">core_out_f_addr[8:0]</obj_property>
       <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider6">
+      <obj_property name="label">core_config</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">#00FF00</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/len_output" type="array">
+      <obj_property name="ElementShortName">len_output[31:0]</obj_property>
+      <obj_property name="ObjectShortName">len_output[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/cstate" type="array">
+      <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/output_init_flag" type="logic">
+      <obj_property name="ElementShortName">output_init_flag</obj_property>
+      <obj_property name="ObjectShortName">output_init_flag</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/cnt_dma_output" type="array">
+      <obj_property name="ElementShortName">cnt_dma_output[31:0]</obj_property>
+      <obj_property name="ObjectShortName">cnt_dma_output[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/dma_result_data_temp" type="array">
+      <obj_property name="ElementShortName">dma_result_data_temp[15:0]</obj_property>
+      <obj_property name="ObjectShortName">dma_result_data_temp[15:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/dma_result_data" type="array">
+      <obj_property name="ElementShortName">dma_result_data[15:0]</obj_property>
+      <obj_property name="ObjectShortName">dma_result_data[15:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/dma_result_valid" type="logic">
+      <obj_property name="ElementShortName">dma_result_valid</obj_property>
+      <obj_property name="ObjectShortName">dma_result_valid</obj_property>
+      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/dma_result_ready" type="logic">
+      <obj_property name="ElementShortName">dma_result_ready</obj_property>
+      <obj_property name="ObjectShortName">dma_result_ready</obj_property>
+      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_conv1x1/dut/u_top_bottleneck/u_controller/dma_result_last" type="logic">
+      <obj_property name="ElementShortName">dma_result_last</obj_property>
+      <obj_property name="ObjectShortName">dma_result_last</obj_property>
+      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
    </wvobject>
 </wave_config>

@@ -1,4 +1,5 @@
-    localparam int OUTPUT_FRAC_BITS = 10;
+module tb_axi_bottleneck_conv3x3stride;
+    localparam int OUTPUT_FRAC_BITS = 13;
     localparam int TIMEOUT_CYCLES = 100_000;
     import uvm_pkg::*;
     import model_contract_pkg::*;
@@ -31,7 +32,10 @@
     // --------------------------------
     // DUT port map
     // --------------------------------
-    axi_bottleneck #(
+    axi_bottleneck
+`ifndef TB_CORE_POST_SYNTHESIS
+    #(
+        .OUTPUT_FRAC_BITS           (OUTPUT_FRAC_BITS),
         .CONFIG_DATA_BITWIDTH      (6),
         .BITWIDTH_MAC_ITERATION     (16),
         .BITWIDTH_POOLING_ITERATION (16),
@@ -45,7 +49,9 @@
         .BRAM_KERNEL_CAPACITY       (12),
         .BRAM_BIAS_CAPACITY         (3),
         .ADDR_BITWIDTH               (3)
-    ) dut (
+    )
+`endif
+    dut (
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),
 
@@ -132,4 +138,4 @@
         #10000ms;
         $fatal(1, "Simulation watchdog timed out");
     end
-
+endmodule

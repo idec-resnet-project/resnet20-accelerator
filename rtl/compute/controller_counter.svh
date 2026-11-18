@@ -1,4 +1,4 @@
-always_ff @(negedge clk or posedge nrst) begin : counter_feature
+always_ff @(negedge clk or negedge nrst) begin : counter_feature
     if (!nrst) begin
         cnt_feature <= 0;
     end else if (cstate == IN_FEATURE) begin
@@ -12,7 +12,7 @@ always_ff @(negedge clk or posedge nrst) begin : counter_feature
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : counter_kernel
+always_ff @(negedge clk or negedge nrst) begin : counter_kernel
     if (!nrst) begin
         cnt_kernel <= 0;
     end else if (cstate == IN_KERNEL) begin
@@ -26,7 +26,7 @@ always_ff @(negedge clk or posedge nrst) begin : counter_kernel
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : counter_bias
+always_ff @(negedge clk or negedge nrst) begin : counter_bias
     if (!nrst) begin
         cnt_bias <= 0;
     end else if (cstate == IN_BIAS) begin
@@ -40,11 +40,11 @@ always_ff @(negedge clk or posedge nrst) begin : counter_bias
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : counter_dma_output
+always_ff @(negedge clk or negedge nrst) begin : counter_dma_output
     if (!nrst) begin
         cnt_dma_output <= 0;
     end else if (cstate == OUTPUT) begin
-        if (dma_result_hk) begin
+        if (dma_result_hk | (cnt_dma_output == 0) | (cnt_dma_output == 1)) begin
             cnt_dma_output <= cnt_dma_output + 1;
         end else begin
             cnt_dma_output <= cnt_dma_output;
@@ -56,7 +56,7 @@ end
 
 
 // core
-always_ff @(negedge clk or posedge nrst) begin : counter_core_in
+always_ff @(negedge clk or negedge nrst) begin : counter_core_in
     if (!nrst) begin
         cnt_run <= 0;
     end else if (cstate == RUN) begin
@@ -70,7 +70,7 @@ always_ff @(negedge clk or posedge nrst) begin : counter_core_in
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : counter_core_out
+always_ff @(negedge clk or negedge nrst) begin : counter_core_out
     if (!nrst) begin
         cnt_output <= 0;
     end else if (cstate == RUN) begin

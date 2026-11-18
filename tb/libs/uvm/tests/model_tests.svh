@@ -34,6 +34,10 @@
             @(negedge env.ctrl.driver.vif.clk);
             env.ctrl.driver.vif.reset_request = 1;
             repeat (4) @(posedge env.ctrl.driver.vif.clk);
+`ifdef TB_CORE_POST_SYNTHESIS
+            // Xilinx primitives remain under global startup reset for 100 ns.
+            #100ns;
+`endif
             @(negedge env.ctrl.driver.vif.clk);
             env.ctrl.driver.vif.reset_request = 0;
         endtask

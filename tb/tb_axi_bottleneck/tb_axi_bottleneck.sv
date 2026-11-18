@@ -33,7 +33,11 @@ module tb_axi_bottleneck;
     // --------------------------------
     // Select the DUT here. The dummy initializes its model backend internally.
     // axi_bottleneck_dummy #(.OUTPUT_FRAC_BITS(OUTPUT_FRAC_BITS)) dut (
-    axi_bottleneck dut (
+    axi_bottleneck
+`ifndef TB_CORE_POST_SYNTHESIS
+    #(.OUTPUT_FRAC_BITS(OUTPUT_FRAC_BITS))
+`endif
+    dut (
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),
 

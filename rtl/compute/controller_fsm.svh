@@ -1,12 +1,12 @@
 assign len_feature =(ctrl_fw+1) * (ctrl_fw+1) * (ctrl_fc+1) - 1;
 assign len_kernel = (ctrl_kw+1) * (ctrl_kw+1) * (ctrl_kc+1) * (ctrl_fc+1) - 1;
 assign len_bias = ctrl_kc;
-assign len_output = (mac_enable) ? ((gap_enable) ? ctrl_oc : (ctrl_ow+1) * (ctrl_ow+1) * (ctrl_oc+1) - 1) : len_feature;
+assign len_output = ((mac_enable) ? ((gap_enable) ? ctrl_oc : (ctrl_ow+1) * (ctrl_ow+1) * (ctrl_oc+1) - 1) : len_feature);
 
 assign cfg_response = rstate;
 
 
-always_ff @(negedge clk or posedge nrst) begin : FSM_FLAG_First_IDLE
+always_ff @(negedge clk or negedge nrst) begin : FSM_FLAG_First_IDLE
     if (!nrst) begin
         is_fisrt_IDLE <= '1;
     end else if ((cstate != IDLE) & is_fisrt_IDLE) begin
@@ -16,7 +16,7 @@ always_ff @(negedge clk or posedge nrst) begin : FSM_FLAG_First_IDLE
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : FSM_FLAG_AFTER_SKIP
+always_ff @(negedge clk or negedge nrst) begin : FSM_FLAG_AFTER_SKIP
     if (!nrst) begin
         ctrl_is_after_skip <= '0;
     end else if ((cstate == RUN) & ctrl_is_skip) begin
@@ -38,21 +38,17 @@ always_comb begin : RESPONSE
     endcase
 end
 
-always_ff @(negedge clk or posedge nrst) begin : fmem_select
+always_ff @(negedge clk or negedge nrst) begin : fmem_select
     if (!nrst) begin
-        is_fmem0_in <= 0;
+        is_fmem0_in <= 1;
     end else if (cstate == DECODE) begin
-        if (ctrl_input_enable) begin
-            is_fmem0_in <= is_fmem0_in;
-        end else begin
-            is_fmem0_in <= ~is_fmem0_in;
-        end
+        is_fmem0_in <= ~is_fmem0_in;
     end else begin
         is_fmem0_in <= is_fmem0_in;
     end
 end
 
-always_ff @(negedge clk or posedge nrst) begin : FSM_cstate
+always_ff @(negedge clk or negedge nrst) begin : FSM_cstate
     if (!nrst) begin
         cstate <= IDLE;
     end else begin
@@ -112,7 +108,7 @@ always_ff @(negedge clk or posedge nrst) begin : FSM_cstate
                 end   
             end
             OUTPUT: begin
-                if ((cnt_dma_output == len_output) & dma_result_hk) begin
+                if ((cnt_dma_output == len_output + 2) && dma_result_hk) begin
                     cstate <= IDLE;
                 end else begin
                     cstate <= OUTPUT;

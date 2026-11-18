@@ -3,39 +3,6 @@ always_ff @(negedge clk or negedge nrst) begin
     if (!nrst) in_enable <= '0;
     else in_enable <= (cstate == RUN) & (cnt_run != len_feature+1);
 end
-
-assign mac_iteration = (ctrl_kw+1)*(ctrl_kw+1)*(ctrl_fc+1);
-assign gap_iteration = (ctrl_fw+1)*(ctrl_fw+1);
-
-assign core_in_f_addr  = {addr_cin, addr_fcol, addr_frow};
-assign core_in_k_addr  = {addr_cout, addr_cin, addr_kcol, addr_krow};
-assign core_in_b_addr  = {addr_cout};
-assign core_out_f_addr = {addr_oc, addr_ocol, addr_orow};
-
-// fmem
-assign fmem_rd_addr_temp = addr_frow + ctrl_fw * (addr_fcol + ctrl_fw * addr_cin);
-
-assign fmem_wr_enable[0] = (is_fmem0_in)  ? 0 : (out_enable | dma_feature_hk);
-assign fmem_wr_enable[1] = (is_fmem0_in)  ? (out_enable | dma_feature_hk) : 0;
-assign fmem_wr_addr[0]   = (~is_fmem0_in)  ? core_in_f_addr : core_out_f_addr;
-assign fmem_wr_addr[1]   = (is_fmem0_in) ? core_in_f_addr : core_out_f_addr;
-assign fmem_rd_addr[0]   = core_in_f_addr;
-assign fmem_rd_addr[1]   = core_in_f_addr;
-
-// kernel
-assign kmem_wr_enable    = dma_kernel_hk;
-assign kmem_rd_addr      = core_in_k_addr;
-assign kmem_wr_addr      = core_in_k_addr;
-
-assign bmem_wr_enable    = dma_bias_hk;
-assign bmem_rd_addr      = core_in_b_addr;
-assign bmem_wr_addr      = core_in_b_addr;
-
-assign rmem_wr_enable    = (ctrl_is_skip) ? out_enable : 0;
-assign rmem_wr_addr      =  (~is_fmem0_in) ? core_in_f_addr : '0;
-assign rmem_rd_addr      = (is_fmem0_in) ? core_in_f_addr :cnt_feature[BRAM_FEATRE_CAPACITY-1:0];
-
-
 // counter
 reg [ADDR_BITWIDTH-1:0] addr_frow_next;
 reg [ADDR_BITWIDTH-1:0] addr_fcol_next;
@@ -67,6 +34,44 @@ wire  addr_krkccinfrfc_carry;
 wire  addr_krkccinfrfccout_carry;
 wire  addr_oroc_carry;
 wire  addr_orococ_carry;
+
+wire [BRAM_FEATRE_CAPACITY-1:0] output_read_addr;
+
+assign output_read_addr = dma_result_hk ? {addr_oc_next, addr_ocol_next, addr_orow_next} : core_out_f_addr;
+
+assign mac_iteration = (ctrl_kw+1)*(ctrl_kw+1)*(ctrl_fc+1);
+assign gap_iteration = (ctrl_fw+1)*(ctrl_fw+1);
+
+assign core_in_f_addr  = {addr_cin, addr_fcol, addr_frow};
+assign core_in_k_addr  = {addr_cout, addr_cin, addr_kcol, addr_krow};
+assign core_in_b_addr  = {addr_cout};
+assign core_out_f_addr = {addr_oc, addr_ocol, addr_orow};
+
+// fmem
+assign fmem_rd_addr_temp = addr_frow + ctrl_fw * (addr_fcol + ctrl_fw * addr_cin);
+
+assign fmem_wr_enable[0] = (ctrl_input_enable) ? ((is_fmem0_in)  ? '0 : dma_feature_hk)
+                           : ((is_fmem0_in)  ? '0 : out_enable & cstate[5]);
+assign fmem_wr_enable[1] = (ctrl_input_enable) ? ((~is_fmem0_in)  ? '0 : dma_feature_hk)
+                           : ((~is_fmem0_in)  ? '0 : out_enable & cstate[5]);
+assign fmem_wr_addr[0]   = (ctrl_input_enable)  ? core_in_f_addr : core_out_f_addr;
+assign fmem_wr_addr[1]   = (ctrl_input_enable)  ? core_in_f_addr : core_out_f_addr;
+assign fmem_rd_addr[0]   = (cstate == OUTPUT) ? output_read_addr : core_in_f_addr;
+assign fmem_rd_addr[1]   = (cstate == OUTPUT) ? output_read_addr : core_in_f_addr;
+
+// kernel
+assign kmem_wr_enable    = dma_kernel_hk;
+assign kmem_rd_addr      = core_in_k_addr;
+assign kmem_wr_addr      = core_in_k_addr;
+
+assign bmem_wr_enable    = dma_bias_hk;
+assign bmem_rd_addr      = core_in_b_addr;
+assign bmem_wr_addr      = core_in_b_addr;
+
+assign rmem_wr_enable    = (ctrl_is_skip) ? out_enable : 0;
+assign rmem_wr_addr      =  (~is_fmem0_in) ? core_in_f_addr : '0;
+assign rmem_rd_addr      = (is_fmem0_in) ? core_in_f_addr :cnt_feature[BRAM_FEATRE_CAPACITY-1:0];
+
 
 assign addr_frfc_carry        = addr_fcol_carry & addr_frow_carry;
 assign addr_frfccin_carry     = addr_fcol_carry & addr_frow_carry & addr_cin_carry;
@@ -174,16 +179,16 @@ always_comb begin
             addr_oc_next    = (addr_orococ_carry & out_enable)          ? '0 : addr_oc   + (addr_oroc_carry & out_enable);
         end
         OUTPUT : begin
-            if (dma_result_hk) begin
-                addr_frow_next  = (addr_orow_carry)     ? '0 : addr_frow + 1;
-                addr_fcol_next  = (addr_oroc_carry)     ? '0 : addr_fcol + addr_orow_carry;
-                addr_cin_next   = (addr_orococ_carry)  ? '0  : addr_cin  + addr_oroc_carry;
+            if (dma_result_hk || (cnt_dma_output == 0)) begin
+                addr_frow_next  = addr_frow; 
+                addr_fcol_next  = addr_fcol;
+                addr_cin_next   = addr_cin;
                 addr_krow_next  = addr_krow;
                 addr_kcol_next  = addr_kcol;
                 addr_cout_next  = addr_cout;
-                addr_orow_next  = addr_orow;
-                addr_ocol_next  = addr_ocol;
-                addr_oc_next    = addr_oc;
+                addr_orow_next  = (addr_orow_carry)     ? '0 : addr_orow + 1;
+                addr_ocol_next  = (addr_oroc_carry)     ? '0 : addr_ocol + addr_orow_carry;
+                addr_oc_next    = (addr_orococ_carry)   ? '0  : addr_oc  + addr_oroc_carry;
             end else begin
                 addr_frow_next  = addr_frow; 
                 addr_fcol_next  = addr_fcol;
@@ -210,7 +215,7 @@ always_comb begin
     endcase
 end
 
-always_ff @(negedge clk or posedge nrst) begin : FEATURE_ROW
+always_ff @(negedge clk or negedge nrst) begin : FEATURE_ROW
     if (!nrst) begin
         addr_frow <= 0;
         addr_fcol <= 0;

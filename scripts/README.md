@@ -14,7 +14,7 @@ scripts\behav_sim.bat tb_axi_bottleneck_toy
 | `--gui-live` | 라이브 파형 창에서 실행 |
 | `--skip-compile` | 기존 스냅샷 재사용. 소스·DUT·파일 목록 변경 후에는 새로 컴파일 |
 
-Windows 실행기는 XSim이 기록할 수 있는 전체 계층의 신호를 `tb/<tb_name>/.log/behav_tb.wdb`에 저장합니다. 파형을 저장하면서 `--skip-compile`을 사용하려면 `-debug all`로 빌드한 스냅샷이 필요합니다. `--no-wdb`를 지정하면 결과 WDB를 저장하지 않습니다.
+Windows 실행기는 XSim이 기록할 수 있는 전체 계층의 신호를 `.log/sim/<tb_name>/behav_tb.wdb`에 저장합니다. 합성 시뮬레이션은 `.log/sim/<tb_name>_synthesis/behav_tb.wdb`를 사용합니다. 파형을 저장하면서 `--skip-compile`을 사용하려면 `-debug all`로 빌드한 스냅샷이 필요합니다. `--no-wdb`를 지정하면 결과 WDB를 저장하지 않습니다.
 
 ## 폴더와 파일 목록
 
@@ -66,4 +66,4 @@ TB 실행과 컴파일은 `verification` 소스를 참조하지 않습니다. `v
 
 ## 기존 진입점
 
-`behav_sim.sh`는 기존 `tb_core`용 Bash 진입점이며 사전 데이터를 사용합니다. `synthesis.bat tb_core --sim`은 기존 합성 넷리스트를 사용합니다. 합성 도구는 `tb/libs/rtl`을 입력으로 사용하고, 합성 wrapper가 공통 실행기에 넷리스트·대체할 RTL 디렉터리·매크로·추가 elaboration 대상을 전달합니다.
+`behav_sim.sh`는 기존 `tb_core`용 Bash 진입점이며 사전 데이터를 사용합니다. `synthesis_sim.bat <testbench>`는 TB의 DUT와 파라미터로 합성한 뒤 컴파일·elaboration·시뮬레이션을 직접 수행합니다. `--skip-compile`은 합성과 컴파일을 생략합니다. `synthesis.bat <testbench> --sim`도 이 실행기를 호출합니다. 합성 Tcl은 `fpga/zedboard/synthesis.tcl`에 있으며, 보드 정의와 제약은 같은 폴더에서 읽습니다. 합성 산출물은 `.log/synth/<testbench>/zedboard/` 아래에 저장합니다. AXI TB는 `axi_bottleneck_funcsim.v`, 단독 core TB는 `core_funcsim.v`로 RTL을 대체합니다.

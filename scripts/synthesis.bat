@@ -7,6 +7,7 @@ rem ----------------------------------------------------------------
 for %%I in ("%~dp0..") do set "ROOT=%%~fI"
 
 set "CONFIG_SIM=0"
+set "TB_NAME="
 set "GUI_LIVE_FLAG="
 set "GUI_STATIC_FLAG="
 set "NO_WDB_FLAG="
@@ -20,7 +21,10 @@ if /i "%~1"=="--gui-live" goto option_gui_live
 if /i "%~1"=="--gui" goto option_gui
 if /i "%~1"=="--no-wdb" goto option_no_wdb
 if /i "%~1"=="--skip-compile" goto option_skip_compile
-if /i not "%~1"=="tb_core" goto error_args
+if defined TB_NAME goto error_args
+set "TB_NAME=%~1"
+set TB_NAME | findstr /r /x /c:"TB_NAME=[A-Za-z_][A-Za-z_0-9]*" >nul
+if errorlevel 1 goto error_args
 shift /1
 goto options
 
@@ -53,6 +57,7 @@ rem ----------------------------------------------------------------
 rem check environment
 rem ----------------------------------------------------------------
 :environment
+if not defined TB_NAME set "TB_NAME=tb_core"
 if "%CONFIG_SIM%"=="1" goto simulate
 if defined NO_WDB_FLAG goto error_args
 if defined SKIP_COMPILE_FLAG goto error_args
@@ -71,26 +76,21 @@ if not defined PYTHON_CMD goto error_python
 rem ----------------------------------------------------------------
 rem synthesize
 rem ----------------------------------------------------------------
-"%PYTHON_CMD%" "%ROOT%\scripts\synthesis.py"
+"%PYTHON_CMD%" "%ROOT%\scripts\synthesis.py" %TB_NAME%
 exit /b %ERRORLEVEL%
 
 rem ----------------------------------------------------------------
 rem simulate the existing netlist
 rem ----------------------------------------------------------------
 :simulate
-for %%I in ("%~dp0..") do set "ROOT=%%~fI"
-set "TB_SIM_NETLIST=%ROOT%\.log\synth\tb_core\zedboard\reference_rtl\core_funcsim.v"
-set "TB_SIM_RTL_DIR=%ROOT%\tb\libs\rtl"
-set "TB_SIM_COMPILE_FLAGS=-d TB_CORE_POST_SYNTHESIS"
-set "TB_SIM_ELAB_TARGETS=glbl -L unisims_ver"
-call "%~dp0behav_sim.bat" tb_core %SKIP_COMPILE_FLAG% %NO_WDB_FLAG% %GUI_LIVE_FLAG% %GUI_STATIC_FLAG%
+call "%~dp0synthesis_sim.bat" %TB_NAME% %SKIP_COMPILE_FLAG% %NO_WDB_FLAG% %GUI_LIVE_FLAG% %GUI_STATIC_FLAG%
 exit /b %ERRORLEVEL%
 
 rem ----------------------------------------------------------------
 rem error
 rem ----------------------------------------------------------------
 :error_args
-echo Usage: %~nx0 [tb_core] [--sim [--skip-compile] [--no-wdb] [--gui-live ^| --gui]] 1>&2
+echo Usage: %~nx0 [testbench] [--sim [--skip-compile] [--no-wdb] [--gui-live ^| --gui]] 1>&2
 exit /b 2
 
 :error_python

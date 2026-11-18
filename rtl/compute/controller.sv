@@ -29,10 +29,12 @@ module controller #(
     // core input
     output reg                                   in_enable,
     input  wire                                  out_enable,
+    output reg                                  output_init_flag,
 
     // top control
     output reg                                   is_fmem0_in,
     output reg                                   is_zero,
+    output wire                                  is_feature_in,
     
     // DMA feature
     input  wire                                  dma_feature_valid,
@@ -177,6 +179,15 @@ wire dma_result_hk;
 // ----------------------------------------------------------------
 `include "controller_fsm.svh"
 
+assign is_feature_in = ctrl_input_enable & (cstate == IN_FEATURE);
+
+always @(negedge clk or negedge nrst) begin
+    if (!nrst) begin
+       output_init_flag <= 0; 
+    end else begin
+        output_init_flag <= cnt_dma_output == 0; 
+    end
+end
 // ----------------------------------------------------------------
 // counter
 // ----------------------------------------------------------------

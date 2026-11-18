@@ -1,5 +1,4 @@
-    // Both tests use stride 1.
-    localparam int OUTPUT_SIZE = INPUT_SIZE + 2 * PADDING - KERNEL_SIZE + 1;
+    localparam int OUTPUT_SIZE = (INPUT_SIZE + 2 * PADDING - KERNEL_SIZE) / STRIDE + 1;
     localparam int SCALE = 1024; // Q5.10
 
     localparam bit [31:0] OP_INPUT  = 32'h01;
@@ -13,9 +12,9 @@
     endfunction
 
     function automatic bit [31:0] instruction_word(bit [31:0] op,
-                                                     int size, channels, padding);
-        // Bit 8 stays zero for stride 1.
-        return op | (padding << 9) | ((size - 1) << 10) |
+                                                     int size, channels, padding,
+                                                     int stride = 1);
+        return op | ((stride - 1) << 8) | (padding << 9) | ((size - 1) << 10) |
                ((size - 1) << 16) | ((channels - 1) << 22);
     endfunction
 
@@ -33,8 +32,8 @@
                     for (int ic = 0; ic < IN_CHANNELS; ic++) begin
                         for (int ky = 0; ky < KERNEL_SIZE; ky++) begin
                             for (int kx = 0; kx < KERNEL_SIZE; kx++) begin
-                                iy = y + ky - PADDING;
-                                ix = x + kx - PADDING;
+                                iy = y * STRIDE + ky - PADDING;
+                                ix = x * STRIDE + kx - PADDING;
                                 if (iy >= 0 && iy < INPUT_SIZE && ix >= 0 && ix < INPUT_SIZE) begin
                                     feature_index = (ic * INPUT_SIZE + iy) * INPUT_SIZE + ix;
                                     kernel_index = ((oc * IN_CHANNELS + ic) * KERNEL_SIZE + ky) *
@@ -66,7 +65,7 @@
                                             ((i * 7) % 19 - 9) * (SCALE / 8);
 
         conv.instruction = instruction_word(OP_MAC | OP_OUTPUT | (RELU_ENABLE ? OP_RELU : 0),
-                                            KERNEL_SIZE, OUT_CHANNELS, PADDING);
+                                            KERNEL_SIZE, OUT_CHANNELS, PADDING, STRIDE);
         conv.payload[KERNEL].words = new[OUT_CHANNELS * IN_CHANNELS * KERNEL_SIZE * KERNEL_SIZE];
         foreach (conv.payload[KERNEL].words[i])
             conv.payload[KERNEL].words[i] = SEQUENTIAL_PAYLOADS ? i + 1 :
