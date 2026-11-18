@@ -27,7 +27,8 @@ module avgpool #(
 )(
     input wire clk, 
     input wire rst_n,
-    input wire enable,                      
+    input wire enable,             
+    input wire valid_in,         
     input wire [ITER_CNT-1:0] iter,         
                                             
 
@@ -86,7 +87,7 @@ module avgpool #(
             // when enable is high and iteration count is 0,
             // set sum to data_in and iteration count to 1
             //=======================================================================
-                if(enable && (iter_cnt == 0))
+                if(enable && valid_in && (iter_cnt == 0))
                 begin
                     sum        <= data_in;
                     iter_cnt   <= 1;

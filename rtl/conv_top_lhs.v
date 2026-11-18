@@ -21,7 +21,6 @@
 
 
 module conv_top
-
 #(
     parameter integer WORD_W = 16,
     parameter integer BITWIDTH_MAC_ITERATION     = 16,
@@ -31,10 +30,10 @@ module conv_top
     parameter integer PARALLEL_PC                = 1,
     parameter integer PARALLEL_PF                = 1
 )
-    (
+(
     input  wire                                  clk,
     input  wire                                  nrst,
-    
+
     // config
     input  wire                                  mac_enable,
     input  wire [BITWIDTH_MAC_ITERATION-1:0]     mac_iteration,
@@ -44,128 +43,184 @@ module conv_top
     input  wire [BITWIDTH_POOLING_ITERATION-1:0] pooling_iteration,
     input  wire                                  gap_enable,
     input  wire [BITWIDTH_GAP_ITERATION-1:0]     gap_iteration,
-    
+
     // input
     input  wire                                  in_enable,
     input  wire [PARALLEL_PC*WORD_W-1:0]         in_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         kernel_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         bias_data,
-    
+
     // output
     output reg                                   out_enable,
     output reg  [WORD_W-1:0]                     out_data
-   
-    );
-    wire    [PARALLEL_PC*WORD_W-1:0]    mac_out;
-    wire    [PARALLEL_PC*WORD_W-1:0]    ReLU_out;
-    wire    [PARALLEL_PC*WORD_W-1:0]    pooling_out;
-    wire    [PARALLEL_PC*WORD_W-1:0]    residual_out;
-    wire                                valid_out_mac;
-    wire                                valid_out_relu;
-    wire                                valid_out_residual;
+);
 
-    reg                                 mac_enable_reg;
-    reg                                 relu_enable_reg;
-    reg                                 residual_enable_reg;
-    reg                                 pooling_enable_reg;    
-    reg                                 gap_enable_reg;
-    
+    //=======================================================================
+    // data
+    //=======================================================================
+    wire [PARALLEL_PC*WORD_W-1:0] mac_out;
+    wire [PARALLEL_PC*WORD_W-1:0] ReLU_out;
+    wire [PARALLEL_PC*WORD_W-1:0] residual_out;
+    wire [WORD_W-1:0]             pooling_out;
+
+    //=======================================================================
+    // valid
+    //=======================================================================
+    // 모듈 -> 디코더 (lane 별)
+    wire [PARALLEL_PC-1:0] valid_out_mac;
+    wire [PARALLEL_PC-1:0] valid_out_relu;
+    wire [PARALLEL_PC-1:0] valid_out_residual;
+    wire                   valid_out_pooling;
+
+    // 디코더 -> 모듈
+    wire mac_valid_in;
+    wire relu_valid_in;
+    wire residual_valid_in;
+    wire pooling_valid_in;
+    wire chain_valid_out;
+
+    //=======================================================================
+    // config 레지스터
+    //=======================================================================
+    reg mac_enable_reg;
+    reg relu_enable_reg;
+    reg residual_enable_reg;
+    reg pooling_enable_reg;
+    reg gap_enable_reg;
+
     always @(posedge clk or negedge nrst)
     begin
-        if(!nrst)
+        if (!nrst)
         begin
-            out_data    <= 0;
-            out_enable  <= 0;
-            mac_enable_reg <= 0;
-            relu_enable_reg <= 0;
-            residual_enable_reg <= 0;
-            pooling_enable_reg <= 0;
-            gap_enable_reg <= 0;
+            mac_enable_reg      <= 1'b0;
+            relu_enable_reg     <= 1'b0;
+            residual_enable_reg <= 1'b0;
+            pooling_enable_reg  <= 1'b0;
+            gap_enable_reg      <= 1'b0;
+            out_data            <= {WORD_W{1'b0}};
+            out_enable          <= 1'b0;
         end
-        
         else
-            begin
-            out_data    <= pooling_out;      
-            out_enable  <= 1;
-            end   
+        begin
+            mac_enable_reg      <= mac_enable;
+            relu_enable_reg     <= relu_enable;
+            residual_enable_reg <= residual_enable;
+            pooling_enable_reg  <= pooling_enable;
+            gap_enable_reg      <= gap_enable;
+            out_data            <= pooling_out;
+            out_enable          <= chain_valid_out;
+        end
     end
-    
+
+    //=======================================================================
+    // valid 체인 디코더
+    //=======================================================================
+    conv_valid_dcd uut_valid_dcd
+    (
+        .mac_enable         (mac_enable_reg),
+        .relu_enable        (relu_enable_reg),
+        .residual_enable    (residual_enable_reg),
+        .pooling_enable     (pooling_enable_reg),
+        .gap_enable         (gap_enable_reg),
+
+        .in_valid           (in_enable),
+
+        .mac_valid_out      (valid_out_mac[0]),
+        .relu_valid_out     (valid_out_relu[0]),
+        .residual_valid_out (valid_out_residual[0]),
+        .pooling_valid_out  (valid_out_pooling),
+
+        .mac_valid_in       (mac_valid_in),
+        .relu_valid_in      (relu_valid_in),
+        .residual_valid_in  (residual_valid_in),
+        .pooling_valid_in   (pooling_valid_in),
+
+        .valid_out          (chain_valid_out)
+    );
+
+    //=======================================================================
+    // lane: MAC -> ReLU -> residual
+    //=======================================================================
     genvar i;
-    
     generate
-    for(i = 0; i<PARALLEL_PC; i=i+1)
-    begin
-    mac_packed
-    #(
-    .WORD_W(WORD_W),
-    .ACC_W(WORD_W*2+1),
-    .ITER_CNT(BITWIDTH_MAC_ITERATION)
-    ) 
-    uut_mac
-    (
-    .clk        (clk),                                                
-    .rst_n      (nrst),                                              
-    .enable     (mac_enable_reg),    
-    .valid_in   (), 
-    .valid_out  (valid_out_mac),                                               
-    .iter       (mac_iteration),   
-    .fmap_in    (in_data[i*WORD_W+:WORD_W]),                          
-    .weight_in  (kernel_data[i*WORD_W+:WORD_W]),  
-    .valid_out  (mac_valid_out),             
-    .data_out   (mac_out[i*WORD_W+:WORD_W])             
-     );
-    
-    ReLU_packed
-    #(
-    .WORD_W(WORD_W)
-    )
-    uut_ReLU
-    (
-    .clk        (clk),      
-    .rst_n      (nrst),    
-    .enable     (relu_enable_reg),   
-    .valid_in   (),
-    .data_in    (mac_out[i*WORD_W+:WORD_W]),  
-    .valid_out  (valid_out_relu),
-    .data_out   (ReLU_out[i*WORD_W+:WORD_W])
-    );
-    
-    residual_packed
-    #(
-    .WORD_W(WORD_W)
-    )
-    uut_residual
-    (
-    .clk        (clk),        
-    .rst_n      (nrst),      
-    .enable     (residual_enable_reg),     
-    .valid_in   (),   
-    .valid_out  (valid_out_residual),
-    .data_in    (ReLU_out[i*WORD_W+:WORD_W]),    
-    .data_skip  (bias_data[i*WORD_W+:WORD_W]),
-    .data_out   (residual_out[i*WORD_W+:WORD_W])       
-    );
+    for (i = 0; i < PARALLEL_PC; i = i + 1)
+    begin : g_lane
+
+        mac_packed
+        #(
+            .WORD_W   (WORD_W),
+            .ACC_W    (WORD_W*2+1),
+            .ITER_CNT (BITWIDTH_MAC_ITERATION)
+        )
+        uut_mac
+        (
+            .clk       (clk),
+            .rst_n     (nrst),
+            .enable    (mac_enable_reg),
+            .valid_in  (mac_valid_in),
+            .iter      (mac_iteration),
+            .fmap_in   (in_data[i*WORD_W +: WORD_W]),
+            .weight_in (kernel_data[i*WORD_W +: WORD_W]),
+            .valid_out (valid_out_mac[i]),
+            .data_out  (mac_out[i*WORD_W +: WORD_W])
+        );
+
+        ReLU_packed
+        #(
+            .WORD_W (WORD_W)
+        )
+        uut_ReLU
+        (
+            .clk       (clk),
+            .rst_n     (nrst),
+            .enable    (relu_enable_reg),
+            .valid_in  (relu_valid_in),
+            .data_in   (mac_out[i*WORD_W +: WORD_W]),
+            .valid_out (valid_out_relu[i]),
+            .data_out  (ReLU_out[i*WORD_W +: WORD_W])
+        );
+
+        residual_packed
+        #(
+            .WORD_W (WORD_W)
+        )
+        uut_residual
+        (
+            .clk       (clk),
+            .rst_n     (nrst),
+            .enable    (residual_enable_reg),
+            .valid_in  (residual_valid_in),
+            .data_in   (ReLU_out[i*WORD_W +: WORD_W]),
+            .data_skip (bias_data[i*WORD_W +: WORD_W]),
+            .valid_out (valid_out_residual[i]),
+            .data_out  (residual_out[i*WORD_W +: WORD_W])
+        );
+
     end
     endgenerate
+
+    //=======================================================================
+    // pooling (lane 0)
+    //=======================================================================
     pooling_packed
     #(
-    .WORD_W      (WORD_W),
-    .ACC_W       (WORD_W*2+1),
-    .MAX_ITER_CNT(BITWIDTH_POOLING_ITERATION),
-    .AVG_ITER_CNT(BITWIDTH_GAP_ITERATION)
+        .WORD_W       (WORD_W),
+        .ACC_W        (WORD_W*2+1),
+        .MAX_ITER_CNT (BITWIDTH_POOLING_ITERATION),
+        .AVG_ITER_CNT (BITWIDTH_GAP_ITERATION)
     )
     uut_pooling
     (
-    .clk        (clk),          
-    .rst_n      (nrst),        
-    .enable_avg (gap_enable_reg),   
-    .enable_max (pooling_enable_reg),   
-    .valid_in   (),
-    .max_iter   (pooling_iteration),
-    .avg_iter   (gap_iteration),     
-    .data_in    (residual_out),
-    .data_out   (pooling_out)          
+        .clk        (clk),
+        .rst_n      (nrst),
+        .enable_avg (gap_enable_reg),
+        .enable_max (pooling_enable_reg),
+        .valid_in   (pooling_valid_in),
+        .max_iter   (pooling_iteration),
+        .avg_iter   (gap_iteration),
+        .data_in    (residual_out[WORD_W-1:0]),
+        .valid_out  (valid_out_pooling),
+        .data_out   (pooling_out)
     );
-    
-    
+
 endmodule

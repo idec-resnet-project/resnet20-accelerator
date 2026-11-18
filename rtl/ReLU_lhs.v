@@ -25,13 +25,15 @@ module ReLU
 parameter integer WORD_W = 16
 )
 (
-    input wire clk,
-    input wire rst_n,
-    input wire enable,
-    input wire signed [WORD_W-1:0] data_in,
+    input wire                      clk,
+    input wire                      rst_n,
+    input wire                      enable,
+    input wire                      valid_in,
+
+    input wire signed [WORD_W-1:0]  data_in,
     
-    output reg valid_out,
-    output reg signed [WORD_W-1:0] data_out
+    output reg                      valid_out,
+    output reg signed [WORD_W-1:0]  data_out
     );    
     always @(posedge clk or negedge rst_n)
     begin
@@ -49,10 +51,10 @@ parameter integer WORD_W = 16
     // else output the input data
     // when enable is low, output is 0
     //=======================================================================
-        else if(enable)
+        else if(enable && valid_in)
             begin
                 valid_out <= 1;                 
-                data_out   <= (enable && data_in[WORD_W-1]) ? 0 : data_in;
+                data_out   <= (valid_in && data_in[WORD_W-1]) ? 0 : data_in;
                 
             end
             

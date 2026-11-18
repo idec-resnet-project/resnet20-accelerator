@@ -30,6 +30,7 @@ module pooling_packed #(
     input wire                          rst_n,
     input wire                          enable_avg,                      
     input wire                          enable_max,
+    input wire                          valid_in,
     input wire [MAX_ITER_CNT-1:0]       max_iter,  
     input wire [AVG_ITER_CNT-1:0]       avg_iter,       
                                             
@@ -37,11 +38,11 @@ module pooling_packed #(
     input wire signed [WORD_W-1:0]  data_in, 
     
 
-    //output reg                     valid_out,                   
+    output wire                     valid_out,                   
     output wire signed [WORD_W-1:0] data_out
     );
 
-    wire    valid_out;
+    //wire    valid_out;
     wire    signed [WORD_W-1:0] data_out_pool;
 
 
@@ -55,6 +56,7 @@ module pooling_packed #(
     (
         .clk(clk),
         .rst_n(rst_n),
+        .valid_in(valid_in),
         .enable_avg(enable_avg),
         .enable_max(enable_max),
         .max_iter(max_iter),

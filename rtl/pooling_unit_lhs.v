@@ -8,6 +8,7 @@ module pooling_unit #(
 )(
     input wire clk, 
     input wire rst_n,
+    input wire valid_in,
     input wire enable_avg,                      
     input wire enable_max,
     input wire [MAX_ITER_CNT-1:0] max_iter,         
@@ -38,6 +39,7 @@ module pooling_unit #(
         .clk(clk),
         .rst_n(rst_n),
         .enable(enable_avg),
+        .valid_in(valid_in),
         .iter(avg_iter),
         .data_in(data_in),
         .valid_out(valid_out_avg),
@@ -52,6 +54,7 @@ module pooling_unit #(
         .clk(clk),
         .rst_n(rst_n),
         .enable(enable_max),
+        .valid_in(valid_in),
         .iter(max_iter),
         .data_in(data_in),
         .valid_out(valid_out_max),

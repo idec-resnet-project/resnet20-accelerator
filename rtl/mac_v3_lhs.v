@@ -10,6 +10,7 @@ module mac_v3
     input  wire                         clk, 
     input  wire                         rst_n,
     input  wire                         enable,
+    input  wire                         valid_in,
     input  wire        [ITER_CNT-1:0]   iter,
     input  wire signed [WORD_W-1:0]     fmap_in,
     input  wire signed [WORD_W-1:0]     weight_in,
@@ -51,7 +52,7 @@ module mac_v3
     // when valid input(enable) is high
     // set iter_cnt to 1 and proc(processing register) to high
     //=======================================================================
-                    if (enable && !proc) 
+                    if (enable && valid_in && !proc) 
                         begin                
                             iter_reg  <= iter;
                             iter_cnt  <= {{(ITER_CNT-1){1'b0}}, 1'b1};
@@ -111,7 +112,7 @@ module mac_v3
     // intiate MAC, load input data, multiply and accumulate
     //=======================================================================   
                 
-                if (enable && !proc) 
+                if (enable && valid_in && !proc) 
                     begin
                         fmap     <= fmap_in;
                         weight   <= weight_in;

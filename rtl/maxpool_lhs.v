@@ -27,7 +27,8 @@ module maxpool #(
 )(
     input wire                      clk, 
     input wire                      rst_n,
-    input wire                      enable,            
+    input wire                      enable, 
+    input wire                      valid_in,           
     input wire        [ITER_CNT-1:0]iter,    
     input wire signed [WORD_W-1:0]  data_in,
 
@@ -52,7 +53,7 @@ module maxpool #(
         end
         else 
         begin
-            if(enable && (iter_cnt == 0))
+            if(enable && valid_in && (iter_cnt == 0))
             begin
                 iter_cnt    <= 1;
                 iter_reg    <= iter;

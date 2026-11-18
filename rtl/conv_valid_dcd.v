@@ -18,40 +18,43 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-`timescale 1ns / 1ps
-
 module conv_valid_dcd
-#(
-    parameter integer WORD_W = 16
-)
 (
-    input   wire    mac_enable,
-    input   wire    residual_enable,
-    input   wire    relu_enable,
-    input   wire    pooling_enable,
-    input   wire    gap_enable,
+    // 레지스터된 enable
+    input  wire mac_enable,
+    input  wire relu_enable,
+    input  wire residual_enable,
+    input  wire pooling_enable,
+    input  wire gap_enable,
 
-    input   wire    mac_valid_out,
-    input   wire    residual_valid_out,
-    input   wire    relu_valid_out,
-    input   wire    pooling_valid_out,
-    input   wire    gap_valid_out,
+    // 체인 입력 valid
+    input  wire in_valid,
 
-    output  wire    mac_valid_in,
-    output  wire    residual_valid_in,
-    output  wire    relu_valid_in,
-    output  wire    pooling_valid_in,
-    output  wire    gap_valid_in,
+    // 각 모듈 valid_out
+    input  wire mac_valid_out,
+    input  wire relu_valid_out,
+    input  wire residual_valid_out,
+    input  wire pooling_valid_out,
 
-    output  wire    valid_out
+    // 각 모듈 valid_in
+    output wire mac_valid_in,
+    output wire relu_valid_in,
+    output wire residual_valid_in,
+    output wire pooling_valid_in,
+
+    // 체인 최종 valid
+    output wire valid_out
 );
-    
-    assign mac_valid_in         = mac_enable && mac_valid_out;
-    assign residual_valid_in    = residual_enable && residual_valid_out;
-    assign relu_valid_in        = relu_enable && relu_valid_out;
-    assign pooling_valid_in     = pooling_enable && pooling_valid_out;
-    assign gap_valid_in         = gap_enable && gap_valid_out;
 
-    
-   
+    wire v_mac  = mac_enable                     ? mac_valid_out      : in_valid;
+    wire v_relu = relu_enable                    ? relu_valid_out     : v_mac;
+    wire v_res  = residual_enable                ? residual_valid_out : v_relu;
+    wire v_pool = (pooling_enable || gap_enable) ? pooling_valid_out  : v_res;
+
+    assign mac_valid_in      = in_valid;
+    assign relu_valid_in     = v_mac;
+    assign residual_valid_in = v_relu;
+    assign pooling_valid_in  = v_res;
+    assign valid_out         = v_pool;
+
 endmodule

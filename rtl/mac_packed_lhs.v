@@ -27,11 +27,12 @@ module mac_packed#(
     input   wire                            clk, 
     input   wire                            rst_n,
     input   wire                            enable, //en = 0 -> data bypass, en = 1 -> using mac 
-       
+    input   wire                            valid_in, //valid_in = 1 -> data is valid, valid_in = 0 -> data is invalid   
     input   wire           [ITER_CNT-1:0]   iter, //if iteration = 3 -> Y = X0W0 + X1W1 + X2W2  
     input   wire    signed [WORD_W-1:0]     fmap_in,     //feature value
     input   wire    signed [WORD_W-1:0]     weight_in, //weight value      
     
+    output  wire                            valid_out, //valid_out = 1 -> data is valid, valid_out = 0 -> data is invalid
     output  wire    signed [WORD_W-1:0]     data_out //mac --out_data--> other
     );
     
@@ -43,6 +44,8 @@ module mac_packed#(
     wire                    valid_out_post_mac;
     wire                    valid_mux;
     assign  valid_mux = valid_out_post_mac||mac_proc||enable||valid_out_mac;
+    assign  valid_out = valid_out_post_mac;
+    
     mux#(
     .WORD_W(WORD_W)
     ) uut_mux    
@@ -64,6 +67,7 @@ module mac_packed#(
     .clk(clk),                    
     .rst_n(rst_n),                   
     .enable(enable), //en = 0 -> data
+    .valid_in(valid_in), //valid_in = 1 -> data is valid, valid_in = 0 -> data is invalid
     .iter(iter),    
     .fmap_in(fmap_in),    
     .weight_in(weight_in),     

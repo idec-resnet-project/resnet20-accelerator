@@ -26,14 +26,18 @@ parameter integer WORD_W = 16
 (
     input  wire                     clk,
     input  wire                     rst_n,
-    input  wire                     enable,    
+    input  wire                     enable,  
+    input  wire                     valid_in,  
     input  wire signed [WORD_W-1:0] data_in,
     
+    output wire                     valid_out,
     output wire signed [WORD_W-1:0] data_out    
     );
 
-    wire              valid_out;
+    wire              valid_relu;
     wire [WORD_W-1:0] relu_out;
+    assign valid_out = valid_relu;
+
     mux 
     #(
     .WORD_W(WORD_W)
@@ -41,7 +45,7 @@ parameter integer WORD_W = 16
     (
     .data_x(data_in),
     .data_y(relu_out),
-    .enable(valid_out),      
+    .enable(valid_relu),      
     .data_out(data_out)
     );
     
@@ -52,9 +56,10 @@ parameter integer WORD_W = 16
     (
     .clk(clk),                          
     .rst_n(rst_n),                         
-    .enable(enable),                        
+    .enable(enable),    
+    .valid_in(valid_in),                    
     .data_in(data_in),                                
-    .valid_out(valid_out),                   
+    .valid_out(valid_relu),     // valid_out 포트는 위 assign 으로만 구동
     .data_out(relu_out)
     );
     
