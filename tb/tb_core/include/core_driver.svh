@@ -58,7 +58,7 @@
         if (layer.weight_base != weights_consumed)
             $fatal(1, "%s: weight consumption order mismatch", layer_name[index]);
         budget = longint'(out_h) * out_w * layer.cout *
-                 (longint'(taps) * (input_gap + 1) + (residual ? SKIP_DELAY_CYCLES : 0)) + 16;
+                 (longint'(taps) * (input_gap + 1) + (residual ? SKIP_DELAY_CYCLES : 0)) + CORE_PIPELINE_CYCLES + 1;
         begin_compare(layer_name[index], use_gap ? 1 : out_w, layer.cout, result_words, budget);
         configure(residual, (layer.op & FLAG_RELU) != 0, use_gap, taps, out_h * out_w);
 
@@ -98,7 +98,7 @@
     task automatic check_arithmetic;
         directed_expected[0] = 1;
         directed_expected[1] = -1;
-        begin_compare("bias sampled once and signed ties", 2, 1, 2, 4 * (input_gap + 1) + 16, 1);
+        begin_compare("bias sampled once and signed ties", 2, 1, 2, 4 * (input_gap + 1) + CORE_PIPELINE_CYCLES + 1, 1);
         configure(0, 0, 0, 2, 0);
         send_word(1, 512, 1, -1);
         idle(input_gap);
@@ -111,7 +111,7 @@
 
         directed_expected[0] = 32767;
         directed_expected[1] = -32768;
-        begin_compare("MAC saturation", 2, 1, 2, 2 * (input_gap + 1) + 16, 1);
+        begin_compare("MAC saturation", 2, 1, 2, 2 * (input_gap + 1) + CORE_PIPELINE_CYCLES + 1, 1);
         configure(0, 0, 0, 1, 0);
         send_word(32767, 32767, 0, 0);
         idle(input_gap);
@@ -121,7 +121,7 @@
         directed_expected[0] = -1;
         directed_expected[1] = 32767;
         begin_compare("skip timing and residual saturation", 2, 1, 2,
-                      2 * (longint'(SKIP_DELAY_CYCLES) + input_gap + 1) + 16, 1);
+                      2 * (longint'(SKIP_DELAY_CYCLES) + input_gap + 1) + CORE_PIPELINE_CYCLES + 1, 1);
         configure(1, 0, 0, 1, 0);
         send_word(32767, 32767, 0, -1);
         send_skip(-32768, 0);

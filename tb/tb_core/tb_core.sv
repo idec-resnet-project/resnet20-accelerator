@@ -5,8 +5,8 @@ module tb_core;
     string data_dir;
     localparam int SKIP_DELAY_CYCLES = 1;
     localparam int OUTPUT_FRAC_BITS  = 10;
-    // Five registered datapath stages with two clocks per stage.
-    localparam int CORE_PIPELINE_CYCLES = 10;
+    // MAC, residual/ReLU/pooling, GAP (sum, magnitude, eight divide stages, sign), and boundaries.
+    localparam int CORE_PIPELINE_CYCLES = 3 + 3 * 2 + (2 + 8 + 1) + 4;
     localparam int CORE_FRAC_BITS = 10;
 
     // --------------------------------

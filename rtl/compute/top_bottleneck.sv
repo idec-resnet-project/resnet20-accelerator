@@ -99,7 +99,7 @@ reg [BITWIDTH-1:0] dma_result_data_buf;
 wire [BITWIDTH-1:0] dma_result_data_temp;
 wire output_init_flag;
 
-always @(negedge clk or negedge nrst) begin
+always @(posedge clk or negedge nrst) begin
     if (!nrst) begin
         dma_result_data_buf <= 0;
     end else if ((dma_result_valid & dma_result_ready) | output_init_flag) begin

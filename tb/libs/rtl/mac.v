@@ -10,12 +10,9 @@ module mac #(
     input wire in_enable,
     input wire signed [BITWIDTH-1:0] in_data,
     input wire signed [BITWIDTH-1:0] kernel_data,
-    output reg out_enable,
-    output reg signed [BITWIDTH-1:0] out_data
+    output wire out_enable,
+    output wire signed [BITWIDTH-1:0] out_data
 );
-    wire valid;
-    wire signed [BITWIDTH-1:0] data;
-
     mac_accumulate #(
         .BITWIDTH               (BITWIDTH),
         .BITWIDTH_MAC_ITERATION (BITWIDTH_MAC_ITERATION),
@@ -30,14 +27,10 @@ module mac #(
         .kernel_data (kernel_data),
         .bias_data   ({BITWIDTH{1'b0}}),
         .last_input  (),
-        .out_enable  (valid),
-        .out_data    (data)
+        .out_enable  (out_enable),
+        .out_data    (out_data)
     );
 
-    always @* begin
-        out_enable = valid;
-        out_data = data;
-    end
 endmodule
 
 // Input and bias use INPUT_FRAC_BITS. MAC output uses OUTPUT_FRAC_BITS.
@@ -61,7 +54,9 @@ module mac_accumulate #(
 );
 
     localparam integer OUTPUT_SHIFT = 2 * INPUT_FRAC_BITS - OUTPUT_FRAC_BITS;
-    localparam integer ACTIVATION_DIVISOR = 1 << OUTPUT_SHIFT;
+    // Full product, maximum tap count, and one guard bit for the bias.
+    localparam integer ACC_WIDTH = 2*BITWIDTH + BITWIDTH_MAC_ITERATION + 1;
+    localparam [ACC_WIDTH-1:0] ONE = 1;
 
     // synthesis translate_off
     initial begin
@@ -71,71 +66,82 @@ module mac_accumulate #(
     end
     // synthesis translate_on
 
-    // ------------------------------------
-    // Fixed-point arithmetic
-    // ------------------------------------
-    function automatic signed [BITWIDTH-1:0] saturate(input signed [63:0] value);
-        reg signed [63:0] limit;
-        begin
-            limit = 64'sd1 <<< (BITWIDTH-1);
-            if (value >= limit) saturate = limit - 1;
-            else if (value < -limit) saturate = -limit;
-            else saturate = value;
-        end
-    endfunction
-
-    function automatic signed [63:0] rounded_divide(
-        input signed [63:0] value,
-        input integer divisor
-    );
-        begin
-            if (value < 0) rounded_divide = -((-value + divisor/2) / divisor);
-            else rounded_divide = (value + divisor/2) / divisor;
-        end
-    endfunction
-
-    reg signed [63:0] accumulator;
+    // Stage 1. Count accepted taps and capture the product and its controls together.
     reg [BITWIDTH_MAC_ITERATION-1:0] input_count;
-    reg pending_enable;
-    reg signed [BITWIDTH-1:0] pending_data;
-    // One multiplier, one accumulator update per enabled input clock.
-    wire signed [2*BITWIDTH-1:0] product = in_data * kernel_data;
-    wire signed [63:0] extended_product = $signed(product);
-    wire signed [63:0] extended_bias = $signed(bias_data);
-    wire signed [63:0] base_sum = (input_count == 0) ?
-                                  (extended_bias <<< INPUT_FRAC_BITS) : accumulator;
-    wire signed [63:0] total = base_sum + extended_product;
     assign last_input = enable && in_enable && input_count == iteration - 1'b1;
 
-    always @(negedge clk or negedge nrst) begin
+    reg product_valid, product_first, product_last, product_bypass;
+    reg signed [2*BITWIDTH-1:0] product_q;
+    reg signed [BITWIDTH-1:0] bias_q, bypass_q;
+    always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
-            pending_enable <= 0;
-            pending_data <= 0;
+            input_count <= 0;
+            product_valid <= 0;
+        end else begin
+            product_valid <= in_enable;
+            if (in_enable)
+                input_count <= (!enable || last_input) ? 0 : input_count + 1'b1;
+        end
+    end
+
+    // Payload registers are consumed only when their corresponding valid bit is set.
+    always @(posedge clk) begin
+        if (in_enable) begin
+            product_q <= in_data * kernel_data;
+            bias_q <= bias_data;
+            bypass_q <= in_data;
+            product_first <= input_count == 0;
+            product_last <= last_input;
+            product_bypass <= !enable;
+        end
+    end
+
+    // Stage 2. The first tap loads the scaled bias, later taps use the running sum.
+    reg signed [ACC_WIDTH-1:0] accumulator;
+    wire signed [ACC_WIDTH-1:0] extended_bias = bias_q;
+    wire signed [ACC_WIDTH-1:0] addend = product_first ?
+                                          (extended_bias <<< INPUT_FRAC_BITS) : accumulator;
+    reg sum_valid, sum_bypass;
+    reg signed [BITWIDTH-1:0] bypass_delayed;
+    always @(posedge clk or negedge nrst) begin
+        if (!nrst)
+            sum_valid <= 0;
+        else
+            sum_valid <= product_valid && (product_last || product_bypass);
+    end
+    always @(posedge clk) begin
+        if (product_valid) begin
+            accumulator <= addend + product_q;
+            sum_bypass <= product_bypass;
+            bypass_delayed <= bypass_q;
+        end
+    end
+
+    // Stage 3. Round to nearest, with exact ties away from zero, then saturate.
+    localparam signed [ACC_WIDTH-1:0] LIMIT = $signed(ONE) <<< (BITWIDTH-1);
+    wire signed [ACC_WIDTH-1:0] rounded;
+    generate
+        if (OUTPUT_SHIFT == 0) begin : no_shift
+            assign rounded = accumulator;
+        end else begin : round_shift
+            // The arithmetic shift takes the floor. Negative exact ties keep that floor.
+            wire below_half_bit_set = |(accumulator & ((ONE << (OUTPUT_SHIFT-1)) - ONE));
+            wire increment = accumulator[OUTPUT_SHIFT-1] &&
+                             (!accumulator[ACC_WIDTH-1] || below_half_bit_set);
+            assign rounded = (accumulator >>> OUTPUT_SHIFT) + $signed({1'b0, increment});
+        end
+    endgenerate
+    wire signed [BITWIDTH-1:0] saturated = (rounded >= LIMIT) ? LIMIT - 1 :
+                                           (rounded < -LIMIT) ? -LIMIT : rounded;
+
+    always @(posedge clk or negedge nrst) begin
+        if (!nrst) begin
             out_enable <= 0;
             out_data <= 0;
-            accumulator <= 0;
-            input_count <= 0;
         end else begin
-            out_enable <= pending_enable;
-            if (pending_enable) out_data <= pending_data;
-
-            pending_enable <= 0;
-            if (in_enable) begin
-                if (!enable) begin
-                    accumulator <= 0;
-                    input_count <= 0;
-                    pending_data <= in_data;
-                    pending_enable <= 1;
-                end else if (last_input) begin
-                    pending_data <= saturate(rounded_divide(total, ACTIVATION_DIVISOR));
-                    pending_enable <= 1;
-                    accumulator <= 0;
-                    input_count <= 0;
-                end else begin
-                    accumulator <= total;
-                    input_count <= input_count + 1'b1;
-                end
-            end
+            out_enable <= sum_valid;
+            if (sum_valid)
+                out_data <= sum_bypass ? bypass_delayed : saturated;
         end
     end
 endmodule

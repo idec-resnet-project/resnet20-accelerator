@@ -167,6 +167,7 @@ wire [BRAM_BIAS_CAPACITY-1:0] core_in_b_addr;
 wire [BRAM_FEATRE_CAPACITY-1:0] core_out_f_addr;
 
 wire [BRAM_FEATRE_CAPACITY-1:0] fmem_rd_addr_temp;
+wire [BRAM_FEATRE_CAPACITY-1:0] output_read_addr;
 
 // DMA
 wire dma_kernel_hk;
@@ -181,7 +182,7 @@ wire dma_result_hk;
 
 assign is_feature_in = ctrl_input_enable & (cstate == IN_FEATURE);
 
-always @(negedge clk or negedge nrst) begin
+always @(posedge clk or negedge nrst) begin
     if (!nrst) begin
        output_init_flag <= 0; 
     end else begin

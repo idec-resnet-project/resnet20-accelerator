@@ -8,7 +8,8 @@ module core #(
     // Parallelism
     parameter integer PARALLEL_PC                = 1,
     parameter integer PARALLEL_PF                = 1,
-    parameter integer OUTPUT_FRAC_BITS          = 10
+    parameter integer OUTPUT_FRAC_BITS          = 10,
+    parameter integer PIPELINE_BOUNDARIES        = 1
 )(
     input  wire                                  clk,
     input  wire                                  nrst,
@@ -30,8 +31,8 @@ module core #(
     input  wire        [BITWIDTH-1:0]             bias_data,
 
     // Output stream
-    output reg                                   out_enable,
-    output reg         [BITWIDTH-1:0]             out_data
+    output wire                                   out_enable,
+    output wire         [BITWIDTH-1:0]             out_data
 );
     wire mac_last_input;
     wire mac_valid, residual_valid, relu_valid, pooling_valid, gap_valid;
@@ -53,12 +54,24 @@ module core #(
     reg signed [BITWIDTH-1:0] mac_held_data, skip_held_data;
 
     wire skip_valid = waiting_for_skip && in_enable;
-    wire pair_valid = (mac_valid || mac_held_valid) && (skip_valid || skip_held_valid);
+    // Match the additional MAC register before joining the two streams.
+    reg skip_valid_q;
+    reg signed [BITWIDTH-1:0] skip_data_q;
+    always @(posedge clk or negedge nrst) begin
+        if (!nrst) begin
+            skip_valid_q <= 0;
+            skip_data_q <= 0;
+        end else begin
+            skip_valid_q <= skip_valid;
+            if (skip_valid) skip_data_q <= in_data;
+        end
+    end
+    wire pair_valid = (mac_valid || mac_held_valid) && (skip_valid_q || skip_held_valid);
     wire residual_in_valid = use_residual ? pair_valid : mac_valid;
     wire signed [BITWIDTH-1:0] residual_main = mac_held_valid ? mac_held_data : mac_data;
-    wire signed [BITWIDTH-1:0] residual_skip = skip_held_valid ? skip_held_data : in_data;
+    wire signed [BITWIDTH-1:0] residual_skip = skip_held_valid ? skip_held_data : skip_data_q;
 
-    always @(negedge clk or negedge nrst) begin
+    always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
             waiting_for_skip <= 0;
             mac_held_valid <= 0;
@@ -80,9 +93,9 @@ module core #(
                     mac_held_valid <= 1;
                     mac_held_data <= mac_data;
                 end
-                if (skip_valid) begin
+                if (skip_valid_q) begin
                     skip_held_valid <= 1;
-                    skip_held_data <= in_data;
+                    skip_held_data <= skip_data_q;
                 end
             end
         end
@@ -110,25 +123,46 @@ module core #(
         .out_data        (mac_data)
     );
 
+    wire residual_input_valid;
+    wire signed [BITWIDTH-1:0] residual_input, residual_shortcut;
+    core_stream_boundary #(.WIDTH(2*BITWIDTH), .REGISTERED(PIPELINE_BOUNDARIES)) to_residual (
+        .clk(clk), .nrst(nrst), .in_valid(residual_in_valid), .in_data({residual_main, residual_skip}),
+        .out_valid(residual_input_valid), .out_data({residual_input, residual_shortcut})
+    );
+
     residual #(.BITWIDTH(BITWIDTH)) u_residual (
         .clk        (clk),
         .nrst       (nrst),
         .enable     (use_residual),
-        .in_enable  (residual_in_valid),
-        .in_data    (residual_main),
-        .skip_data  (residual_skip),
+        .in_enable  (residual_input_valid),
+        .in_data    (residual_input),
+        .skip_data  (residual_shortcut),
         .out_enable (residual_valid),
         .out_data   (residual_data)
+    );
+
+    wire relu_input_valid;
+    wire signed [BITWIDTH-1:0] relu_input;
+    core_stream_boundary #(.WIDTH(BITWIDTH), .REGISTERED(PIPELINE_BOUNDARIES)) to_relu (
+        .clk(clk), .nrst(nrst), .in_valid(residual_valid), .in_data(residual_data),
+        .out_valid(relu_input_valid), .out_data(relu_input)
     );
 
     relu #(.BITWIDTH(BITWIDTH)) u_relu (
         .clk        (clk),
         .nrst       (nrst),
         .enable     (relu_enable),
-        .in_enable  (residual_valid),
-        .in_data    (residual_data),
+        .in_enable  (relu_input_valid),
+        .in_data    (relu_input),
         .out_enable (relu_valid),
         .out_data   (relu_data)
+    );
+
+    wire pooling_input_valid;
+    wire signed [BITWIDTH-1:0] pooling_input;
+    core_stream_boundary #(.WIDTH(BITWIDTH), .REGISTERED(PIPELINE_BOUNDARIES)) to_pooling (
+        .clk(clk), .nrst(nrst), .in_valid(relu_valid), .in_data(relu_data),
+        .out_valid(pooling_input_valid), .out_data(pooling_input)
     );
 
     pooling #(
@@ -139,10 +173,17 @@ module core #(
         .nrst       (nrst),
         .enable     (pooling_enable),
         .iteration  (pooling_iteration),
-        .in_enable  (relu_valid),
-        .in_data    (relu_data),
+        .in_enable  (pooling_input_valid),
+        .in_data    (pooling_input),
         .out_enable (pooling_valid),
         .out_data   (pooling_data)
+    );
+
+    wire gap_input_valid;
+    wire signed [BITWIDTH-1:0] gap_input;
+    core_stream_boundary #(.WIDTH(BITWIDTH), .REGISTERED(PIPELINE_BOUNDARIES)) to_gap (
+        .clk(clk), .nrst(nrst), .in_valid(pooling_valid), .in_data(pooling_data),
+        .out_valid(gap_input_valid), .out_data(gap_input)
     );
 
     general_average_pooling #(
@@ -153,14 +194,45 @@ module core #(
         .nrst       (nrst),
         .enable     (gap_enable),
         .iteration  (gap_iteration),
-        .in_enable  (pooling_valid),
-        .in_data    (pooling_data),
+        .in_enable  (gap_input_valid),
+        .in_data    (gap_input),
         .out_enable (gap_valid),
         .out_data   (gap_data)
     );
 
-    always @* begin
-        out_enable = gap_valid;
-        out_data = gap_data;
-    end
+    assign out_enable = gap_valid;
+    assign out_data = gap_data;
+endmodule
+
+// Each boundary moves its payload and valid together, including valid bubbles.
+module core_stream_boundary #(
+    parameter integer WIDTH = 16,
+    parameter integer REGISTERED = 1
+)(
+    input wire clk, nrst,
+    input wire in_valid,
+    input wire [WIDTH-1:0] in_data,
+    output wire out_valid,
+    output wire [WIDTH-1:0] out_data
+);
+    generate
+        if (REGISTERED) begin : registered_stream
+            reg valid;
+            reg [WIDTH-1:0] data;
+            always @(posedge clk or negedge nrst) begin
+                if (!nrst) begin
+                    valid <= 0;
+                    data <= 0;
+                end else begin
+                    valid <= in_valid;
+                    if (in_valid) data <= in_data;
+                end
+            end
+            assign out_valid = valid;
+            assign out_data = data;
+        end else begin : direct_stream
+            assign out_valid = in_valid;
+            assign out_data = in_data;
+        end
+    endgenerate
 endmodule

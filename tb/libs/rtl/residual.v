@@ -13,23 +13,15 @@ module residual #(parameter integer BITWIDTH = 16)(
     // ------------------------------------
     // Fixed-point arithmetic
     // ------------------------------------
-    function automatic signed [BITWIDTH-1:0] saturate(input signed [63:0] value);
-        reg signed [63:0] limit;
-        begin
-            limit = 64'sd1 <<< (BITWIDTH-1);
-            if (value >= limit) saturate = limit - 1;
-            else if (value < -limit) saturate = -limit;
-            else saturate = value;
-        end
-    endfunction
-
     reg pending_enable;
     reg signed [BITWIDTH-1:0] pending_data;
     // skip_data must address the same feature as in_data on this enabled clock.
-    wire signed [63:0] main_extended = $signed(in_data);
-    wire signed [63:0] skip_extended = $signed(skip_data);
+    wire signed [BITWIDTH:0] sum = in_data + skip_data;
+    wire overflow = sum[BITWIDTH] ^ sum[BITWIDTH-1];
+    wire [BITWIDTH-1:0] limit = {sum[BITWIDTH], {(BITWIDTH-1){~sum[BITWIDTH]}}};
+    wire [BITWIDTH-1:0] saturated = overflow ? limit : sum[BITWIDTH-1:0];
 
-    always @(negedge clk or negedge nrst) begin
+    always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
             pending_enable <= 0;
             pending_data <= 0;
@@ -38,7 +30,7 @@ module residual #(parameter integer BITWIDTH = 16)(
         end else begin
             pending_enable <= in_enable;
             if (in_enable)
-                pending_data <= enable ? saturate(main_extended + skip_extended) : in_data;
+                pending_data <= enable ? saturated : in_data;
 
             out_enable <= pending_enable;
             if (pending_enable) out_data <= pending_data;

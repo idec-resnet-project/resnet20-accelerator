@@ -20,7 +20,7 @@ module pooling #(
     wire signed [BITWIDTH-1:0] next_maximum =
         (input_count == 0 || in_data > maximum) ? in_data : maximum;
 
-    always @(negedge clk or negedge nrst) begin
+    always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
             pending_enable <= 0;
             pending_data <= 0;
