@@ -110,7 +110,8 @@ module conv_top
     .valid_out  (valid_out_mac),                                               
     .iter       (mac_iteration),   
     .fmap_in    (in_data[i*WORD_W+:WORD_W]),                          
-    .weight_in  (kernel_data[i*WORD_W+:WORD_W]),               
+    .weight_in  (kernel_data[i*WORD_W+:WORD_W]),  
+    .valid_out  (mac_valid_out),             
     .data_out   (mac_out[i*WORD_W+:WORD_W])             
      );
     
