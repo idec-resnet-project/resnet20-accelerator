@@ -60,18 +60,21 @@
         cfg.output_frac_bits = output_frac_bits;
         load.instruction = instruction_word(OP_INPUT, INPUT_SIZE, IN_CHANNELS, 0);
         load.payload[FEATURE].words = new[INPUT_SIZE * INPUT_SIZE * IN_CHANNELS];
-        // Multiples of 1/8 keep the reference exactly representable in Q5.10.
+        // Sequential payloads use raw Q5.10 words for waveform inspection.
         foreach (load.payload[FEATURE].words[i])
-            load.payload[FEATURE].words[i] = ((i * 7) % 19 - 9) * (SCALE / 8);
+            load.payload[FEATURE].words[i] = SEQUENTIAL_PAYLOADS ? i + 1 :
+                                            ((i * 7) % 19 - 9) * (SCALE / 8);
 
         conv.instruction = instruction_word(OP_MAC | OP_OUTPUT | (RELU_ENABLE ? OP_RELU : 0),
                                             KERNEL_SIZE, OUT_CHANNELS, PADDING);
         conv.payload[KERNEL].words = new[OUT_CHANNELS * IN_CHANNELS * KERNEL_SIZE * KERNEL_SIZE];
         foreach (conv.payload[KERNEL].words[i])
-            conv.payload[KERNEL].words[i] = ((i * 5) % 11 - 5) * (SCALE / 8);
+            conv.payload[KERNEL].words[i] = SEQUENTIAL_PAYLOADS ? i + 1 :
+                                           ((i * 5) % 11 - 5) * (SCALE / 8);
         conv.payload[BIAS].words = new[OUT_CHANNELS];
         foreach (conv.payload[BIAS].words[i])
-            conv.payload[BIAS].words[i] = ((i % 2 == 0) ? -SCALE / 4 : SCALE / 8) * (1 + i / 2);
+            conv.payload[BIAS].words[i] = SEQUENTIAL_PAYLOADS ? i + 1 :
+                                         ((i % 2 == 0) ? -SCALE / 4 : SCALE / 8) * (1 + i / 2);
         conv.result_count = OUTPUT_SIZE * OUTPUT_SIZE * OUT_CHANNELS;
         conv.reference_logits_path = {data_dir, "/reference_conv_float.txt"};
         write_reference(load, conv);

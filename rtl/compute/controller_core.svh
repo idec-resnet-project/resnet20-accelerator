@@ -17,8 +17,8 @@ assign fmem_rd_addr_temp = addr_frow + ctrl_fw * (addr_fcol + ctrl_fw * addr_cin
 
 assign fmem_wr_enable[0] = (is_fmem0_in)  ? 0 : (out_enable | dma_feature_hk);
 assign fmem_wr_enable[1] = (is_fmem0_in)  ? (out_enable | dma_feature_hk) : 0;
-assign fmem_wr_addr[0]   = (is_fmem0_in)  ? core_in_f_addr : core_out_f_addr;
-assign fmem_wr_addr[1]   = (~is_fmem0_in) ? core_in_f_addr : core_out_f_addr;
+assign fmem_wr_addr[0]   = (~is_fmem0_in)  ? core_in_f_addr : core_out_f_addr;
+assign fmem_wr_addr[1]   = (is_fmem0_in) ? core_in_f_addr : core_out_f_addr;
 assign fmem_rd_addr[0]   = core_in_f_addr;
 assign fmem_rd_addr[1]   = core_in_f_addr;
 

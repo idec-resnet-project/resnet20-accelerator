@@ -97,8 +97,8 @@ wire is_fmem0_in;
 // --------------------------------
 // ping-pong datapath 
 assign in_data          = fmem_rd_data[is_fmem0_in]; 
-assign fmem_wr_data[0]  = (is_fmem0_in) ? out_data         : dma_feature_data;
-assign fmem_wr_data[1]  = (is_fmem0_in) ? dma_feature_data : out_data;
+assign fmem_wr_data[0]  = (~is_fmem0_in) ? out_data         : dma_feature_data;
+assign fmem_wr_data[1]  = (~is_fmem0_in) ? dma_feature_data : out_data;
 
 // DMA datapath
 assign dma_result_data  = fmem_rd_data[~is_fmem0_in];

@@ -7,6 +7,7 @@ package model_pkg;
     localparam int KERNEL_SIZE = 3;
     localparam int PADDING = 1;
     localparam bit RELU_ENABLE = 1;
+    localparam bit SEQUENTIAL_PAYLOADS = 0;
 
     `include "models/conv_model.svh"
 endpackage
