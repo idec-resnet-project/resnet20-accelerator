@@ -32,7 +32,22 @@ module tb_axi_bottleneck_partial;
     // --------------------------------
     // Select the DUT here. The dummy initializes its model backend internally.
     // axi_bottleneck_dummy dut (
-    axi_bottleneck dut (
+    axi_bottleneck 
+    #(
+        .CONFIG_DATA_BITWIDTH      (6),
+        .BITWIDTH_MAC_ITERATION     (16),
+        .BITWIDTH_POOLING_ITERATION (16),
+        .BITWIDTH_GAP_ITERATION     (16),
+        .PARALLEL_PC                (1),
+        .PARALLEL_PF                (1),
+        .AXI_LITE_ADDR_WIDTH        (32),
+        .AXI_LITE_DATA_WIDTH        (32),
+        .CONFIG_DEFAULT             ('0),
+        .BRAM_FEATRE_CAPACITY       (18),
+        .BRAM_KERNEL_CAPACITY       (24),
+        .BRAM_BIAS_CAPACITY         (6),
+        .ADDR_BITWIDTH               (6)
+    ) dut (
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),
 
