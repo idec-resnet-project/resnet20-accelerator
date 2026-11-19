@@ -13,8 +13,7 @@ module top_bottleneck #(
     parameter integer BRAM_FEATRE_CAPACITY       = 14,
     parameter integer BRAM_KERNEL_CAPACITY       = 16,
     parameter integer BRAM_BIAS_CAPACITY         = 6,
-    parameter integer ADDR_BITWIDTH             = 3,
-    parameter integer OUTPUT_FRAC_BITS         = 10
+    parameter integer ADDR_BITWIDTH             = 3
 )(
     input  wire                       clk,
     input  wire                       nrst,
@@ -265,7 +264,6 @@ controller #(
 // --------------------------------
 core #(
     .BITWIDTH                   (BITWIDTH),
-    .OUTPUT_FRAC_BITS           (OUTPUT_FRAC_BITS),
     .BITWIDTH_MAC_ITERATION     (BITWIDTH_MAC_ITERATION),
     .BITWIDTH_POOLING_ITERATION (BITWIDTH_POOLING_ITERATION),
     .BITWIDTH_GAP_ITERATION     (BITWIDTH_GAP_ITERATION),

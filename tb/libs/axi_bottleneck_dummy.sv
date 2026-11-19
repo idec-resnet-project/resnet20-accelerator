@@ -1,4 +1,4 @@
-module axi_bottleneck_dummy #(parameter int OUTPUT_FRAC_BITS = 10) (
+module axi_bottleneck_dummy (
     input  logic         s_axi_aclk,
     input  logic         s_axi_aresetn,
 
@@ -80,7 +80,7 @@ module axi_bottleneck_dummy #(parameter int OUTPUT_FRAC_BITS = 10) (
     import model_backend_pkg::*;
     model_backend backend;
 
-    initial backend = build_model_backend(OUTPUT_FRAC_BITS);
+    initial backend = build_model_backend(AXI_FRAC_BITS);
     final begin
         if (backend != null) backend.close();
     end

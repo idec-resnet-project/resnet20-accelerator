@@ -46,7 +46,7 @@ tb/
 
 ## 모델과 DUT 선택
 
-`.f`에서 `resnet20`, `resnet20_partial`, `toy`의 `model_pkg.sv` 중 하나를 선택합니다. 공통 진입점은 `build_model_config(data_dir, output_frac_bits)`입니다. UVM은 top이 전달한 설정으로 명령과 데이터를 보내고 결과를 검사합니다.
+`.f`에서 `resnet20`, `resnet20_partial`, `toy`의 `model_pkg.sv` 중 하나를 선택합니다. 공통 진입점은 `build_model_config(data_dir)`입니다. UVM은 top이 전달한 설정으로 명령과 데이터를 보내고 Q5.10 결과를 검사합니다.
 
 각 AXI top의 DUT 인스턴스 한 곳에서 `axi_bottleneck` 또는 주석으로 제공된 `axi_bottleneck_dummy`를 선택합니다. 더미 DUT는 backend 초기화와 해제를 내부에서 처리합니다. `.f`에 포함된 `model_backend_pkg.sv`와 `model_compute.c`가 DPI 연산을 제공합니다. C 파일이 목록에 있으면 RTL 선택 시에도 C 컴파일을 수행합니다. DUT 선택 후 `--skip-compile` 없이 다시 실행합니다.
 

@@ -16,8 +16,7 @@ module axi_bottleneck #(
     parameter integer BRAM_FEATRE_CAPACITY        = 14,
     parameter integer BRAM_KERNEL_CAPACITY        = 14,
     parameter integer BRAM_BIAS_CAPACITY          = 6,
-    parameter integer ADDR_BITWIDTH              = 3,
-    parameter integer OUTPUT_FRAC_BITS          = 10
+    parameter integer ADDR_BITWIDTH              = 3
 )(
     input  wire                             s_axi_aclk,
     input  wire                             s_axi_aresetn,
@@ -117,7 +116,6 @@ axi_lite_reg #(
 
 top_bottleneck #(
     .BITWIDTH                   (BITWIDTH),
-    .OUTPUT_FRAC_BITS           (OUTPUT_FRAC_BITS),
     .CONFIG_BITWIDTH            (AXI_LITE_DATA_WIDTH),
     .BITWIDTH_MAC_ITERATION     (BITWIDTH_MAC_ITERATION),
     .BITWIDTH_POOLING_ITERATION (BITWIDTH_POOLING_ITERATION),

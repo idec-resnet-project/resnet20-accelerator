@@ -1,4 +1,5 @@
 package model_contract_pkg;
+    localparam int AXI_FRAC_BITS = 10;
     // --------------------------------
     // Stream payloads and command plan
     // --------------------------------
@@ -48,7 +49,6 @@ package model_contract_pkg;
         bit [31:0] done_mask = 32'h1000_0000;
         bit [31:0] error_mask = 32'h8000_0000;
         int timeout_cycles = 10_000_000;
-        int output_frac_bits = 10;
         real min_logit_snr_db = 50.0;
         model_command commands[$];
     endclass

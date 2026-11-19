@@ -8,7 +8,6 @@ module core #(
     // Parallelism
     parameter integer PARALLEL_PC                = 1,
     parameter integer PARALLEL_PF                = 1,
-    parameter integer OUTPUT_FRAC_BITS          = 10,
     parameter integer PIPELINE_BOUNDARIES        = 1
 )(
     input  wire                                  clk,
@@ -68,8 +67,7 @@ module core #(
     mac_accumulate #(
         .BITWIDTH               (BITWIDTH),
         .BITWIDTH_MAC_ITERATION (BITWIDTH_MAC_ITERATION),
-        .INPUT_FRAC_BITS        (10),
-        .OUTPUT_FRAC_BITS       (OUTPUT_FRAC_BITS)
+        .INPUT_FRAC_BITS        (10)
     ) u_mac (
         .clk             (clk),
         .nrst            (nrst),

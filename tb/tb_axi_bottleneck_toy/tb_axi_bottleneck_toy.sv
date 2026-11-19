@@ -1,5 +1,4 @@
 module tb_axi_bottleneck_toy;
-    localparam int OUTPUT_FRAC_BITS = 10;
     localparam int TIMEOUT_CYCLES = 100_000;
     import uvm_pkg::*;
     import model_contract_pkg::*;
@@ -35,7 +34,6 @@ module tb_axi_bottleneck_toy;
     axi_bottleneck
 `ifndef TB_CORE_POST_SYNTHESIS
     #(
-        .OUTPUT_FRAC_BITS           (OUTPUT_FRAC_BITS),
         .CONFIG_DATA_BITWIDTH      (6),
         .BITWIDTH_MAC_ITERATION     (16),
         .BITWIDTH_POOLING_ITERATION (16),
@@ -119,7 +117,7 @@ module tb_axi_bottleneck_toy;
         string tb_dir;
 
         if (!$value$plusargs("TB_DIR=%s", tb_dir)) tb_dir = ".";
-        cfg = build_model_config(model_data_dir(tb_dir), OUTPUT_FRAC_BITS);
+        cfg = build_model_config(model_data_dir(tb_dir));
         cfg.timeout_cycles = TIMEOUT_CYCLES;
 
         uvm_config_db#(model_run_config)::set(null, "uvm_test_top", "run_cfg", cfg);

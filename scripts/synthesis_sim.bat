@@ -215,6 +215,8 @@ if not defined NO_WDB (
     if not exist "%WDB_PATH%" goto error_simulate
 )
 
+if /i "%TB_NAME%"=="tb_axi_bottleneck_stepbystep" if not exist "uvm_test_passed" goto error_simulate
+
 if defined GUI_STATIC (
     call :open_wave_view
     if errorlevel 1 goto error_wave_view

@@ -134,22 +134,22 @@ module tb_axi_bottleneck_stepbystep;
     logic clk = 0;
     always #1 clk = ~clk;
 
-    stepbystep_dut #("conv1x1", 15) conv1x1(clk);
-    stepbystep_dut #("conv3x3", 13) conv3x3(clk);
-    stepbystep_dut #("conv3x3stride", 13) conv3x3stride(clk);
-    stepbystep_dut #("toy", 10) toy(clk);
+    stepbystep_dut #("conv1x1") conv1x1(clk);
+    stepbystep_dut #("conv3x3") conv3x3(clk);
+    stepbystep_dut #("conv3x3stride") conv3x3stride(clk);
+    stepbystep_dut #("toy") toy(clk);
 
     initial begin : configure_suite
         string tb_dir;
 
         if (!$value$plusargs("TB_DIR=%s", tb_dir)) tb_dir = ".";
         conv1x1.configure(stepbystep_conv1x1_model_pkg::build_model_config(
-            ".", 15, "reference_conv1x1_float.txt"));
+            ".", "reference_conv1x1_float.txt"));
         conv3x3.configure(stepbystep_conv3x3_model_pkg::build_model_config(
-            ".", 13, "reference_conv3x3_float.txt"));
+            ".", "reference_conv3x3_float.txt"));
         conv3x3stride.configure(stepbystep_conv3x3stride_model_pkg::build_model_config(
-            ".", 13, "reference_conv3x3stride_float.txt"));
-        toy.configure(model_pkg::build_model_config(model_pkg::model_data_dir(tb_dir), 10));
+            ".", "reference_conv3x3stride_float.txt"));
+        toy.configure(model_pkg::build_model_config(model_pkg::model_data_dir(tb_dir)));
         run_test("stepbystep_test");
     end
 
@@ -160,8 +160,7 @@ module tb_axi_bottleneck_stepbystep;
 endmodule
 
 module stepbystep_dut #(
-    parameter string STAGE_NAME = "",
-    parameter int OUTPUT_FRAC_BITS = 10
+    parameter string STAGE_NAME = ""
 )(input logic clk);
     import uvm_pkg::*;
     import model_contract_pkg::*;
@@ -187,8 +186,8 @@ module stepbystep_dut #(
     // DUT port map
     // --------------------------------
     axi_bottleneck
+`ifndef TB_CORE_POST_SYNTHESIS
     #(
-        .OUTPUT_FRAC_BITS           (OUTPUT_FRAC_BITS),
         .CONFIG_DATA_BITWIDTH      (6),
         .BITWIDTH_MAC_ITERATION     (16),
         .BITWIDTH_POOLING_ITERATION (16),
@@ -203,6 +202,7 @@ module stepbystep_dut #(
         .BRAM_BIAS_CAPACITY         (3),
         .ADDR_BITWIDTH               (3)
     )
+`endif
     dut (
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),

@@ -36,7 +36,7 @@
         return inst;
     endfunction
 
-    function automatic model_run_config build_model_config(string data_dir, int output_frac_bits);
+    function automatic model_run_config build_model_config(string data_dir);
         model_run_config cfg = new;
         model_command command;
         instruction_t inst;
@@ -44,7 +44,6 @@
         int fd;
         localparam int WEIGHT_OFFSET_BYTES = 394368;
 
-        cfg.output_frac_bits = output_frac_bits;
         path = {data_dir, "/weight.bin"};
         fd = $fopen(path, "rb");
         if (!fd) $fatal(1, "Cannot open %s", path);

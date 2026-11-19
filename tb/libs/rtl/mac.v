@@ -33,12 +33,11 @@ module mac #(
 
 endmodule
 
-// Input and bias use INPUT_FRAC_BITS. MAC output uses OUTPUT_FRAC_BITS.
+// Inputs, bias, and output share the same fixed-point format.
 module mac_accumulate #(
     parameter integer BITWIDTH = 16,
     parameter integer BITWIDTH_MAC_ITERATION = 16,
-    parameter integer INPUT_FRAC_BITS = 10,
-    parameter integer OUTPUT_FRAC_BITS = INPUT_FRAC_BITS
+    parameter integer INPUT_FRAC_BITS = 10
 )(
     input wire clk,
     input wire nrst,
@@ -53,16 +52,15 @@ module mac_accumulate #(
     output reg signed [BITWIDTH-1:0] out_data
 );
 
-    localparam integer OUTPUT_SHIFT = 2 * INPUT_FRAC_BITS - OUTPUT_FRAC_BITS;
+    localparam integer OUTPUT_SHIFT = INPUT_FRAC_BITS;
     // Full product, maximum tap count, and one guard bit for the bias.
     localparam integer ACC_WIDTH = 2*BITWIDTH + BITWIDTH_MAC_ITERATION + 1;
     localparam [ACC_WIDTH-1:0] ONE = 1;
 
     // synthesis translate_off
     initial begin
-        if (OUTPUT_FRAC_BITS < 0 || OUTPUT_FRAC_BITS >= BITWIDTH ||
-            OUTPUT_FRAC_BITS > 2 * INPUT_FRAC_BITS)
-            $fatal(1, "OUTPUT_FRAC_BITS exceeds the supported MAC precision");
+        if (INPUT_FRAC_BITS < 0 || INPUT_FRAC_BITS >= BITWIDTH)
+            $fatal(1, "INPUT_FRAC_BITS exceeds the supported MAC precision");
     end
     // synthesis translate_on
 

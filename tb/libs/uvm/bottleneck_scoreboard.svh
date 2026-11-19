@@ -95,7 +95,7 @@
             end
             signal_power = 0.0;
             error_power = 0.0;
-            output_scale = 2.0 ** cfg.output_frac_bits;
+            output_scale = 2.0 ** AXI_FRAC_BITS;
             
             if (show_result_table) begin
                 $display("----------------------------------------------------------------\n");

@@ -30,14 +30,13 @@
     // --------------------------------
     // Model command payloads and expected results
     // --------------------------------
-    function automatic model_run_config build_model_config(string data_dir, int output_frac_bits);
+    function automatic model_run_config build_model_config(string data_dir);
         model_run_config cfg = new;
         model_command command;
         instruction_t inst;
         int fd, words_read;
         string weight_path = {data_dir, "/weight.bin"};
 
-        cfg.output_frac_bits = output_frac_bits;
         fd = $fopen(weight_path, "rb");
         if (!fd) $fatal(1, "Cannot open %s", weight_path);
         words_read = 0;

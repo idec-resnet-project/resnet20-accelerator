@@ -1,5 +1,4 @@
 module tb_axi_bottleneck_partial;
-    localparam int OUTPUT_FRAC_BITS = 10;
     import uvm_pkg::*;
     import model_contract_pkg::*;
     import tb_axi_bottleneck_pkg::*;
@@ -32,12 +31,8 @@ module tb_axi_bottleneck_partial;
     // DUT port map
     // --------------------------------
     // Select the DUT here. The dummy initializes its model backend internally.
-    // axi_bottleneck_dummy #(.OUTPUT_FRAC_BITS(OUTPUT_FRAC_BITS)) dut (
-    axi_bottleneck
-`ifndef TB_CORE_POST_SYNTHESIS
-    #(.OUTPUT_FRAC_BITS(OUTPUT_FRAC_BITS))
-`endif
-    dut (
+    // axi_bottleneck_dummy dut (
+    axi_bottleneck dut (
         .s_axi_aclk            (clk),
         .s_axi_aresetn         (nrst),
 
@@ -105,7 +100,7 @@ module tb_axi_bottleneck_partial;
         string tb_dir;
 
         if (!$value$plusargs("TB_DIR=%s", tb_dir)) tb_dir = ".";
-        cfg = build_model_config(model_data_dir(tb_dir), OUTPUT_FRAC_BITS);
+        cfg = build_model_config(model_data_dir(tb_dir));
 
         uvm_config_db#(model_run_config)::set(null, "uvm_test_top", "run_cfg", cfg);
         uvm_config_db#(virtual axi_lite_if)::set(null, "uvm_test_top.env.ctrl*", "vif", ctrl);
