@@ -52,7 +52,7 @@
                 command.payload[s].words = new[stream_words(inst, model_stream_e'(s))];
 
             if (inst.op == OP_INPUT)
-                command.payload[FEATURE].words = read_hex({data_dir, "/input_q5_10.hex"},
+                command.payload[FEATURE].words = read_hex({data_dir, "/input_q7_8.hex"},
                                                         stream_words(inst, FEATURE));
             for (int s = KERNEL; s <= BIAS; s++) begin
                 for (int j = 0; j < command.payload[s].words.size(); j++) begin

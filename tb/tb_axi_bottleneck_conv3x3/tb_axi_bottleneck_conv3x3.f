@@ -1,0 +1,17 @@
+../libs/interfaces/axi_lite_if.sv
+../libs/interfaces/axis_if.sv
+../libs/model_contract_pkg.sv
+model_pkg.sv
+../libs/uvm/tb_axi_bottleneck_pkg.sv
+../../rtl/compute/axi_lite_reg.v
+../../rtl/compute/buffer.v
+../../rtl/compute/controller.sv
+../../rtl/compute/top_bottleneck.sv
+../../rtl/compute/axi_bottleneck.sv
+../libs/rtl/mac.v
+../libs/rtl/residual.v
+../libs/rtl/relu.v
+../libs/rtl/pooling.v
+../libs/rtl/general_average_pooling.v
+../libs/rtl/core.v
+tb_axi_bottleneck_conv3x3.sv

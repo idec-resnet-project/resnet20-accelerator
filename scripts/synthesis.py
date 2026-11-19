@@ -27,7 +27,7 @@ if {[catch {
     set_property BOARD_PART $board [current_project]
     puts "ZedBoard: $board_xml ($part)"
 
-    set reference_rtl [file join $root verification core reference_rtl]
+    set reference_rtl [file join $root tb libs rtl]
     read_verilog -sv [glob -directory $reference_rtl *.v]
     read_xdc [file join $board_dir master.xdc]
     synth_design -top core -part $part
@@ -52,7 +52,7 @@ def main():
         return 1
 
     root = Path(__file__).resolve().parents[1]
-    build = root / "build" / "synth" / "tb_core" / "zedboard" / "reference_rtl"
+    build = root / ".log" / "synth" / "tb_core" / "zedboard" / "reference_rtl"
     build.mkdir(parents=True, exist_ok=True)
     log = build / "synthesis.log"
     env = os.environ.copy()

@@ -36,7 +36,7 @@ package model_contract_pkg;
         bit [31:0] done_mask = 32'h1000_0000;
         bit [31:0] error_mask = 32'h8000_0000;
         int timeout_cycles = 1_000_000;
-        int output_frac_bits = 10;
+        int output_frac_bits = 8;
         real min_logit_snr_db = 50.0;
         model_command commands[$];
     endclass

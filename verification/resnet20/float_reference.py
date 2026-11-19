@@ -2,7 +2,7 @@
 import operator
 import struct
 
-SCALE = 1024
+SCALE = 256
 
 
 class WeightReader:
@@ -79,14 +79,16 @@ def infer(feature, weights):
 
 
 def fixture_input():
-    return [((i * 73 + (i // 32) * 19) % 2049) - 1024 for i in range(32 * 32 * 3)]
+    # Same real values as the former Q5.10 fixture, rounded to Q7.8 (ties away from zero).
+    q5_10 = [((i * 73 + (i // 32) * 19) % 2049) - 1024 for i in range(32 * 32 * 3)]
+    return [(w + 2) // 4 if w >= 0 else -((-w + 2) // 4) for w in q5_10]
 
 
 def write_fixture(output, weight_path):
     feature = fixture_input()
     logits = infer(feature, WeightReader(weight_path))
     output.mkdir(parents=True, exist_ok=True)
-    (output / "input_q5_10.hex").write_text(
+    (output / "input_q7_8.hex").write_text(
         "".join(f"{word & 0xffff:04x}\n" for word in feature),
         encoding="ascii", newline="\n")
     (output / "reference_logits_float.txt").write_text(

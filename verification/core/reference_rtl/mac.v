@@ -41,11 +41,11 @@ module mac #(
     end
 endmodule
 
-// The reference core supplies the bias and uses Q5.10 at the same MAC stage.
+// The reference core supplies the bias and uses Q7.8 at the same MAC stage.
 module mac_accumulate #(
     parameter integer BITWIDTH = 16,
     parameter integer BITWIDTH_MAC_ITERATION = 16,
-    parameter integer INPUT_FRAC_BITS = 10
+    parameter integer INPUT_FRAC_BITS = 8
 )(
     input wire clk,
     input wire nrst,

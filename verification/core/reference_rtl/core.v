@@ -94,7 +94,7 @@ module core #(
     mac_accumulate #(
         .BITWIDTH               (BITWIDTH),
         .BITWIDTH_MAC_ITERATION (BITWIDTH_MAC_ITERATION),
-        .INPUT_FRAC_BITS        (10)
+        .INPUT_FRAC_BITS        (8)
     ) u_mac (
         .clk             (clk),
         .nrst            (nrst),

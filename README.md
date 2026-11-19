@@ -12,10 +12,10 @@
     - mac(conv, fc), relu, pooling등을 수행함.
 
 ### Testbench 구성
-- [tb_core](tb/tb_core/tb_core.sv)는 단일 lane Q5.10 [더미 core](tb/tb_core/dummy/core.v)를 구동합니다.
+- [tb_core](tb/tb_core/tb_core.sv)는 단일 lane Q7.8 [더미 core](tb/tb_core/dummy/core.v)를 구동합니다.
   [데이터 스케줄러](tb/tb_core/include/data_schedule.svh)가 feature와 kernel 주소를 계산하고,
   레이어별 출력 수와 타이밍을 확인하고 최종 로짓 10개의 SNR이 50 dB 이상인지 검사합니다.
-  기준 로짓은 같은 Q5.10 입력과 가중치로 계산한 양자화 전 Python float 값입니다.
+  기준 로짓은 같은 Q7.8 입력과 가중치로 계산한 양자화 전 Python float 값입니다.
 
 ### 참고
 
@@ -62,7 +62,7 @@ bash scripts/synthesis_sim.sh tb_core
 
 `synthesis_sim.sh`는 합성부터 실행합니다.
 
-시뮬레이션 옵션은 `--gui`, `--skip-delay N`, `--output-frac-bits N`입니다. 출력 소수부 기본값은 10비트입니다. `INPUT_GAP`으로 입력 간격을, `PYTHON`으로 Python 경로를 지정할 수 있습니다.
+시뮬레이션 옵션은 `--gui`, `--skip-delay N`, `--output-frac-bits N`입니다. 출력 소수부 기본값은 8비트입니다. `INPUT_GAP`으로 입력 간격을, `PYTHON`으로 Python 경로를 지정할 수 있습니다.
 
 - 합성 산출물 · `build/synth/tb_core/frac_<N>/`
 - 시뮬레이션 로그 · `build/sim/tb_core/`, `build/sim/tb_core_synthesis/`

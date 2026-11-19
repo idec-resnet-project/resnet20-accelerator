@@ -2,34 +2,22 @@
 set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 TB_PATH="$ROOT/tb/tb_core"
-PATH_LOG="$ROOT/build/sim/tb_core"
+PATH_LOG="$ROOT/.log/sim/tb_core"
 POST_SYNTHESIS="${TB_CORE_POST_SYNTHESIS:-0}"
 if [[ "$POST_SYNTHESIS" == 1 ]]; then
-    PATH_LOG="$ROOT/build/sim/tb_core_synthesis"
+    PATH_LOG="$ROOT/.log/sim/tb_core_synthesis"
 fi
 GUI=0
 WINDOWS=0
-SKIP_DELAY=1
-OUTPUT_FRAC_BITS=10
 usage() {
     local script=behav_sim.sh
     if [[ "$POST_SYNTHESIS" == 1 ]]; then script=synthesis_sim.sh; fi
-    echo "Usage: bash scripts/$script [tb_core] [--skip-delay N] [--output-frac-bits N] [--gui]" >&2
+    echo "Usage: bash scripts/$script [tb_core] [--gui]" >&2
 }
 while (( $# )); do
     case "$1" in
         tb_core) ;;
         --gui) GUI=1 ;;
-        --skip-delay)
-            shift
-            [[ "${1:-}" =~ ^[1-9][0-9]*$ ]] || { usage; exit 2; }
-            SKIP_DELAY="$1"
-            ;;
-        --output-frac-bits)
-            shift
-            [[ "${1:-}" =~ ^([0-9]|1[0-5])$ ]] || { usage; exit 2; }
-            OUTPUT_FRAC_BITS="$1"
-            ;;
         *) usage; exit 2 ;;
     esac
     shift
@@ -42,16 +30,6 @@ for tool in xvlog xelab xsim; do
     command -v "$name" >/dev/null || { echo "[ ERROR ] $name not found. Add Vivado bin to PATH." >&2; exit 1; }
 done
 [[ -f "$TB_PATH/tb_core.f" ]] || { echo '[ ERROR ] tb_core.f not found.' >&2; exit 1; }
-python_cmd="${PYTHON:-}"
-if [[ -z "$python_cmd" ]]; then
-    for candidate in python3 python python3.14; do
-        if "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 10))' >/dev/null 2>&1; then
-            python_cmd="$candidate"
-            break
-        fi
-    done
-fi
-[[ -n "$python_cmd" ]] || { echo '[ ERROR ] Set PYTHON to a Python 3.10+ executable.' >&2; exit 1; }
 tool_path() {
     if (( WINDOWS )); then cygpath -am "$1"; else printf '%s\n' "$1"; fi
 }
@@ -69,12 +47,21 @@ compile_flags=()
 elab_targets=(tb_core)
 if [[ "$POST_SYNTHESIS" == 1 ]]; then
     bash "$ROOT/scripts/synthesis.sh" tb_core
-    netlist="$ROOT/build/synth/tb_core/zedboard/reference_rtl/core_funcsim.v"
+    netlist="$ROOT/.log/synth/tb_core/zedboard/reference_rtl/core_funcsim.v"
     compile_flags=(-d TB_CORE_POST_SYNTHESIS)
     # Vivado's functional Verilog netlist includes glbl.
     elab_targets+=(glbl -L unisims_ver)
 fi
 mkdir -p -- "$PATH_LOG"
+include_flags=(-i "$(tool_path "$TB_PATH")")
+[[ -d "$TB_PATH/include" ]] && include_flags+=(-i "$(tool_path "$TB_PATH/include")")
+[[ -d "$ROOT/tb/libs" ]] && include_flags+=(-i "$(tool_path "$ROOT/tb/libs")")
+while IFS= read -r source || [[ -n "$source" ]]; do
+    source=${source%$'\r'}
+    [[ -z "$source" || "$source" == \#* || "$source" == //* ]] && continue
+    directory=$(cd -- "$TB_PATH/$(dirname -- "$source")" && pwd)
+    include_flags+=(-i "$(tool_path "$directory")")
+done < "$TB_PATH/tb_core.f"
 (
     cd -- "$TB_PATH"
     if [[ "$POST_SYNTHESIS" == 1 ]]; then
@@ -84,8 +71,8 @@ mkdir -p -- "$PATH_LOG"
         source=${source%$'\r'}
         source=${source#"${source%%[![:space:]]*}"}
         source=${source%"${source##*[![:space:]]}"}
-        [[ -z "$source" || "$source" == \#* ]] && continue
-        if [[ "$POST_SYNTHESIS" == 1 && "$source" == ../../verification/core/reference_rtl/* ]]; then continue; fi
+        [[ -z "$source" || "$source" == \#* || "$source" == //* ]] && continue
+        if [[ "$POST_SYNTHESIS" == 1 && "$source" == ../libs/rtl/* ]]; then continue; fi
         [[ -f "$source" ]] || { echo "[ ERROR ] Source not found: $source" >&2; exit 1; }
         absolute="$(cd -- "$(dirname -- "$source")" && pwd)/$(basename -- "$source")"
         printf 'sv work "%s"\n' "$(tool_path "$absolute")"
@@ -94,23 +81,18 @@ mkdir -p -- "$PATH_LOG"
 cd -- "$PATH_LOG"
 : > simulate.log
 
-"$python_cmd" "$(tool_path "$ROOT/verification/core/golden_ref/generate_resnet20_core.py")" --out vectors
 
 echo '------------------------------------'
 echo '[1/3] Compiling HDL...'
 echo '------------------------------------'
-run_tool xvlog -prj sources.prj -i "$(tool_path "$TB_PATH/include")" "${compile_flags[@]}" -log compile.log
+run_tool xvlog -prj sources.prj -L uvm "${include_flags[@]}" "${compile_flags[@]}" -log compile.log
 
 echo '------------------------------------'
 echo '[2/3] Elaborating tb_core...'
 echo '------------------------------------'
-{
-    printf -- '-generic_top "SKIP_DELAY_CYCLES=%s"\n' "$SKIP_DELAY"
-    printf -- '-generic_top "OUTPUT_FRAC_BITS=%s"\n' "$OUTPUT_FRAC_BITS"
-} > elaborate_args.f
 debug=()
 if (( GUI )); then debug+=(-debug typical); fi
-run_tool xelab "${elab_targets[@]}" -s behav_tb -f elaborate_args.f "${debug[@]}" -log elaborate.log
+run_tool xelab "${elab_targets[@]}" -L uvm -s behav_tb "${debug[@]}" -timescale 1ns/1ps -log elaborate.log
 
 echo '------------------------------------'
 echo '[3/3] Running ResNet-20 core verification...'
@@ -118,7 +100,7 @@ echo '------------------------------------'
 args=(behav_tb -log simulate.log)
 
 # A response file preserves '=' through Windows batch wrappers.
-: > stream_args.f
+printf -- '-testplusarg "TB_DIR=%s"\n' "$(tool_path "$TB_PATH")" > stream_args.f
 [[ -n "${INPUT_GAP:-}" ]] && printf -- '-testplusarg "input_gap=%s"\n' "$INPUT_GAP" >> stream_args.f
 [[ -s stream_args.f ]] && args+=(-f stream_args.f)
 if (( GUI )); then

@@ -127,7 +127,7 @@ static run_result_t wait_pl_done(void)
     return RUN_TIMEOUT;
 }
 
-/* Load weight.bin at WEIGHT_BASE and the Q5.10 input at FEATURE_BASE before run.
+/* Load weight.bin at WEIGHT_BASE and the Q7.8 input at FEATURE_BASE before run.
  * On any error, reset active PL/DMA channels before restarting inference. */
 run_result_t run(const instruction_t *instructions, size_t count)
 {

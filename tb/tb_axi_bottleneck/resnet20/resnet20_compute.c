@@ -24,7 +24,7 @@ enum {
 enum {
     CAPACITY   = 32 * 32 * 16,
     MAX_KERNEL = 64 * 64 * 3 * 3,
-    SCALE      = 1024
+    SCALE      = 256
 };
 
 typedef struct {
