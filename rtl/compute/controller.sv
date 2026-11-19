@@ -62,32 +62,6 @@ module controller #(
 
 );
     localparam BITWIDTH_CNT = 32;
-    reg [BITWIDTH_MAC_ITERATION-1:0]        counter_iteration_mac;
-    reg [BITWIDTH_POOLING_ITERATION-1:0]    counter_iteration_pooling;
-    reg [BITWIDTH_GAP_ITERATION-1:0]        counter_iteration_gap;
-    reg [PHASE_ITERATION-1:0]               counter_iteration_phase;
-    //reg [LAYER_DEPTH-1:0]                   = 30
-
-    // --------------------------------
-    // wire & reg
-    // --------------------------------
-    // FSM
-    state_t     op_state;       // current
-    state_t     op_next;        // next
-    response_t  resp_state;     // response
-    network_t   layer_state;    // layer status
-
-
-    // counter
-    reg [BITWIDTH_CNT-1 :0] cnt_feature;
-    reg [BITWIDTH_CNT-1 :0] cnt_kernel;
-    reg [BITWIDTH_CNT-1 :0] cnt_bias;
-    reg [BITWIDTH_CNT-1 :0] cnt_run;
-    reg [BITWIDTH_CNT-1 :0] cnt_output;
-    reg [LAYER_DEPTH-1  :0] cnt_layer;
-
-    //reg op_past;
-
     // FSM - for one-hot encoding
     typedef enum logic [7:0] {
         STATE_IDLE          = 8'b00000001,
@@ -135,8 +109,47 @@ module controller #(
         logic        input_enable;   // [0]
     } op_code_t;
 
-    op_code_t op_code,op_past;
+    // wire & reg
+    // --------------------------------
+    // FSM
+    state_t     state_now;       // current
+    state_t     state_past;        // next
+    response_t  resp_state;     // response
+    network_t   layer_state;    // layer status
+
     
+    reg [BITWIDTH_MAC_ITERATION-1:0]        counter_iteration_mac;
+    reg [BITWIDTH_POOLING_ITERATION-1:0]    counter_iteration_pooling;
+    reg [BITWIDTH_GAP_ITERATION-1:0]        counter_iteration_gap;
+    reg [PHASE_ITERATION-1:0]               counter_iteration_phase;
+    //reg [LAYER_DEPTH-1:0]                   = 30
+
+    op_code_t op_code,op_past;
+    wire cfg_transition;
+    wire idle_end,decode_end,feature_end,parameter_end,run_end,drain_end,output_end,error_escape;
+    
+    // counter
+    reg [BITWIDTH_CNT-1 :0] cnt_feature;
+    reg [BITWIDTH_CNT-1 :0] cnt_kernel;
+    reg [BITWIDTH_CNT-1 :0] cnt_bias;
+    reg [BITWIDTH_CNT-1 :0] cnt_run;
+    reg [BITWIDTH_CNT-1 :0] cnt_output;
+    reg [LAYER_DEPTH-1  :0] cnt_layer;
+
+    //wire op_transition = cfg_transition;
+    //wire cmd_transition = (op_past[31:28] != cmd_code);
+
+    assign idle_end          = (~idle_past)         &    idle_last;
+    assign decode_end        = (~decode_past)       &    decode_last;
+    assign feature_end       = (~feature_past)      &    feature_last;
+    assign parameter_end     = (~parameter_past)    &    parameter_last;
+    assign run_end           = (~run_past)          &    run_last;
+    assign drain_end         = (~drain_past)        &    drain_last;
+    assign output_end        = (~output_past)       &    output_last;
+    assign error_escape      = (~error_escape)      &    error_last;
+    
+    assign cfg_transition = (~cfg_enable_past) & cfg_enable;
+        // --------------------------------
         
     // counter
 
@@ -157,21 +170,16 @@ module controller #(
     assign output_enable    = cfg[1];          //output_enable       
     assign input_enable     = cfg[0];          //input_enable
 
-    
+    assign dma_feature_ready = dma_feature_valid & dma_feature_last;
+    assign dma_kernel_ready = dma_kernel_valid & dma_kernel_last;
+    assign dma_bias_ready = dma_bias_valid & dma_bias_last;
 
-    assign dma_feature_ready = dma_feature_valid & ;
-    assign dma_kernel_ready = dma_feature_valid & ;
-    assign dma_bias_ready = dma_feature_valid & ;
-
-
-    //wire op_transition = cfg_transition;
-    //wire cmd_transition = (op_past[31:28] != cmd_code);
-    wire cfg_transition = (~cfg_enable_past) & cfg_enable;
+    assign op_code = cfg_enable? 
 
     always_ff @(posedge clk or negedge nrst) begin
         if(!nrst) begin
-            op_past <= STATE_IDLE;
-            op_code <= STATE_IDLE;
+            op_past <= 32'd0;
+            op_code <= 32'd0;
             cfg_enable_past <= 1'b0;
        end
         else begin
@@ -180,22 +188,9 @@ module controller #(
             op_past <= op_state;
         end
     end
-/*
-    always_ff @(cmd_code, cmd_transition,nrst) begin
-        if(!nrst) begin
-            
-        end
-        else begin
-            if(cmd_transition) begin
-            
-            end
-            else begin
 
-            end
-        end
-
-    end
-*/
+    //reg idx,InX, InY,stride,;
+    //iy,ix,w,cin, ic, 
 
     //mac_iteration
     //pooling_iteration
@@ -224,7 +219,7 @@ module controller #(
     always_ff @(posedge clk or negedge nrst) begin
         if(!nrst) begin
             //y -> x -> channel(H/W/C)
-            
+            if(idx)
             input_width
             input_height
             input_channel
@@ -268,7 +263,6 @@ module controller #(
         //8-2 : output flag -> DMA -> save to Memory
         //8-3 : CPU read form DDR Memory
 
-
     //3. check status - Done or Error
 
     //Memory     C file control  controller
@@ -293,7 +287,7 @@ module controller #(
             counter_STATE <= 8'd0;
         end
         else begin
-            if(op_transition || op_state[0]) begin
+            if(cfg_transition || input_enable) begin
                 counter_STATE <= 8'd0;
             end
             else begin
@@ -304,35 +298,41 @@ module controller #(
     
     always_comb @(*) begin
         if(!nrst) begin
-            
+            state_now <= STATE_IDLE;
         end
         else begin
-            case (op_state)
+            case (state_now)
                 STATE_IDLE : begin        //read from AXI AW/W
                     if(cfg_transition)
-                        op_state <= STATE_DECODE;
+                        state_now <= STATE_DECODE;
                     else
-                        op_state <= STATE_IDLE;
+                        state_now <= STATE_IDLE;
                 end
                 STATE_DECODE : begin
                     if(input_enable)
-                        op_state <= STATE_IN_FEATURE;
+                        state_now <= STATE_IN_FEATURE;
                     else if(mac_enable)
-                        op_state <= STATE_IN_PARAM;
+                        state_now <= STATE_IN_PARAM;
                     else if( (~is_skip) & mac_enable )
-                        op_state <= STATE_DECODE;
+                        state_now <= STATE_DECODE;
                     //else if()
                     //    op_state <= STATE_ERROR;
                     else begin
-                        op_state <= STATE_DECODE;
+                        state_now <= STATE_DECODE;
                     end
                 end
                 STATE_IN_FEATURE : begin
-                    -> STATE_IN_PARAM
-                    -> 
-                    -> STATE_ERROR
-                    if(STATE_IN_FEATURE)
-                    else if
+                    if(dma_feature_ready & dma_feature_valid) begin
+                        state_now <= STATE_IN_FEATURE;
+                    end
+                    else if(dma_bias_ready & dma_bias_valid) begin
+                        state_now <= STATE_IN_PARAM;
+                    end
+                    //else if()
+                    //    state_now <= STATE_ERROR;
+                    else begin
+                        state_now <= STATE_IN_FEATURE;
+                    end
                 end
                 STATE_IN_PARAM : begin
                     if(STATE_IN_PARAM)
@@ -375,7 +375,7 @@ module controller #(
             counter_iteration_mac <= {BITWIDTH_MAC_ITERATION{1'b0}};
         end
         else begin
-            if((op_state == STATE_OUTPUT) && (op_state != op_next)) begin
+            if((state_now == STATE_OUTPUT) && (state_now != state_next)) begin
                 if(counter_iteration_mac >= {1'b1,{(BITWIDTH_MAC_ITERATION-1){1'b0}}} - 1'b1) begin
                     counter_iteration_mac <= {BITWIDTH_MAC_ITERATION{1'b0}};
                 end
@@ -396,7 +396,7 @@ module controller #(
             counter_iteration_pooling <= {BITWIDTH_POOLING_ITERATION{1'b0}};
         end
         else begin
-            if((op_state == STATE_OUTPUT) && (op_state != op_next)) begin
+            if((state_now == STATE_OUTPUT) && (state_now != state_next)) begin
                 if(counter_iteration_pooling >= {1'b1,{(BITWIDTH_POOLING_ITERATION-1){1'b0}}} - 1'b1) begin
                     counter_iteration_pooling <= {BITWIDTH_POOLING_ITERATION{1'b0}};
                 end
@@ -414,7 +414,7 @@ module controller #(
             counter_iteration_gap <= {BITWIDTH_GAP_ITERATION{1'b0}};
         end
         else begin
-            if((op_state == STATE_OUTPUT) && (op_state != op_next)) begin
+            if((state_now == STATE_OUTPUT) && (state_now != state_next)) begin
                 if(counter_iteration_gap >= {1'b1,(BITWIDTH_GAP_ITERATION-1){1'b0}} - 1'b1) begin
                     counter_iteration_gap <= {BITWIDTH_GAP_ITERATION{1'b0}};
                 end
