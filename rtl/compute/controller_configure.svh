@@ -14,6 +14,16 @@ assign cfg_h                = cfg[21:16];
 assign cfg_c                = cfg[27:22];
 
 assign ctrl_ow_next              = ((((ctrl_is_after_skip) ? ctrl_fw : ctrl_ow) - cfg_w + {cfg_padding, 1'b0}) >> cfg_stride);
+assign is_feature_in = ctrl_input_enable & (cstate == IN_FEATURE);
+assign is_skip_connection = cfg_residual_enable;
+
+always @(posedge clk or negedge nrst) begin
+    if (!nrst) begin
+       output_init_flag <= 0; 
+    end else begin
+        output_init_flag <= cnt_dma_output == 0; 
+    end
+end
 
 always_ff @(posedge clk or negedge nrst) begin : update_config
     if (!nrst) begin

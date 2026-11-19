@@ -73,6 +73,8 @@ module controller #(
     output wire [BRAM_FEATRE_CAPACITY-1:0]       rmem_rd_addr,
     output wire [BRAM_FEATRE_CAPACITY-1:0]       rmem_wr_addr
 );
+integer i;
+
 
 // FSM
 typedef enum reg [7:0] {
@@ -105,7 +107,7 @@ localparam LATENCY_CORE = 1;
 // ----------------------------------------------------------------
 // wire & reg
 // ----------------------------------------------------------------
-// FSM
+// ---- FSM ----
 state_t                 cstate; // current
 response_t              rstate; // response
 
@@ -116,7 +118,7 @@ wire [BITWIDTH_CNT-1:0] len_kernel;
 wire [BITWIDTH_CNT-1:0] len_bias;
 wire [BITWIDTH_CNT-1:0] len_output;
 
-// counter
+// ---- counter ----
 reg [BITWIDTH_CNT-1:0] cnt_feature;
 reg [BITWIDTH_CNT-1:0] cnt_kernel;
 reg [BITWIDTH_CNT-1:0] cnt_bias;
@@ -124,7 +126,7 @@ reg [BITWIDTH_CNT-1:0] cnt_run;
 reg [BITWIDTH_CNT-1:0] cnt_output;
 reg [BITWIDTH_CNT-1:0] cnt_dma_output;
 
-// configure
+// ---- configure ----
 wire                              cfg_input_enable;
 wire                              cfg_output_enable;
 wire                              cfg_mac_enable;
@@ -151,7 +153,8 @@ reg                               ctrl_stride;
 
 wire [CONFIG_DATA_BITWIDTH-1:0]   ctrl_ow_next;
 
-// core
+// ---- core ----
+// matrix coordination
 reg [ADDR_BITWIDTH-1:0] addr_frow;
 reg [ADDR_BITWIDTH-1:0] addr_fcol;
 reg [ADDR_BITWIDTH-1:0] addr_cin;
@@ -162,24 +165,59 @@ reg [ADDR_BITWIDTH-1:0] addr_orow;
 reg [ADDR_BITWIDTH-1:0] addr_ocol;
 reg [ADDR_BITWIDTH-1:0] addr_oc; 
 
-wire slide_frow_carry;
-wire slide_fcol_carry;
+reg [ADDR_BITWIDTH-1:0] addr_frow_next; // next coord
+reg [ADDR_BITWIDTH-1:0] addr_fcol_next;
+reg [ADDR_BITWIDTH-1:0] addr_cin_next;
+reg [ADDR_BITWIDTH-1:0] addr_krow_next;
+reg [ADDR_BITWIDTH-1:0] addr_kcol_next;
+reg [ADDR_BITWIDTH-1:0] addr_cout_next;
+reg [ADDR_BITWIDTH-1:0] addr_orow_next;
+reg [ADDR_BITWIDTH-1:0] addr_ocol_next;
+reg [ADDR_BITWIDTH-1:0] addr_oc_next;
 
-wire [ADDR_BITWIDTH:0] addr_frow_signed;
+wire [ADDR_BITWIDTH:0] addr_frow_signed; // for feature sliding
 wire [ADDR_BITWIDTH:0] addr_fcol_signed;
 wire [ADDR_BITWIDTH:0] addr_frow_slided = addr_frow_signed + (addr_krow - ctrl_padding);
 wire [ADDR_BITWIDTH:0] addr_fcol_slided = addr_fcol_signed + (addr_kcol - ctrl_padding);
 
+// carry
+wire  addr_frow_carry;
+wire  addr_fcol_carry;
+wire  addr_cin_carry;
+wire  addr_krow_carry;
+wire  addr_kcol_carry;
+wire  addr_cout_carry;
+wire  addr_orow_carry;
+wire  addr_ocol_carry;
+wire  addr_oc_carry;
+
+wire  addr_frfc_carry;
+wire  addr_frfccin_carry;
+wire  addr_krkc_carry;
+wire  addr_krkccin_carry;
+wire  addr_krkccincout_carry;
+wire  addr_krkccinfr_carry;
+wire  addr_krkccinfrfc_carry;
+wire  addr_krkccinfrfccout_carry;
+wire  addr_oroc_carry;
+wire  addr_orococ_carry;
+
+wire slide_frow_carry;
+wire slide_fcol_carry;
+
+// addressing
 wire [BRAM_FEATRE_CAPACITY-1:0] core_in_f_addr;
 wire [BRAM_KERNEL_CAPACITY-1:0] core_in_k_addr;
 wire [BRAM_BIAS_CAPACITY-1:0] core_in_b_addr;
 wire [BRAM_FEATRE_CAPACITY-1:0] core_out_f_addr;
 wire [BRAM_FEATRE_CAPACITY-1:0] core_residual_addr;
 
+// temp
 wire [BRAM_FEATRE_CAPACITY-1:0] fmem_rd_addr_temp;
 wire [BRAM_FEATRE_CAPACITY-1:0] output_read_addr;
+reg [BRAM_FEATRE_CAPACITY-1:0] rmem_rd_addr_buf[LATENCY_RESIDUAL-1:0];
 
-// DMA
+// ---- DMA ---- 
 wire dma_kernel_hk;
 wire dma_bias_hk;
 wire dma_feature_hk;
@@ -190,15 +228,6 @@ wire dma_result_hk;
 // ----------------------------------------------------------------
 `include "controller_fsm.svh"
 
-assign is_feature_in = ctrl_input_enable & (cstate == IN_FEATURE);
-
-always @(posedge clk or negedge nrst) begin
-    if (!nrst) begin
-       output_init_flag <= 0; 
-    end else begin
-        output_init_flag <= cnt_dma_output == 0; 
-    end
-end
 // ----------------------------------------------------------------
 // counter
 // ----------------------------------------------------------------
