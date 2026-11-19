@@ -99,7 +99,7 @@ module avgpool #(
             // when enable is high and iteration count is less than iter,
             // add data_in to sum and increment iteration count
             //=======================================================================
-                else if(proc && (iter_cnt < iter_reg))
+                else if(proc && valid_in && (iter_cnt < iter_reg))
                 begin
                     sum        <= sum + data_in;
                     iter_cnt   <= iter_cnt + 1;                             

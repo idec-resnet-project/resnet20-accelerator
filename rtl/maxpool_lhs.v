@@ -61,7 +61,7 @@ module maxpool #(
                 valid_out   <= 0;    
                 proc        <= 1;      
             end
-            else if(proc && (iter_cnt < iter_reg))
+            else if(proc && valid_in && (iter_cnt < iter_reg))
             begin
                 iter_cnt    <= iter_cnt + 1;
                 max         <= (max < data_in) ? data_in : max; 
