@@ -79,6 +79,35 @@ package stepbystep_test_pkg;
                 stages[i] = new(stage_names[i], this);
         endfunction
 
+        function string instruction_name(bit [7:0] opcode, string stage_name);
+            case (opcode)
+                8'h01: return "IN_FEATURE";
+                8'h42: return stage_name == "toy" ? "FC_OUT" : "CONV1X1_OUT";
+                8'h50: return "CONV_RELU";
+                8'h52: return "CONV_RELU_OUT";
+                8'h74: return "RESIDUAL_GAP";
+                8'hc0: return "SKIP_CONV";
+                default: return "UNKNOWN";
+            endcase
+        endfunction
+
+        function void print_instruction_table(model_run_config cfg, string stage_name);
+            bit [31:0] instruction;
+
+            $display("%-13s | IN OUT MAC RES RELU POOL GAP SKIP | Stride Pad |  W  H  C", "Instruction");
+            foreach (cfg.commands[i]) begin
+                instruction = cfg.commands[i].instruction;
+                // MAC commands encode kernel W/H and Cout. INPUT encodes feature W/H and Cin.
+                $display("%-13s | %2d %3d %3d %3d %4d %4d %3d %4d | %6d %3d | %2d %2d %2d",
+                         instruction_name(instruction[7:0], stage_name),
+                         instruction[0], instruction[1], instruction[6],
+                         instruction[5], instruction[4], instruction[3], instruction[2],
+                         instruction[7], int'(instruction[8]) + 1, instruction[9],
+                         int'(instruction[15:10]) + 1, int'(instruction[21:16]) + 1,
+                         int'(instruction[27:22]) + 1);
+            end
+        endfunction
+
         virtual task run_phase(uvm_phase phase);
             bit prior_failure;
             int errors_before;
@@ -88,6 +117,7 @@ package stepbystep_test_pkg;
             prior_failure = test_failed;
             foreach (stages[i]) begin
                 $display("[ %0d/%0d ] %s", i + 1, $size(stages), stage_names[i]);
+                print_instruction_table(stages[i].cfg, stage_names[i]);
                 test_failed = 0;
                 errors_before = server.get_severity_count(UVM_ERROR);
                 stages[i].run_inference();
