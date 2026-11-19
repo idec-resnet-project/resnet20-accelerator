@@ -54,8 +54,9 @@
         inst = partial_input_instruction();
         command = new;
         command.instruction = pack_instruction(inst);
-        command.payload[FEATURE].words =
-            read_hex({data_dir, "/input_q5_10.hex"}, stream_words(inst, FEATURE));
+        command.payload[FEATURE].words = feature_to_chw(
+            read_hex({data_dir, "/input_q5_10.hex"}, stream_words(inst, FEATURE)),
+            inst.width * inst.height, inst.cin);
         cfg.commands.push_back(command);
 
         for (int i = FIRST_BLOCK_COMMAND; i < $size(PROGRAM); i++) begin

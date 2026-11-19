@@ -50,6 +50,9 @@ package model_backend_pkg;
         endfunction
 
         virtual function void accept_word(model_stream_e stream, int index, int word_value);
+            // The DPI model stores features in HWC order.
+            if (stream == FEATURE)
+                index = feature_hwc_index(index, inst.width * inst.height, inst.cin);
             model_store(handle, int'(stream), index, word_value);
         endfunction
 

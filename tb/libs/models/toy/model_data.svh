@@ -50,8 +50,9 @@
                 command.payload[s].words = new[stream_words(inst, model_stream_e'(s))];
 
             if (inst.op == OP_INPUT)
-                command.payload[FEATURE].words = read_hex({data_dir, "/input_q5_10.hex"},
-                                                        stream_words(inst, FEATURE));
+                command.payload[FEATURE].words = feature_to_chw(
+                    read_hex({data_dir, "/input_q5_10.hex"}, stream_words(inst, FEATURE)),
+                    inst.width * inst.height, inst.cin);
             for (int s = KERNEL; s <= BIAS; s++) begin
                 for (int j = 0; j < command.payload[s].words.size(); j++) begin
                     command.payload[s].words[j] = read_word(fd, weight_path);

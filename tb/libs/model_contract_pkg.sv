@@ -4,6 +4,18 @@ package model_contract_pkg;
     // --------------------------------
     typedef int model_words_t[];
 
+    // Convert a channel-major stream position to its pixel-major position.
+    function automatic int feature_hwc_index(int chw_index, int pixels, int channels);
+        return (chw_index % pixels) * channels + chw_index / pixels;
+    endfunction
+
+    function automatic model_words_t feature_to_chw(model_words_t hwc, int pixels, int channels);
+        model_words_t chw = new[hwc.size()];
+        foreach (chw[i])
+            chw[i] = hwc[feature_hwc_index(i, pixels, channels)];
+        return chw;
+    endfunction
+
     // Keep the stream order in sync with the DPI adapter.
     typedef enum int {
         FEATURE,

@@ -48,13 +48,17 @@
             if (state != 0) test_fatal("RESET", $sformatf("Unexpected status %08h", state));
         endtask
 
-        task run_phase(uvm_phase phase);
-            phase.raise_objection(this);
+        task run_inference();
             reset_dut();
             check_reset();
             seq.start(null);
             if (env.streams[RESULT].monitor.stall_cycles == 0)
                 test_fatal("NO_STALL", "Inference did not exercise result backpressure");
+        endtask
+
+        task run_phase(uvm_phase phase);
+            phase.raise_objection(this);
+            run_inference();
             phase.drop_objection(this);
         endtask
         function void final_phase(uvm_phase phase);

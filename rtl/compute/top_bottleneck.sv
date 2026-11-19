@@ -93,7 +93,8 @@ wire [BITWIDTH-1:0]                   out_data;
 // buffer switch
 wire is_fmem0_in;
 wire is_feature_in;
-
+wire is_zero;
+wire is_skip_connection;
 // dma output 
 reg [BITWIDTH-1:0] dma_result_data_buf;
 wire [BITWIDTH-1:0] dma_result_data_temp;
@@ -114,7 +115,7 @@ end
 // controll
 // --------------------------------
 // ping-pong datapath 
-assign in_data          = fmem_rd_data[~is_fmem0_in]; 
+assign in_data          = (is_zero) ? '0 : fmem_rd_data[~is_fmem0_in]; 
 assign fmem_wr_data[0]  = (is_feature_in) ? dma_feature_data : out_data;
 assign fmem_wr_data[1]  = (is_feature_in) ? dma_feature_data : out_data;
 
@@ -123,6 +124,7 @@ assign dma_result_data = dma_result_data_buf;
 assign dma_result_data_temp  = fmem_rd_data[is_fmem0_in];
 assign kmem_wr_data     = dma_kernel_data;
 assign bmem_wr_data     = dma_bias_data;
+assign rmem_wr_data     = out_data;
 
 // --------------------------------
 // Buffer
@@ -227,6 +229,8 @@ controller #(
     // I/O
     .in_enable         (in_enable),
     .out_enable        (out_enable),
+    .is_zero           (is_zero),
+    .is_skip_connection (is_skip_connection),
     // DMAs
     .dma_feature_valid (dma_feature_valid),
     .dma_feature_ready (dma_feature_ready),
@@ -284,6 +288,7 @@ core #(
     .in_data           (in_data),
     .kernel_data       (kmem_rd_data),                  
     .bias_data         (bmem_rd_data),
+    .residual_data     (rmem_rd_data),
     // output
     .out_enable        (out_enable),        
     .out_data          (out_data)

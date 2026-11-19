@@ -79,8 +79,10 @@ module mac_accumulate #(
             product_valid <= 0;
         end else begin
             product_valid <= in_enable;
-            if (in_enable)
-                input_count <= (!enable || last_input) ? 0 : input_count + 1'b1;
+            if (!enable || !in_enable || last_input)
+                input_count <= 0;
+            else
+                input_count <= input_count + 1'b1;
         end
     end
 

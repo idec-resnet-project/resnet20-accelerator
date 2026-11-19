@@ -32,11 +32,14 @@ module core #(
 
     // Output stream
     output wire                                   out_enable,
-    output wire         [BITWIDTH-1:0]             out_data
+    output wire         [BITWIDTH-1:0]             out_data,
+
+    // Supply the shortcut with the last MAC tap.
+    input  wire         [BITWIDTH-1:0]             residual_data
 );
     wire mac_last_input;
     wire mac_valid, residual_valid, relu_valid, pooling_valid, gap_valid;
-    wire signed [BITWIDTH-1:0] mac_data, residual_data, relu_data, pooling_data, gap_data;
+    wire signed [BITWIDTH-1:0] mac_data, residual_out_data, relu_data, pooling_data, gap_data;
 
     // synthesis translate_off
     initial begin
@@ -49,56 +52,14 @@ module core #(
     // Align the MAC result and shortcut
     // --------------------------------
     wire use_residual = mac_enable && residual_enable;
-    reg waiting_for_skip;
-    reg mac_held_valid, skip_held_valid;
-    reg signed [BITWIDTH-1:0] mac_held_data, skip_held_data;
+    reg [BITWIDTH-1:0] shortcut_tap, shortcut_sum, shortcut_result;
 
-    wire skip_valid = waiting_for_skip && in_enable;
-    // Match the additional MAC register before joining the two streams.
-    reg skip_valid_q;
-    reg signed [BITWIDTH-1:0] skip_data_q;
-    always @(posedge clk or negedge nrst) begin
-        if (!nrst) begin
-            skip_valid_q <= 0;
-            skip_data_q <= 0;
-        end else begin
-            skip_valid_q <= skip_valid;
-            if (skip_valid) skip_data_q <= in_data;
-        end
-    end
-    wire pair_valid = (mac_valid || mac_held_valid) && (skip_valid_q || skip_held_valid);
-    wire residual_in_valid = use_residual ? pair_valid : mac_valid;
-    wire signed [BITWIDTH-1:0] residual_main = mac_held_valid ? mac_held_data : mac_data;
-    wire signed [BITWIDTH-1:0] residual_skip = skip_held_valid ? skip_held_data : skip_data_q;
-
-    always @(posedge clk or negedge nrst) begin
-        if (!nrst) begin
-            waiting_for_skip <= 0;
-            mac_held_valid <= 0;
-            skip_held_valid <= 0;
-            mac_held_data <= 0;
-            skip_held_data <= 0;
-        end else begin
-            // The next valid input after the last MAC tap carries the shortcut.
-            if (skip_valid)
-                waiting_for_skip <= 0;
-            else if (use_residual && mac_last_input)
-                waiting_for_skip <= 1;
-
-            if (!use_residual || pair_valid) begin
-                mac_held_valid <= 0;
-                skip_held_valid <= 0;
-            end else begin
-                if (mac_valid) begin
-                    mac_held_valid <= 1;
-                    mac_held_data <= mac_data;
-                end
-                if (skip_valid_q) begin
-                    skip_held_valid <= 1;
-                    skip_held_data <= skip_data_q;
-                end
-            end
-        end
+    // Match the MAC's product, sum, and output registers.
+    always @(posedge clk) begin
+        if (use_residual && mac_last_input)
+            shortcut_tap <= residual_data;
+        shortcut_sum <= shortcut_tap;
+        shortcut_result <= shortcut_sum;
     end
 
     // --------------------------------
@@ -114,7 +75,7 @@ module core #(
         .nrst            (nrst),
         .enable          (mac_enable),
         .iteration       (mac_iteration),
-        .in_enable       (in_enable && !waiting_for_skip),
+        .in_enable       (in_enable),
         .in_data         (in_data),
         .kernel_data     (kernel_data),
         .bias_data       (bias_data),
@@ -126,7 +87,7 @@ module core #(
     wire residual_input_valid;
     wire signed [BITWIDTH-1:0] residual_input, residual_shortcut;
     core_stream_boundary #(.WIDTH(2*BITWIDTH), .REGISTERED(PIPELINE_BOUNDARIES)) to_residual (
-        .clk(clk), .nrst(nrst), .in_valid(residual_in_valid), .in_data({residual_main, residual_skip}),
+        .clk(clk), .nrst(nrst), .in_valid(mac_valid), .in_data({mac_data, shortcut_result}),
         .out_valid(residual_input_valid), .out_data({residual_input, residual_shortcut})
     );
 
@@ -138,13 +99,13 @@ module core #(
         .in_data    (residual_input),
         .skip_data  (residual_shortcut),
         .out_enable (residual_valid),
-        .out_data   (residual_data)
+        .out_data   (residual_out_data)
     );
 
     wire relu_input_valid;
     wire signed [BITWIDTH-1:0] relu_input;
     core_stream_boundary #(.WIDTH(BITWIDTH), .REGISTERED(PIPELINE_BOUNDARIES)) to_relu (
-        .clk(clk), .nrst(nrst), .in_valid(residual_valid), .in_data(residual_data),
+        .clk(clk), .nrst(nrst), .in_valid(residual_valid), .in_data(residual_out_data),
         .out_valid(relu_input_valid), .out_data(relu_input)
     );
 

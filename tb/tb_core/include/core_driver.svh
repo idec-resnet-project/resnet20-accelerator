@@ -3,28 +3,20 @@
     // --------------------------------
     task automatic idle(input int cycles);
         repeat (cycles) begin
-            @(posedge clk);
+            @(negedge clk);
             in_enable = 0;
         end
     endtask
 
-    task automatic drive(input word_t value, kernel, bias, input int index);
+    task automatic send_word(input word_t value, kernel, bias, input int index,
+                             input word_t residual_word = 0);
+        @(negedge clk);
         in_enable = 1;
         in_data = value;
         kernel_data = kernel;
         bias_data = bias;
+        residual_data = residual_word;
         if (index >= 0) queue_output(index);
-    endtask
-
-    task automatic send_word(input word_t value, kernel, bias, input int index);
-        @(posedge clk);
-        drive(value, kernel, bias, index);
-    endtask
-
-    task automatic send_skip(input word_t value, input int index);
-        idle(SKIP_DELAY_CYCLES - 1);
-        @(posedge clk);
-        drive(value, 0, 0, index);
     endtask
 
     task automatic configure(input bit residual, relu, gap, input int taps, group_size);
@@ -58,7 +50,7 @@
         if (layer.weight_base != weights_consumed)
             $fatal(1, "%s: weight consumption order mismatch", layer_name[index]);
         budget = longint'(out_h) * out_w * layer.cout *
-                 (longint'(taps) * (input_gap + 1) + (residual ? SKIP_DELAY_CYCLES : 0)) + CORE_PIPELINE_CYCLES + 1;
+                 longint'(taps) * (input_gap + 1) + CORE_PIPELINE_CYCLES + 1;
         begin_compare(layer_name[index], use_gap ? 1 : out_w, layer.cout, result_words, budget);
         configure(residual, (layer.op & FLAG_RELU) != 0, use_gap, taps, out_h * out_w);
 
@@ -75,10 +67,10 @@
                         value = address.padded ? 16'sd0 : feature[address.feature_index];
                         send_word(value, weights[address.kernel_index],
                                   tap == 0 ? weights[bias_base + oc] : 16'sd0,
-                                  !residual && tap == taps - 1 ? expected_index : -1);
+                                  tap == taps - 1 ? expected_index : -1,
+                                  residual && tap == taps - 1 ? shortcut[output_word_index] : 16'sd0);
                         if (tap != taps - 1) idle(input_gap);
                     end
-                    if (residual) send_skip(shortcut[output_word_index], expected_index);
                     idle(input_gap);
                 end
             end
@@ -121,12 +113,10 @@
         directed_expected[0] = -1;
         directed_expected[1] = 32767;
         begin_compare("skip timing and residual saturation", 2, 1, 2,
-                      2 * (longint'(SKIP_DELAY_CYCLES) + input_gap + 1) + CORE_PIPELINE_CYCLES + 1, 1);
+                      2 * (input_gap + 1) + CORE_PIPELINE_CYCLES + 1, 1);
         configure(1, 0, 0, 1, 0);
-        send_word(32767, 32767, 0, -1);
-        send_skip(-32768, 0);
+        send_word(32767, 32767, 0, 0, -32768);
         idle(input_gap);
-        send_word(0, 0, 32767, -1);
-        send_skip(1, 1);
+        send_word(0, 0, 32767, 1, 1);
         finish_compare();
     endtask

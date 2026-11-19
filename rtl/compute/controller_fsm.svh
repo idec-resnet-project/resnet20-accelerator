@@ -42,7 +42,11 @@ always_ff @(posedge clk or negedge nrst) begin : fmem_select
     if (!nrst) begin
         is_fmem0_in <= 1;
     end else if (cstate == DECODE) begin
-        is_fmem0_in <= ~is_fmem0_in;
+        if (ctrl_is_after_skip) begin
+            is_fmem0_in <= is_fmem0_in;
+        end else begin
+            is_fmem0_in <= ~is_fmem0_in;
+        end
     end else begin
         is_fmem0_in <= is_fmem0_in;
     end

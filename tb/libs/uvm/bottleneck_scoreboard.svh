@@ -17,6 +17,8 @@
         int writes;
         int checked_commands;
         model_words_t captured_logits;
+        bit show_result_table = 1;
+        string last_snr = "unavailable";
 
         function new(string name, uvm_component parent);
             super.new(name, parent);
@@ -95,10 +97,11 @@
             error_power = 0.0;
             output_scale = 2.0 ** cfg.output_frac_bits;
             
-            $display("----------------------------------------------------------------\n");
-            $display("***********       RESULT         ************\n");
-
-            $display("%5s | %16s | %16s | %16s", "Index", "Float Reference", "DUT Output", "Absolute Error");
+            if (show_result_table) begin
+                $display("----------------------------------------------------------------\n");
+                $display("***********       RESULT         ************\n");
+                $display("%5s | %16s | %16s | %16s", "Index", "Float Reference", "DUT Output", "Absolute Error");
+            end
             foreach (captured_logits[i]) begin
                 if ($fscanf(fd, "%f", reference) != 1) begin
                     $fclose(fd);
@@ -110,8 +113,9 @@
                 abs_error = (error_value < 0.0) ? -error_value : error_value;
                 signal_power += reference * reference;
                 error_power += error_value * error_value;
-                $display("%5d | %16.8g | %16.8g | %16.8g",
-                         i, reference, dut_output, abs_error);
+                if (show_result_table)
+                    $display("%5d | %16.8g | %16.8g | %16.8g",
+                             i, reference, dut_output, abs_error);
             end
 
             if ($fscanf(fd, "%s", extra) == 1) begin
@@ -137,9 +141,12 @@
                                                       snr_db, cfg.min_logit_snr_db));
                 end
             end
-            $display("");
-            $display("SNR: %s | %s", snr_text, snr_status);
-            $display("----------------------------------------------------------------\n");
+            last_snr = snr_text;
+            if (show_result_table) begin
+                $display("");
+                $display("SNR: %s | %s", snr_text, snr_status);
+                $display("----------------------------------------------------------------\n");
+            end
 
         endfunction
 

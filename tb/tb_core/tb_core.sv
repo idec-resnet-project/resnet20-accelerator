@@ -3,7 +3,6 @@
 module tb_core;
     import model_pkg::*;
     string data_dir;
-    localparam int SKIP_DELAY_CYCLES = 1;
     localparam int OUTPUT_FRAC_BITS  = 10;
     // MAC, residual/ReLU/pooling, GAP (sum, magnitude, eight divide stages, sign), and boundaries.
     localparam int CORE_PIPELINE_CYCLES = 3 + 3 * 2 + (2 + 8 + 1) + 4;
@@ -32,6 +31,7 @@ module tb_core;
     logic signed [15:0] in_data     = 0;
     logic signed [15:0] kernel_data = 0;
     logic signed [15:0] bias_data   = 0;
+    logic signed [15:0] residual_data = 0;
 
     // Output stream
     wire               out_enable;
@@ -58,6 +58,7 @@ module tb_core;
         .in_data           (in_data),
         .kernel_data       (kernel_data),
         .bias_data         (bias_data),
+        .residual_data     (residual_data),
 
         // Output
         .out_enable        (out_enable),
@@ -112,13 +113,11 @@ module tb_core;
             weight_path = {data_dir, "/weight.bin"};
         if ($value$plusargs("input_gap=%d", input_gap) && input_gap < 0)
             $fatal(1, "input_gap must be nonnegative");
-        if (SKIP_DELAY_CYCLES < 1)
-            $fatal(1, "SKIP_DELAY_CYCLES must be positive");
         if (OUTPUT_FRAC_BITS < 0 || OUTPUT_FRAC_BITS > 15)
             $fatal(1, "OUTPUT_FRAC_BITS must be between 0 and 15");
         weights_consumed = 0;
-        $display("[ INFO ] ResNet-20 Q5.10 input_gap=%0d skip_delay=%0d output_frac_bits=%0d",
-                 input_gap, SKIP_DELAY_CYCLES, OUTPUT_FRAC_BITS);
+        $display("[ INFO ] ResNet-20 Q5.10 input_gap=%0d output_frac_bits=%0d",
+                 input_gap, OUTPUT_FRAC_BITS);
 
         read_model(weight_path);
         check_schedule();
@@ -126,7 +125,7 @@ module tb_core;
         // The Vivado global startup reset holds the primitives for 100 ns.
         repeat (11) @(negedge clk);
 `endif
-        repeat (3) @(posedge clk);
+        repeat (3) @(negedge clk);
         nrst = 1;
         check_arithmetic();
         run_model();

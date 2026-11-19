@@ -39,12 +39,12 @@ wire  addr_orococ_carry;
 assign mac_iteration = (ctrl_kw+1)*(ctrl_kw+1)*(ctrl_fc+1);
 assign gap_iteration = (ctrl_fw+1)*(ctrl_fw+1);
 
-assign core_in_f_addr  = {addr_cin, addr_fcol, addr_frow};
+assign core_in_f_addr  = {addr_cin, addr_fcol_slided[ADDR_BITWIDTH-1:0], addr_frow_slided[ADDR_BITWIDTH-1:0]};
 assign core_in_k_addr  = {addr_cout, addr_cin, addr_kcol, addr_krow};
 assign core_in_b_addr  = {addr_cout};
 assign core_out_f_addr = {addr_oc, addr_ocol, addr_orow};
 assign output_read_addr = dma_result_hk ? {addr_oc_next, addr_ocol_next, addr_orow_next} : core_out_f_addr;
-
+assign core_residual_addr = {addr_cout, addr_fcol >> ctrl_stride, addr_frow >> ctrl_stride};
 // fmem
 assign fmem_rd_addr_temp = addr_frow + ctrl_fw * (addr_fcol + ctrl_fw * addr_cin);
 assign fmem_wr_enable[0] = (ctrl_input_enable) ? ((is_fmem0_in)  ? '0 : dma_feature_hk)
@@ -65,17 +65,37 @@ assign bmem_wr_enable    = dma_bias_hk;
 assign bmem_rd_addr      = core_in_b_addr;
 assign bmem_wr_addr      = core_in_b_addr;
 
-assign rmem_wr_enable    = (ctrl_is_skip) ? out_enable : 0;
-assign rmem_wr_addr      =  (~is_fmem0_in) ? core_in_f_addr : '0;
-assign rmem_rd_addr      = (is_fmem0_in) ? core_in_f_addr :cnt_feature[BRAM_FEATRE_CAPACITY-1:0];
+assign rmem_wr_enable    =  (ctrl_is_skip) ? out_enable & cstate[5] : '0;
+assign rmem_wr_addr      =  core_out_f_addr;
+reg [BRAM_FEATRE_CAPACITY-1:0] rmem_rd_addr_buf[LATENCY_RESIDUAL-1:0];
+assign rmem_rd_addr      =  rmem_rd_addr_buf[0];
 
-// carry
-assign addr_frow_carry  = addr_frow  == ctrl_fw;
-assign addr_fcol_carry  = addr_fcol  == ctrl_fw;
-assign addr_cin_carry   = addr_cin   == ctrl_fc;
-assign addr_krow_carry  = addr_krow  == ctrl_kw;
-assign addr_kcol_carry  = addr_kcol  == ctrl_kw;
-assign addr_cout_carry  = addr_cout  == ctrl_kc;
+
+integer i;
+always_ff @(posedge clk or negedge nrst) begin : RMEM_RD_ADDR_BUF
+    if (!nrst) begin
+        for (i=0; i<LATENCY_RESIDUAL; i=i+1) begin
+            rmem_rd_addr_buf[i] <= '0;
+        end
+    end else begin
+        rmem_rd_addr_buf[LATENCY_RESIDUAL-1] <=  core_residual_addr;
+        for (i=0; i<LATENCY_RESIDUAL-1; i=i+1) begin
+            rmem_rd_addr_buf[i] <= rmem_rd_addr_buf[i+1];
+        end
+    end
+end
+
+
+
+assign is_skip_connection = cfg_residual_enable;
+
+// counter carry
+assign addr_frow_carry  = addr_frow == (ctrl_fw - (ctrl_stride & ctrl_fw[0]));
+assign addr_fcol_carry  = addr_fcol == (ctrl_fw - (ctrl_stride & ctrl_fw[0]));
+assign addr_cin_carry   = addr_cin  == ctrl_fc;
+assign addr_krow_carry  = addr_krow == ctrl_kw;
+assign addr_kcol_carry  = addr_kcol == ctrl_kw;
+assign addr_cout_carry  = addr_cout == ctrl_kc;
 assign addr_orow_carry  = addr_orow == ctrl_ow;
 assign addr_ocol_carry  = addr_ocol == ctrl_ow;
 assign addr_oc_carry    = addr_oc == ctrl_kc;
@@ -91,7 +111,23 @@ assign addr_krkccinfrfccout_carry   = addr_krkccinfrfc_carry & addr_cout_carry;
 assign addr_oroc_carry    = addr_orow_carry & addr_ocol_carry;
 assign addr_orococ_carry  = addr_oroc_carry & addr_oc_carry;
 
+// sliding carry
 
+
+assign addr_frow_signed = $signed({1'b0, addr_frow});
+assign addr_fcol_signed = $signed({1'b0, addr_fcol});
+
+
+assign slide_frow_carry = addr_frow_slided > ctrl_fw;
+assign slide_fcol_carry = addr_fcol_slided > ctrl_fw;
+
+always_ff @(posedge clk or negedge nrst) begin : IS_ZERO
+    if (!nrst) begin 
+        is_zero <= 0;
+    end else begin
+        is_zero <= slide_frow_carry | slide_fcol_carry;
+    end
+end
 
 always_comb begin
     case (cstate)
@@ -165,15 +201,15 @@ always_comb begin
             end
         end
         RUN : begin
-            addr_frow_next  = (addr_krkccinfr_carry)       ? '0 : addr_frow + addr_krkccin_carry;
-            addr_fcol_next  = (addr_krkccinfrfc_carry)     ? '0 : addr_fcol + addr_krkccinfr_carry;
-            addr_cin_next   = (addr_krkccin_carry)         ? '0 : addr_cin + addr_krkc_carry;
-            addr_krow_next  = (addr_krow_carry)            ? '0 : addr_krow + 1;
-            addr_kcol_next  = (addr_krkc_carry)            ? '0 : addr_kcol + addr_krow_carry;
-            addr_cout_next  = (addr_krkccinfrfccout_carry) ? '0 : addr_cout + addr_krkccinfrfc_carry;
-            addr_orow_next  = (addr_orow_carry   & out_enable)? '0 : addr_orow + out_enable;
-            addr_ocol_next  = (addr_oroc_carry   & out_enable)            ? '0 : addr_ocol + (addr_orow_carry & out_enable);
-            addr_oc_next    = (addr_orococ_carry & out_enable)          ? '0 : addr_oc   + (addr_oroc_carry & out_enable);
+            addr_frow_next  = (addr_krkccinfr_carry)           ? '0 : addr_frow + (addr_krkccin_carry << ctrl_stride);
+            addr_fcol_next  = (addr_krkccinfrfc_carry)         ? '0 : addr_fcol + (addr_krkccinfr_carry << ctrl_stride);
+            addr_cin_next   = (addr_krkccin_carry)             ? '0 : addr_cin + addr_krkc_carry;
+            addr_krow_next  = (addr_krow_carry)                ? '0 : addr_krow + 1;
+            addr_kcol_next  = (addr_krkc_carry)                ? '0 : addr_kcol + addr_krow_carry;
+            addr_cout_next  = (addr_krkccinfrfccout_carry)     ? '0 : addr_cout + addr_krkccinfrfc_carry;
+            addr_orow_next  = (addr_orow_carry   & out_enable) ? '0 : addr_orow + out_enable;
+            addr_ocol_next  = (addr_oroc_carry   & out_enable) ? '0 : addr_ocol + (addr_orow_carry & out_enable);
+            addr_oc_next    = (addr_orococ_carry & out_enable) ? '0 : addr_oc   + (addr_oroc_carry & out_enable);
         end
         OUTPUT : begin
             if (dma_result_hk || (cnt_dma_output == 0)) begin

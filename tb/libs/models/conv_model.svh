@@ -51,7 +51,10 @@
         $fclose(fd);
     endfunction
 
-    function automatic model_run_config build_model_config(string data_dir, int output_frac_bits);
+    function automatic model_run_config build_model_config(
+        string data_dir, int output_frac_bits,
+        string reference_path = "reference_conv_float.txt"
+    );
         model_run_config cfg = new;
         model_command load = new;
         model_command conv = new;
@@ -75,7 +78,7 @@
             conv.payload[BIAS].words[i] = SEQUENTIAL_PAYLOADS ? i + 1 :
                                          ((i % 2 == 0) ? -SCALE / 4 : SCALE / 8) * (1 + i / 2);
         conv.result_count = OUTPUT_SIZE * OUTPUT_SIZE * OUT_CHANNELS;
-        conv.reference_logits_path = {data_dir, "/reference_conv_float.txt"};
+        conv.reference_logits_path = {data_dir, "/", reference_path};
         write_reference(load, conv);
 
         cfg.commands.push_back(load);

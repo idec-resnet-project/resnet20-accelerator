@@ -35,6 +35,7 @@ module controller #(
     output reg                                   is_fmem0_in,
     output reg                                   is_zero,
     output wire                                  is_feature_in,
+    output wire                                  is_skip_connection,
     
     // DMA feature
     input  wire                                  dma_feature_valid,
@@ -98,7 +99,7 @@ typedef enum reg [3:0] {
 localparam BITWIDTH_CNT = 32;
 
 // core
-localparam LATENCY_RESIDUAL = 1;
+localparam LATENCY_RESIDUAL = 3;
 localparam LATENCY_CORE = 1;
 
 // ----------------------------------------------------------------
@@ -161,10 +162,19 @@ reg [ADDR_BITWIDTH-1:0] addr_orow;
 reg [ADDR_BITWIDTH-1:0] addr_ocol;
 reg [ADDR_BITWIDTH-1:0] addr_oc; 
 
+wire slide_frow_carry;
+wire slide_fcol_carry;
+
+wire [ADDR_BITWIDTH:0] addr_frow_signed;
+wire [ADDR_BITWIDTH:0] addr_fcol_signed;
+wire [ADDR_BITWIDTH:0] addr_frow_slided = addr_frow_signed + (addr_krow - ctrl_padding);
+wire [ADDR_BITWIDTH:0] addr_fcol_slided = addr_fcol_signed + (addr_kcol - ctrl_padding);
+
 wire [BRAM_FEATRE_CAPACITY-1:0] core_in_f_addr;
 wire [BRAM_KERNEL_CAPACITY-1:0] core_in_k_addr;
 wire [BRAM_BIAS_CAPACITY-1:0] core_in_b_addr;
 wire [BRAM_FEATRE_CAPACITY-1:0] core_out_f_addr;
+wire [BRAM_FEATRE_CAPACITY-1:0] core_residual_addr;
 
 wire [BRAM_FEATRE_CAPACITY-1:0] fmem_rd_addr_temp;
 wire [BRAM_FEATRE_CAPACITY-1:0] output_read_addr;

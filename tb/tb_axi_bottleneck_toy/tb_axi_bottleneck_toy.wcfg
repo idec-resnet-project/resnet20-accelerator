@@ -3,7 +3,7 @@
    <wave_state>
    </wave_state>
    <db_ref_list>
-      <db_ref path="C:/Users/zlak0/Desktop/resnet20-accelerator/.log/wave_viewer/22824-9503-26743/behav_tb.wdb" id="1">
+      <db_ref path="C:/Users/idec/Desktop/chohyunkeon/github/resnet20-accelerator/.log/wave_viewer/19182-15556-4991/behav_tb.wdb" id="1">
          <top_modules>
             <top_module name="model_contract_pkg" />
             <top_module name="model_pkg" />
@@ -15,15 +15,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="1,056.850 ns"></ZoomStartTime>
-      <ZoomEndTime time="1,106.451 ns"></ZoomEndTime>
-      <Cursor1Time time="1,082.000 ns"></Cursor1Time>
+      <ZoomStartTime time="0.000000 us"></ZoomStartTime>
+      <ZoomEndTime time="47.650001 us"></ZoomEndTime>
+      <Cursor1Time time="0.697000 us"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="239"></NameColumnWidth>
-      <ValueColumnWidth column_width="92"></ValueColumnWidth>
+      <ValueColumnWidth column_width="84"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="48" />
+   <WVObjectSize size="50" />
    <wvobject type="divider" fp_name="divider24">
       <obj_property name="label">Configure</obj_property>
       <obj_property name="DisplayName">label</obj_property>
@@ -278,6 +278,7 @@
    <wvobject fp_name="group451" type="group">
       <obj_property name="label">kmem</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
       <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_en" type="logic">
          <obj_property name="ElementShortName">kmem_wr_en</obj_property>
          <obj_property name="ObjectShortName">kmem_wr_en</obj_property>
@@ -302,6 +303,7 @@
    <wvobject fp_name="group457" type="group">
       <obj_property name="label">bias</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
       <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_en" type="logic">
          <obj_property name="ElementShortName">bmem_wr_en</obj_property>
          <obj_property name="ObjectShortName">bmem_wr_en</obj_property>
@@ -321,6 +323,39 @@
       <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_rd_data" type="array">
          <obj_property name="ElementShortName">bmem_rd_data[15:0]</obj_property>
          <obj_property name="ObjectShortName">bmem_rd_data[15:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_skip_connection" type="logic">
+      <obj_property name="ElementShortName">is_skip_connection</obj_property>
+      <obj_property name="ObjectShortName">is_skip_connection</obj_property>
+   </wvobject>
+   <wvobject fp_name="group702" type="group">
+      <obj_property name="label">rmem</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_en" type="logic">
+         <obj_property name="ElementShortName">rmem_wr_en</obj_property>
+         <obj_property name="ObjectShortName">rmem_wr_en</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_addr" type="array">
+         <obj_property name="ElementShortName">rmem_wr_addr[8:0]</obj_property>
+         <obj_property name="ObjectShortName">rmem_wr_addr[8:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_data" type="array">
+         <obj_property name="ElementShortName">rmem_wr_data[15:0]</obj_property>
+         <obj_property name="ObjectShortName">rmem_wr_data[15:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_addr" type="array">
+         <obj_property name="ElementShortName">rmem_rd_addr[8:0]</obj_property>
+         <obj_property name="ObjectShortName">rmem_rd_addr[8:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_data" type="array">
+         <obj_property name="ElementShortName">rmem_rd_data[15:0]</obj_property>
+         <obj_property name="ObjectShortName">rmem_rd_data[15:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       </wvobject>
    </wvobject>
    <wvobject type="divider" fp_name="divider6">

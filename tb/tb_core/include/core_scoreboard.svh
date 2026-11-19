@@ -72,7 +72,7 @@
 
     task automatic finish_compare;
         repeat (CORE_PIPELINE_CYCLES + 1) begin
-            @(posedge clk);
+            @(negedge clk);
             in_enable = 0;
         end
         if (received != expected_count || queued != expected_count)
