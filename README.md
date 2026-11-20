@@ -21,6 +21,8 @@
 - 보조 파일: `conv_top_wrapper.v` (conv_top 입출력 IOB 레지스터 + reset 동기화 + reset 중 loopback),
   `tb_packed_io.xdc` / `tb_conv_io.xdc` (post-implementation 용 클럭 / 입력 타이밍 제약)
 
+> `post_mac_lhs.v` 와 `post_mac_pipe4.v` 는 모듈 이름(`post_mac`)이 같으므로 **둘 중 하나만** 프로젝트에 넣으세요.
+> TB 는 latency 를 직접 측정하기 때문에 어느 쪽을 써도 그대로 동작합니다 (pipe4 는 latency +1).
 
 ## 판정 기준 / 콘솔 출력
 
@@ -300,6 +302,19 @@ define 설정 방법:
 wrapper 는 리셋 중(`nrst = 0`)에 `out_data` 로 `in_data` 를 2 클럭 늦게 내보냅니다 (입력 IOB FF → 출력 IOB FF).
 TB 는 시작할 때 이 경로로 clk→out 지연을 측정해서(`[CAL]` 로그) 출력이 안정된 구간의 가운데에서 샘플합니다.
 core RTL 과 무관한 경로라서 core 를 바꿔도 그대로 동작하고, 리셋 중 `out_enable` 은 0 이므로 기능에는 영향이 없습니다.
+
+### wrapper 를 다른 RTL 에 쓸 때
+
+`conv_top_wrapper.v` 는 core 의 **포트에만** 연결하므로, `conv_top` 과 같은 포트를 가진 RTL 이면 그대로 쓸 수 있습니다.
+
+- core 모듈 이름이 `conv_top` 이 아니면 `CORE_MODULE=<이름>` define 을 줍니다 (post-impl 합성 시 `sources_1` 에도).
+- core 에 parameter 를 넘기지 않으므로 core 의 parameter 기본값이 데이터 16b / iteration 16b / `PARALLEL_PC = 1` 이어야 합니다.
+  이름이 같으면 `WRAPPER_PASS_PARAMS` 로 값을 넘길 수 있습니다.
+- core 에는 wrapper 안에서 동기화된 `nrst` (active-low) 가 들어갑니다. core 내부의 동기 / 비동기 리셋 방식은 상관없습니다.
+- 입력 / 출력을 한 단씩 등록하므로 core 대비 **latency +2 클럭**입니다 (`tb_conv_top` 은 이 2 클럭을 빼고 표시).
+- 리셋 중에는 `out_data` 로 `in_data` 가 나옵니다 (출력 타이밍 보정용, 리셋 중 `out_enable` = 0).
+- 데이터 레지스터(`in_data`, `kernel_data`, `bias_data`, `out_data`)에는 리셋이 없고, enable / config / valid 레지스터만 리셋됩니다.
+- 포트 구성이 다른 RTL 에는 그대로 쓸 수 없습니다. 이 경우 wrapper 의 포트 선언과 입출력 레지스터 부분을 그 RTL 포트에 맞게 고쳐야 합니다.
 
 ### post-implementation timing sim
 
