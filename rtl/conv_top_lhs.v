@@ -49,7 +49,7 @@ module conv_top
     input  wire [PARALLEL_PC*WORD_W-1:0]         in_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         kernel_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         bias_data,
-    //input  wire [PARALLEL_PC*WORD_W-1:0]         residual_data,
+    input  wire [PARALLEL_PC*WORD_W-1:0]         residual_data,
     // resi data는 외부에서 받을지 내부에서 capture할지 결정해야함.
     // core 입장에서는 외부에서 주는게 편하긴 함
 
@@ -107,19 +107,19 @@ module conv_top
     begin
         if (!nrst)
         begin
-            mac_enable_reg      <= 1'b0;
-            relu_enable_reg     <= 1'b0;
-            residual_enable_reg <= 1'b0;
-            pooling_enable_reg  <= 1'b0;
-            gap_enable_reg      <= 1'b0;
-            rst_reg_all         <= nrst;
-            rst_reg_mac         <= 1'b0;
-            rst_reg_relu        <= 1'b0;
-            rst_reg_residual    <= 1'b0;
-            rst_reg_pooling     <= 1'b0;
-            out_data            <= {WORD_W{1'b0}};
-            residual_data_capture <= {PARALLEL_PC*WORD_W{1'b0}};
-            out_enable          <= 1'b0;            
+            mac_enable_reg          <= 1'b0;
+            relu_enable_reg         <= 1'b0;
+            residual_enable_reg     <= 1'b0;
+            pooling_enable_reg      <= 1'b0;
+            gap_enable_reg          <= 1'b0;
+            rst_reg_all             <= nrst;
+            rst_reg_mac             <= 1'b0;
+            rst_reg_relu            <= 1'b0;
+            rst_reg_residual        <= 1'b0;
+            rst_reg_pooling         <= 1'b0;
+            out_data                <= {WORD_W{1'b0}};
+            residual_data_capture   <= {PARALLEL_PC*WORD_W{1'b0}};
+            out_enable              <= 1'b0;            
         end
         else
         begin
