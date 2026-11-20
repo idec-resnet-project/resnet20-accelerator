@@ -29,7 +29,7 @@ module mac_v3
     reg        [ITER_CNT-1:0]  iter_cnt;
     reg        [ITER_CNT-1:0]  iter_reg;
     //reg                        proc;
-
+    localparam integer Q_SCALE = 8;
     //=======================================================================
     // Iteration count Logic
     //=======================================================================
@@ -121,7 +121,7 @@ module mac_v3
                         fmap     <= fmap_in;
                         weight   <= weight_in;
                         multi    <= $signed(fmap) * $signed(weight);
-                        acc      <= bias_in; //acc + multi;
+                        acc      <= {{(ACC_W+1-WORD_W-Q_SCALE){bias_in[WORD_W-1]}}, bias_in, {Q_SCALE{1'b0}}}; //acc + multi;
                         data_out <= {(ACC_W+1){1'b0}};
                     end 
     //=======================================================================
@@ -137,7 +137,7 @@ module mac_v3
                                 fmap   <= fmap_in;
                                 weight <= weight_in;
                                 multi  <= $signed(fmap) * $signed(weight);
-                                acc    <= (iter_cnt == 1) ? 0 : acc + multi;
+                                acc    <= acc + multi;
                             end 
                         
                         else 
@@ -145,6 +145,8 @@ module mac_v3
                                 data_out <= acc; 
                                 acc      <= {(ACC_W+1){1'b0}};
                                 multi    <= {(WORD_W*2){1'b0}};
+                                fmap     <= 0;//fmap_in;
+                                weight   <= 0;//weight_in;
                             end
                     end
     //=======================================================================
@@ -153,8 +155,8 @@ module mac_v3
                 else 
                     begin
                         data_out <= {(ACC_W+1){1'b0}};
-                        fmap     <= fmap_in;
-                        weight   <= weight_in;
+                        fmap     <= 0;//fmap_in;
+                        weight   <= 0;//weight_in;
                         multi    <= {(WORD_W*2){1'b0}};
                         acc      <= {(ACC_W+1){1'b0}};
                     end
