@@ -1,62 +1,77 @@
 `timescale 1ns / 1ps
-
-//==========================================================================
-// tb_residual_packed
-//  DUT : residual_packed
-//        residual_unit (포화 덧셈, 3클럭) + mux
-//        valid_mux = proc || done || valid_resi   (파이프라인 3단 전체)
-//        data_out  = valid_mux ? resi_data : data_in
-//        valid_out = valid_resi
+//==============================================================================
+// tb_residual_packed.v  -  residual_packed self-checking testbench
+//------------------------------------------------------------------------------
+//  * behavioral sim / post-implementation timing sim 둘 다 같은 파일로 동작
+//      - DUT 는 parameter override 없이 인스턴스 (timing netlist 에는 parameter 가 없음)
+//      - 입력 : posedge 후 IN_DLY 에 인가  (IN_DLY = IN_DLY_RATIO x 주기)
+//      - 출력 : 시작 시 bypass 경로로 clk->out 을 자동 측정(calibration)해서
+//               "launch edge + (tco_min + tco_max + T)/2" 시점에 샘플
+//               (behavioral 은 tco = 0 -> launch edge + T/2)
+//  * 데이터 : 16b signed Q7.8  (value = int / 256)
+//  * DUT    : residual_packed  data_out = sat16(data_in + data_skip)  (enable=0 이면 bypass)
+//  * 판정   : valid_out == 1 인 사이클의 data_out 을 샘플 -> 기대값(bit-exact)과 비교
+//             bypass(enable=0) 케이스 : valid_out 이 한 번도 안 떠야 하고,
+//                                      data_out 이 data_in 을 그대로 통과해야 PASS
+//  * SNR    : 10*log10( sum(ref^2) / sum((dut-ref)^2) ), ref = 반올림 없는 실수 모델
+//             오차 0 -> INF (평균에서 제외)
+//  * latency: valid_in(=enable) 이 내려간 뒤 valid_out 이 1 이 될 때까지 지난 posedge 수
+//             (= 마지막 입력을 캡처한 posedge 부터 valid_out 을 올린 posedge 까지)
 //
-//  내부 계층 참조 없이 TB 안의 모델만으로 검사 (포트 이름 바뀌어도 안전)
-//   - proc 모델 = 1클럭 전에 입력이 받아짐
-//   - done 모델 = 2클럭 전에 입력이 받아짐
-//   - resi_data 모델 = 마지막으로 나온 residual 결과 (리셋 후 0)
-//
-//  매 클럭 자동 검사
-//   1) valid_out=1      -> data_out == sat(a+b), 지연 == LATENCY
-//   2) proc/done 구간    -> data_out == 직전 residual 결과 (mux가 residual 쪽 유지)
-//   3) 그 외             -> data_out == data_in (바이패스)
-//
-//  출력 파라미터
-//   - 설정값   : WORD_W, LATENCY, INT_MAX/MIN, GAUSS_STD
-//   - 테스트별 : N, clipped, max|err|, MSE, SNR(dB)
-//   - 전체     : 입력/출력/리셋 버림 개수, mux 경로별 클럭 수
-//                (residual / stale(proc 구간) / bypass), 지연 min/max,
-//                clipped 비율, max|err|, MSE, SNR, 오류 종류별 개수, PASS/FAIL
-//   - CSV      : residual_packed_log.csv (valid 출력 1개당 1줄)
-//
-//  SNR 기준 = 이상적 덧셈(포화 없음). 오차는 포화(clipping)에서만 생김
-//   SNR(dB) = 10*log10( sum(ref^2) / sum((ref-out)^2) )
-//
-//  T1 : 단발 입력
-//  T2 : 연속 입력 + 포화 경계값
-//  T3 : enable=0 이면 입력 무시
-//  T4 : 균등분포 풀레인지 랜덤 (포화 많음, SNR 약 12 dB 예상)
-//  T5 : 가우시안 랜덤 (실제 데이터에 가까움, 보고서용 SNR)
-//  T6 : 데이터 corner case
-//  T7 : 제어 corner case (bubble, enable 토글/중단, X 입력, 비동기 리셋)
-//==========================================================================
+//  주파수 변경 : CLK_FREQ_MHZ  (예: xelab ... -generic_top "CLK_FREQ_MHZ=50.0")
+//  Vivado xsim : 기본 run time(1000ns)으로는 안 끝납니다 -> Tcl 콘솔에서  run all
+//==============================================================================
 module tb_residual_packed;
 
-    localparam integer WORD_W    = 16;
-    localparam integer LATENCY   = 3;
-    localparam integer QDEPTH    = 1024;
-    localparam integer MAXV      =  (1 << (WORD_W-1)) - 1;
-    localparam integer MINV      = -(1 << (WORD_W-1));
-    localparam integer GAUSS_STD = 8000;
-    localparam integer MAX_PRINT = 10;   // 오류 종류별 최대 출력 줄 수
+    //--------------------------------------------------------------------------
+    // user parameters  (xelab -generic_top "NAME=VALUE" 로 변경 가능)
+    //--------------------------------------------------------------------------
+    parameter real    CLK_FREQ_MHZ = 100.0;  // 클럭 주파수 [MHz]
+    parameter real    IN_DLY_RATIO = 0.6;    // 입력 인가 시점 = posedge 후 (IN_DLY_RATIO x 주기)
+    parameter integer EN_MODE      = 0;      // 0: enable 케이스 동안 1 고정 / 1: enable 이 valid_in 과 같이 오르내림
+    parameter integer REF_CLIP     = 1;      // SNR ideal 모델  1: Q7.8 범위 clip / 0: clip 없음
+    parameter integer SEED         = 1;      // 랜덤 시드
 
-    reg                       clk       = 1'b0;
-    reg                       rst_n     = 1'b0;
-    reg                       enable    = 1'b0;
-    reg                       valid_in  = 1'b0;
-    reg  signed [WORD_W-1:0]  data_in   = 0;
-    reg  signed [WORD_W-1:0]  data_skip = 0;
-    wire                      valid_out;
-    wire signed [WORD_W-1:0]  data_out;
+    //--------------------------------------------------------------------------
+    // derived / fixed
+    //--------------------------------------------------------------------------
+    localparam integer WORD_W     = 16;
+    localparam real    CLK_PERIOD = 1000.0 / CLK_FREQ_MHZ;      // [ns]
+    localparam real    IN_DLY     = CLK_PERIOD * IN_DLY_RATIO;  // [ns]
+    localparam real    START_DLY  = 200.0;                      // GSR(100ns) 이후 시작 [ns]
+    localparam real    QSCALE     = 256.0;
+    localparam real    QMAX_R     = 32767.0 / 256.0;
+    localparam real    QMIN_R     = -32768.0 / 256.0;
 
-    residual_packed #(.WORD_W(WORD_W)) dut (
+    localparam integer MAXS          = 4096;    // 입력 샘플
+    localparam integer MAXO          = 4096;    // 출력 샘플
+    localparam integer MAXH          = 16384;   // pass-through 기록 (사이클)
+    localparam integer MAXC          = 64;      // 케이스
+    localparam integer DRAIN         = 32;      // 마지막 입력 후 대기 클럭
+    localparam integer CAL_N         = 8;       // calibration 패턴 수
+    localparam integer MAX_ERR_PRINT = 5;
+    localparam integer PT_X          = 99999;   // pass-through 기록에서 X 표시
+
+    localparam integer DM_FULL   = 0;   // int16 전 범위 랜덤
+    localparam integer DM_SMALL  = 1;   // [-512, 511]  (+-2.0)
+    localparam integer DM_POS    = 2;   // [0, 32767]
+    localparam integer DM_NEG    = 3;   // [-32768, -1]
+    localparam integer DM_CUSTOM = 4;   // run_case 호출 전에 stim_x 를 직접 채움
+
+    //--------------------------------------------------------------------------
+    // DUT  (parameter override 없음 : post-impl timing netlist 와 동일하게 사용)
+    //--------------------------------------------------------------------------
+    reg               clk;
+    reg               rst_n;
+    reg               enable;
+    reg               valid_in;
+    reg  [WORD_W-1:0] data_in;
+    reg  [WORD_W-1:0] data_skip;
+    wire              valid_out;
+    wire [WORD_W-1:0] data_out;
+
+    residual_packed dut
+    (
         .clk       (clk),
         .rst_n     (rst_n),
         .enable    (enable),
@@ -67,470 +82,685 @@ module tb_residual_packed;
         .data_out  (data_out)
     );
 
-    always #5 clk = ~clk;   // 100 MHz
+    //--------------------------------------------------------------------------
+    // clock
+    //--------------------------------------------------------------------------
+    initial clk = 1'b0;
+    always #(CLK_PERIOD / 2.0) clk = ~clk;
 
-    //----------------------------------------------------------------------
-    // 기준 모델
-    //----------------------------------------------------------------------
-    function signed [WORD_W-1:0] sat_add;
-        input signed [WORD_W-1:0] a;
-        input signed [WORD_W-1:0] b;
-        reg   signed [WORD_W:0]   s;
+    //--------------------------------------------------------------------------
+    // storage
+    //--------------------------------------------------------------------------
+    integer stim_x   [0:MAXS-1];
+    integer stim_s   [0:MAXS-1];   // data_skip
+    integer exp_int  [0:MAXO-1];
+    real    exp_real [0:MAXO-1];
+    integer last_cap [0:MAXO-1];   // 토큰별 마지막 입력을 캡처한 posedge 번호
+    integer got_val  [0:MAXO-1];
+    integer got_cyc  [0:MAXO-1];   // valid_out 을 올린 posedge 번호
+    integer pt_val   [0:MAXH-1];   // posedge 별 data_out (bypass 확인용)
+
+    reg [8*64-1:0] r_name [0:MAXC-1];
+    integer r_pass [0:MAXC-1];
+    integer r_nexp [0:MAXC-1];
+    integer r_ngot [0:MAXC-1];
+    integer r_nerr [0:MAXC-1];
+    integer r_lcnt [0:MAXC-1];
+    integer r_lmin [0:MAXC-1];
+    integer r_lmax [0:MAXC-1];
+    real    r_lavg [0:MAXC-1];
+    integer r_kind [0:MAXC-1];     // 0: finite SNR, 1: INF, 2: N/A
+    real    r_snr  [0:MAXC-1];
+
+    integer n_case;
+    integer seed;
+    integer en_cfg;
+    integer cur_cap;
+    integer ii;
+
+    //--------------------------------------------------------------------------
+    // posedge counter + output sampler
+    //   샘플 시점 = posedge + smp_r,  샘플값의 launch edge = cyc - smp_k
+    //--------------------------------------------------------------------------
+    integer cyc;
+    real    smp_r;
+    integer smp_k;
+    reg     mon_en;
+    integer out_cnt;
+    integer x_cnt;
+    integer pt_base;
+
+    initial
+    begin : SAMPLER
+        integer lc, ix;
+        forever
         begin
-            s = a + b;
-            if (s > MAXV)      sat_add = MAXV;
-            else if (s < MINV) sat_add = MINV;
-            else               sat_add = s[WORD_W-1:0];
-        end
-    endfunction
-
-    function signed [WORD_W-1:0] clip;
-        input integer v;
-        begin
-            if (v > MAXV)      clip = MAXV;
-            else if (v < MINV) clip = MINV;
-            else               clip = v;
-        end
-    endfunction
-
-    //----------------------------------------------------------------------
-    // 스코어보드 상태
-    //----------------------------------------------------------------------
-    reg signed [WORD_W-1:0] exp_q    [0:QDEPTH-1];
-    integer                 ideal_q  [0:QDEPTH-1];
-    reg signed [WORD_W-1:0] a_q      [0:QDEPTH-1];
-    reg signed [WORD_W-1:0] b_q      [0:QDEPTH-1];
-    integer                 in_cyc_q [0:QDEPTH-1];
-
-    integer wr_ptr = 0, rd_ptr = 0;
-    integer cyc      = 0;
-    integer cur_test = 0;
-    reg     verbose  = 1'b1;
-    reg     acc_now  = 1'b0;   // 이번 클럭에 입력이 받아지는지
-    reg     acc_d1   = 1'b0;   // 1클럭 전 (= proc 모델)
-    reg     acc_d2   = 1'b0;   // 2클럭 전 (= done 모델)
-    reg     sel_m;             // mux 선택 모델
-    reg signed [WORD_W-1:0] last_res = 0;   // resi_data 모델
-
-    // 개수
-    integer n_in = 0, n_out = 0, n_flushed = 0;
-    integer n_mux_res = 0;     // valid_out=1
-    integer n_mux_hold = 0;    // proc/done 구간, 직전 결과 유지
-    integer n_mux_byp = 0;     // data_in 바이패스
-    integer lat_min = 1 << 30, lat_max = -1;
-
-    // 오류 종류별
-    integer e_data  = 0;   // 결과값 불일치
-    integer e_lat   = 0;   // 지연 불일치
-    integer e_unexp = 0;   // 입력 없는데 valid_out
-    integer e_mux   = 0;   // 비-valid 클럭 data_out 불일치 (hold / bypass)
-    integer e_x     = 0;   // valid_out 이 X/Z
-    integer e_misc  = 0;   // directed 체크
-
-    // SNR (테스트별)
-    real    sig_pow = 0.0, noise_pow = 0.0;
-    integer snr_n = 0, snr_sat = 0, max_err = 0;
-    // SNR (전체)
-    real    tot_sig = 0.0, tot_noise = 0.0;
-    integer tot_n = 0, tot_sat = 0, tot_max_err = 0;
-
-    integer idx, lat, err_i, abs_err;
-    real    ref_r, err_r;
-    reg signed [WORD_W-1:0] exp_mux;
-    integer fd;
-
-    //----------------------------------------------------------------------
-    // 매 클럭 검사
-    //  posedge에서 읽으면 DUT 레지스터는 갱신 전 값, data_in은 이번 클럭 값
-    //----------------------------------------------------------------------
-    always @(posedge clk) begin
-        if (rst_n) begin
-
-            // X/Z 체크
-            if (valid_out !== 1'b0 && valid_out !== 1'b1) begin
-                e_x = e_x + 1;
-                if (e_x <= MAX_PRINT)
-                    $display("[ERR] t=%0t valid_out is %b", $time, valid_out);
-            end
-
-            // (2)(3) valid 아닌 클럭: hold 또는 bypass
-            sel_m = acc_d1 || acc_d2;   // proc || done (valid_out=1 은 아래에서 처리)
-            if (valid_out !== 1'b1) begin
-                exp_mux = sel_m ? last_res : data_in;
-                if (data_out !== exp_mux) begin
-                    e_mux = e_mux + 1;
-                    if (e_mux <= MAX_PRINT)
-                        $display("[ERR] t=%0t %s: data_out=%0d exp=%0d (last_res=%0d, data_in=%0d)",
-                                 $time, sel_m ? "hold  " : "bypass",
-                                 data_out, exp_mux, last_res, data_in);
-                end
-                if (sel_m) n_mux_hold = n_mux_hold + 1;
-                else       n_mux_byp  = n_mux_byp + 1;
-            end
-            else
-                n_mux_res = n_mux_res + 1;
-
-            // (1) residual 결과
-            if (valid_out === 1'b1) begin
-                n_out = n_out + 1;
-                if (rd_ptr == wr_ptr) begin
-                    e_unexp = e_unexp + 1;
-                    if (e_unexp <= MAX_PRINT)
-                        $display("[ERR] t=%0t unexpected valid_out (no pending input): data_out=%0d",
-                                 $time, data_out);
-                    last_res = data_out;
-                end
-                else begin
-                    idx = rd_ptr % QDEPTH;
-                    lat = cyc - in_cyc_q[idx];
-                    if (lat < lat_min) lat_min = lat;
-                    if (lat > lat_max) lat_max = lat;
-
-                    if (data_out !== exp_q[idx]) begin
-                        e_data = e_data + 1;
-                        if (e_data <= MAX_PRINT)
-                            $display("[ERR] t=%0t #%0d  %0d + %0d -> data_out=%0d  exp=%0d",
-                                     $time, rd_ptr, a_q[idx], b_q[idx], data_out, exp_q[idx]);
-                    end
-                    if (lat != LATENCY) begin
-                        e_lat = e_lat + 1;
-                        if (e_lat <= MAX_PRINT)
-                            $display("[ERR] t=%0t #%0d latency=%0d (exp %0d)",
-                                     $time, rd_ptr, lat, LATENCY);
-                    end
-                    if (verbose && data_out === exp_q[idx] && lat == LATENCY)
-                        $display("[OK ] t=%0t #%0d  %0d + %0d -> %0d  (latency %0d)",
-                                 $time, rd_ptr, a_q[idx], b_q[idx], data_out, lat);
-
-                    // SNR 누적
-                    err_i   = ideal_q[idx] - data_out;
-                    abs_err = (err_i < 0) ? -err_i : err_i;
-                    ref_r   = ideal_q[idx];
-                    err_r   = err_i;
-                    sig_pow   = sig_pow   + ref_r * ref_r;
-                    noise_pow = noise_pow + err_r * err_r;
-                    tot_sig   = tot_sig   + ref_r * ref_r;
-                    tot_noise = tot_noise + err_r * err_r;
-                    snr_n = snr_n + 1;
-                    tot_n = tot_n + 1;
-                    if (err_i != 0) begin
-                        snr_sat = snr_sat + 1;
-                        tot_sat = tot_sat + 1;
-                    end
-                    if (abs_err > max_err)     max_err     = abs_err;
-                    if (abs_err > tot_max_err) tot_max_err = abs_err;
-
-                    // CSV
-                    $fwrite(fd, "%0d,T%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n",
-                            rd_ptr, cur_test, a_q[idx], b_q[idx], ideal_q[idx],
-                            exp_q[idx], data_out, err_i, lat, (err_i != 0));
-
-                    last_res = exp_q[idx];   // 이후 hold 구간 기대값
-                    rd_ptr   = rd_ptr + 1;
-                end
-            end
-
-            // 입력 기록 + proc/done 모델 시프트
-            acc_now = (enable === 1'b1 && valid_in === 1'b1);
-            acc_d2  = acc_d1;
-            acc_d1  = acc_now;
-            if (acc_now) begin
-                idx           = wr_ptr % QDEPTH;
-                exp_q[idx]    = sat_add(data_in, data_skip);
-                ideal_q[idx]  = data_in + data_skip;
-                a_q[idx]      = data_in;
-                b_q[idx]      = data_skip;
-                in_cyc_q[idx] = cyc;
-                wr_ptr        = wr_ptr + 1;
-                n_in          = n_in + 1;
-            end
-
+            @(posedge clk);
             cyc = cyc + 1;
+            #(smp_r);
+            lc = cyc - smp_k;
+            if (mon_en)
+            begin
+                ix = lc - pt_base;
+                if ((ix >= 0) && (ix < MAXH))
+                begin
+                    if ((^data_out) === 1'bx) pt_val[ix] = PT_X;
+                    else                      pt_val[ix] = $signed(data_out);
+                end
+                if ((^valid_out) === 1'bx)
+                begin
+                    x_cnt = x_cnt + 1;
+                    if (x_cnt <= MAX_ERR_PRINT)
+                        $display("    [X] t=%0t valid_out=%b data_out=%h", $time, valid_out, data_out);
+                end
+                else if (valid_out === 1'b1)
+                begin
+                    if ((^data_out) === 1'bx)
+                    begin
+                        x_cnt = x_cnt + 1;
+                        if (x_cnt <= MAX_ERR_PRINT)
+                            $display("    [X] t=%0t valid_out=%b data_out=%h", $time, valid_out, data_out);
+                    end
+                    if (out_cnt < MAXO)
+                    begin
+                        got_val[out_cnt] = $signed(data_out);
+                        got_cyc[out_cnt] = lc;
+                    end
+                    out_cnt = out_cnt + 1;
+                end
+            end
         end
     end
 
-    //----------------------------------------------------------------------
-    // SNR 태스크
-    //----------------------------------------------------------------------
-    task snr_reset;
-        input integer t;
-        begin
-            cur_test  = t;
-            sig_pow   = 0.0;
-            noise_pow = 0.0;
-            snr_n     = 0;
-            snr_sat   = 0;
-            max_err   = 0;
-        end
-    endtask
+    //--------------------------------------------------------------------------
+    // calibration watcher (data_out 변화 시각 기록)
+    //--------------------------------------------------------------------------
+    reg  [WORD_W-1:0] cal_pat;
+    reg               cal_on;
+    reg               cal_first;
+    reg               cal_hit;
+    real              cal_tfirst;
+    real              cal_tset;
+    real              tco_min;
+    real              tco_max;
 
-    task snr_report;
+    always @(data_out)
+    begin
+        if (cal_on)
         begin
-            if (snr_n == 0)
-                $display("[SNR] T%0d : no samples", cur_test);
-            else if (noise_pow == 0.0)
-                $display("[SNR] T%0d : N=%0d  clipped=0  max|err|=0  MSE=0  SNR = inf (bit-exact)",
-                         cur_test, snr_n);
-            else
-                $display("[SNR] T%0d : N=%0d  clipped=%0d (%0.1f%%)  max|err|=%0d  MSE=%0.2f  SNR = %0.2f dB",
-                         cur_test, snr_n, snr_sat, 100.0 * snr_sat / snr_n, max_err,
-                         noise_pow / snr_n, 10.0 * $log10(sig_pow / noise_pow));
-        end
-    endtask
-
-    //----------------------------------------------------------------------
-    // 자극 태스크 (negedge 구동)
-    //----------------------------------------------------------------------
-    task send;
-        input signed [WORD_W-1:0] a;
-        input signed [WORD_W-1:0] b;
-        begin
-            @(negedge clk);
-            enable    = 1'b1;
-            valid_in  = 1'b1;
-            data_in   = a;
-            data_skip = b;
-        end
-    endtask
-
-    task idle;
-        input integer n;
-        integer k;
-        begin
-            for (k = 0; k < n; k = k + 1) begin
-                @(negedge clk);
-                valid_in  = 1'b0;
-                data_in   = $random;   // 바이패스 경로 확인용
-                data_skip = $random;
+            if (!cal_first)
+            begin
+                cal_first  = 1'b1;
+                cal_tfirst = $realtime;
+            end
+            if (data_out === cal_pat)
+            begin
+                cal_hit  = 1'b1;
+                cal_tset = $realtime;
             end
         end
+    end
+
+    //--------------------------------------------------------------------------
+    // helpers
+    //--------------------------------------------------------------------------
+    task tick;
+        begin
+            @(posedge clk);
+            #(IN_DLY);
+        end
     endtask
 
-    //----------------------------------------------------------------------
-    // 테스트 시퀀스
-    //----------------------------------------------------------------------
-    integer i;
-    integer seed = 7;
-
-    initial begin
-        fd = $fopen("residual_packed_log.csv", "w");
-        $fwrite(fd, "idx,test,a,b,ideal,expected,dut_out,err,latency,clipped\n");
-
-        $display("==========================================");
-        $display(" tb_residual_packed");
-        $display(" WORD_W=%0d  LATENCY=%0d  INT_MAX=%0d  INT_MIN=%0d  GAUSS_STD=%0d",
-                 WORD_W, LATENCY, MAXV, MINV, GAUSS_STD);
-        $display("==========================================");
-
-        repeat (3) @(negedge clk);
-        rst_n  = 1'b1;
-        enable = 1'b1;
-
-        // T1
-        $display("=== T1: single pulse ===");
-        snr_reset(1);
-        send(100, 23);
-        idle(6);
-        snr_report;
-
-        // T2
-        $display("=== T2: back-to-back + saturation ===");
-        snr_reset(2);
-        send(   -50,     20);
-        send( 30000,  10000);
-        send(-30000, -10000);
-        send( 32767,      0);
-        send(-32768,      0);
-        send( 32767,      1);
-        send(-32768,     -1);
-        send( 16384,  16383);
-        send( 16384,  16384);
-        idle(6);
-        snr_report;
-
-        // T3
-        $display("=== T3: enable=0 drops input ===");
-        snr_reset(3);
-        @(negedge clk); enable = 1'b0; valid_in = 1'b1; data_in = 1234; data_skip = 1;
-        @(negedge clk); data_in = 5; data_skip = 6;
-        @(negedge clk); valid_in = 1'b0; enable = 1'b1;
-        idle(6);
-        snr_report;
-
-        // T4
-        $display("=== T4: uniform full-range random, 1000 cycles ===");
-        verbose = 1'b0;
-        snr_reset(4);
-        for (i = 0; i < 1000; i = i + 1) begin
-            @(negedge clk);
-            enable    = ({$random} % 10) != 0;
-            valid_in  = ({$random} % 10) < 7;
-            data_in   = $random;
-            data_skip = $random;
+    task gen_val;
+        input  integer mode;
+        output integer v;
+        reg    [31:0]  r;
+        begin
+            r = $random(seed);
+            case (mode)
+                DM_SMALL : v = $signed(r[9:0]);
+                DM_POS   : v = r[14:0];
+                DM_NEG   : v = -1 - $signed({1'b0, r[14:0]});
+                default  : v = $signed(r[15:0]);
+            endcase
         end
-        idle(10);
-        snr_report;
+    endtask
 
-        // T5
-        $display("=== T5: gaussian random (std=%0d), 1000 cycles ===", GAUSS_STD);
-        snr_reset(5);
-        for (i = 0; i < 1000; i = i + 1) begin
-            @(negedge clk);
-            enable    = ({$random} % 10) != 0;
-            valid_in  = ({$random} % 10) < 7;
-            data_in   = clip($dist_normal(seed, 0, GAUSS_STD));
-            data_skip = clip($dist_normal(seed, 0, GAUSS_STD));
-        end
-        idle(10);
-        snr_report;
-
-        // T6
-        $display("=== T6: data corner cases ===");
-        verbose = 1'b1;
-        snr_reset(6);
-        send( 32767,  32767);   // -> 32767
-        send(-32768, -32768);   // -> -32768 (ideal -65536)
-        send( 32767, -32768);   // -1
-        send(-32768,  32767);   // -1
-        send( 32766,      1);   // 32767, 포화 아님
-        send( 16383,  16385);   // 32768 -> 포화
-        send(-32767,     -1);   // -32768, 포화 아님
-        send(-16384, -16384);   // -32768, 포화 아님
-        send(-16385, -16384);   // -32769 -> 포화
-        send(     0,      0);
-        send(    -1,      1);
-        send(    -1,     -1);   // -2
-        send(  1234,  -1234);
-        idle(6);
-        snr_report;
-
-        // T7
-        $display("=== T7: control corner cases ===");
-        snr_reset(7);
-
-        $display("--- T7a: valid bubble ---");
-        for (i = 0; i < 10; i = i + 1) begin
-            @(negedge clk);
-            enable    = 1'b1;
-            valid_in  = (i % 2 == 0);
-            data_in   = i * 100;
-            data_skip = i;
-        end
-        idle(6);
-
-        $display("--- T7b: enable toggle ---");
-        for (i = 0; i < 10; i = i + 1) begin
-            @(negedge clk);
-            enable    = (i % 2 == 1);
+    // 유효 입력 1개 (다음 posedge 에 캡처)
+    task drive_in;
+        input integer x;
+        input integer s;
+        begin
+            enable    = en_cfg;
             valid_in  = 1'b1;
-            data_in   = -i * 300;
-            data_skip = 7;
+            data_in   = x;
+            data_skip = s;
+            cur_cap   = cyc + 1;
+            tick;
         end
-        idle(6);
-        enable = 1'b1;
+    endtask
 
-        $display("--- T7c: enable drop while in flight ---");
-        send(111, 222);
-        send(333, 444);
-        @(negedge clk); enable = 1'b0; valid_in = 1'b0;
-        repeat (6) @(negedge clk);
-        enable = 1'b1;
-
-        $display("--- T7d: X on data while valid=0 ---");
-        for (i = 0; i < 4; i = i + 1) begin
-            @(negedge clk);
+    // idle 1클럭 (버스에는 랜덤 garbage)
+    task drive_idle;
+        reg [31:0] r;
+        begin
+            r         = $random(seed);
+            enable    = (EN_MODE == 0) ? en_cfg : 1'b0;
             valid_in  = 1'b0;
-            data_in   = {WORD_W{1'bx}};
-            data_skip = {WORD_W{1'bx}};
+            data_in   = r[15:0];
+            data_skip = r[31:16];
+            tick;
         end
-        send(5, 6);
-        @(negedge clk); valid_in = 1'b0; data_in = {WORD_W{1'bx}}; data_skip = {WORD_W{1'bx}};
-        repeat (5) @(negedge clk);
-        // 바이패스로 X가 보이는 건 설계대로.
-        // residual 경로(valid/hold 구간)에 X가 섞이면 위 스코어보드가 mismatch로 잡음
+    endtask
 
-        $display("--- T7e: async reset mid-stream ---");
-        send(1000, 1);
-        send(2000, 2);
-        send(3000, 3);
-        @(negedge clk);
-        valid_in = 1'b0;
-        rst_n    = 1'b0;
-        #1;
-        // 리셋 즉시: valid_out=0, proc/done=0 -> mux 바이패스 -> data_out == data_in
-        if (valid_out !== 1'b0 || data_out !== data_in) begin
-            $display("[ERR] t=%0t async reset: valid_out=%b data_out=%0d data_in=%0d",
-                     $time, valid_out, data_out, data_in);
-            e_misc = e_misc + 1;
+    task reset_dut;
+        begin
+            mon_en    = 1'b0;
+            valid_in  = 1'b0;
+            enable    = (EN_MODE == 0) ? en_cfg : 1'b0;
+            data_in   = {WORD_W{1'b0}};
+            data_skip = {WORD_W{1'b0}};
+            rst_n     = 1'b0;
+            repeat (4) tick;
+            rst_n     = 1'b1;
+            repeat (4) drive_idle;
         end
-        else
-            $display("[OK ] t=%0t async reset: valid_out=0, mux bypasses data_in immediately", $time);
-        n_flushed = n_flushed + (wr_ptr - rd_ptr);
-        $display("      flushed %0d in-flight input(s)", wr_ptr - rd_ptr);
-        rd_ptr   = wr_ptr;
-        acc_d1   = 1'b0;
-        acc_d2   = 1'b0;
-        last_res = 0;   // residual_unit data_out 리셋값
-        repeat (2) @(negedge clk);
-        if (valid_out !== 1'b0) begin
-            $display("[ERR] t=%0t valid_out=1 during reset", $time);
-            e_misc = e_misc + 1;
-        end
-        rst_n     = 1'b1;
-        enable    = 1'b1;
-        valid_in  = 1'b1;
-        data_in   = 4000;
-        data_skip = 4;
-        idle(6);
-        snr_report;
+    endtask
 
-        //------------------------------------------------------------------
-        // 최종 요약
-        //------------------------------------------------------------------
-        $display("==========================================");
-        $display(" SUMMARY  (WORD_W=%0d, LATENCY=%0d)", WORD_W, LATENCY);
-        $display("------------------------------------------");
-        $display(" inputs accepted      : %0d", n_in);
-        $display(" valid outputs        : %0d", n_out);
-        $display(" flushed by reset     : %0d", n_flushed);
-        if (lat_max < 0)
-            $display(" latency min / max    : - / -");
-        else
-            $display(" latency min / max    : %0d / %0d", lat_min, lat_max);
-        $display(" mux cycles  residual : %0d   (valid_out=1, new result)", n_mux_res);
-        $display("             hold     : %0d   (proc/done stage, previous result held)", n_mux_hold);
-        $display("             bypass   : %0d   (data_in passthrough)", n_mux_byp);
-        if (tot_n > 0) begin
-            $display(" clipped outputs      : %0d (%0.2f%%)", tot_sat, 100.0 * tot_sat / tot_n);
-            $display(" max |err| vs ideal   : %0d", tot_max_err);
-            $display(" MSE vs ideal         : %0.4f", tot_noise / tot_n);
-            if (tot_noise == 0.0)
-                $display(" overall SNR          : inf (bit-exact)");
+    task set_xs;
+        input integer idx;
+        input integer x;
+        input integer s;
+        begin
+            stim_x[idx] = x;
+            stim_s[idx] = s;
+        end
+    endtask
+
+    task begin_case;
+        integer k;
+        begin
+            for (k = 0; k < MAXH; k = k + 1) pt_val[k] = PT_X;
+            out_cnt = 0;
+            x_cnt   = 0;
+            pt_base = cyc + 1;
+            mon_en  = 1'b1;
+        end
+    endtask
+
+    task case_header;
+        input [8*64-1:0] name;
+        begin
+            $display("------------------------------------------------------------------------");
+            $display("[CASE %2d] %0s", n_case + 1, name);
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // calibration : enable=0 (bypass) 에서 data_out <= data_in 레지스터의 clk->out 측정
+    //--------------------------------------------------------------------------
+    task calibrate;
+        integer i, n_ok;
+        real    d1, d2, ofs;
+        begin
+            en_cfg  = 0;
+            cal_on  = 1'b0;
+            reset_dut;
+            data_in = {WORD_W{1'b0}};
+            repeat (4) tick;
+            tco_min = 1.0e9;
+            tco_max = -1.0e9;
+            n_ok    = 0;
+            for (i = 0; i < CAL_N; i = i + 1)
+            begin
+                cal_pat   = (i % 2 == 0) ? {WORD_W{1'b1}} : {WORD_W{1'b0}};
+                cal_first = 1'b0;
+                cal_hit   = 1'b0;
+                cal_on    = 1'b1;
+                data_in   = cal_pat;
+                @(posedge clk);
+                d1 = $realtime;                    // capture edge 시각
+                #(IN_DLY);
+                repeat (3) tick;
+                cal_on = 1'b0;
+                if (cal_hit)
+                begin
+                    if (cal_tfirst - d1 < tco_min) tco_min = cal_tfirst - d1;
+                    if (cal_tset   - d1 > tco_max) tco_max = cal_tset   - d1;
+                    n_ok = n_ok + 1;
+                end
+            end
+            if (n_ok == 0)
+            begin
+                $display("[CAL] WARNING : no data_out change seen on bypass path -> assuming tco = 0");
+                tco_min = 0.0;
+                tco_max = 0.0;
+            end
+            else if (n_ok < CAL_N)
+                $display("[CAL] WARNING : only %0d / %0d patterns observed (check input timing IN_DLY)", n_ok, CAL_N);
+            if (tco_min < 0.0) tco_min = 0.0;
+            ofs   = (tco_min + tco_max + CLK_PERIOD) / 2.0;
+            smp_k = $rtoi(ofs / CLK_PERIOD);
+            smp_r = ofs - smp_k * CLK_PERIOD;
+            $display("[CAL] clk->data_out : min %6.3f ns / max %6.3f ns  (behavioral = 0 / 0)", tco_min, tco_max);
+            $display("[CAL] output sample : launch edge + %6.3f ns  (posedge + %6.3f ns, k=%0d)", ofs, smp_r, smp_k);
+            if ((tco_max - tco_min) > 0.8 * CLK_PERIOD)
+                $display("[CAL] WARNING : output bit skew (%6.3f ns) is large vs clock period", tco_max - tco_min);
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // check + report
+    //   bypass = 1 : valid_out 0개 + data_out == data_in (pass-through) 확인
+    //--------------------------------------------------------------------------
+    task finish_case;
+        input [8*64-1:0] name;
+        input integer    n_exp;
+        input integer    bypass;
+        integer i, d, v, idx, n_got, n_err, pass, kind, lat, lmin, lmax, lsum, lcnt, ok, pt_lat;
+        real    dr, sig, noi, snr, lavg;
+        begin
+            n_got = out_cnt;
+            n_err = 0;
+            sig   = 0.0;
+            noi   = 0.0;
+            lmin  = 1000000;
+            lmax  = -1000000;
+            lsum  = 0;
+            lcnt  = 0;
+            pass  = 0;
+
+            if (bypass)
+            begin
+                // pass-through 지연 d (0~3) 중 전 샘플이 일치하는 최소값
+                pt_lat = -1;
+                for (d = 0; (d <= 3) && (pt_lat < 0); d = d + 1)
+                begin
+                    ok = 1;
+                    for (i = 0; i < n_exp; i = i + 1)
+                    begin
+                        idx = last_cap[i] + d - pt_base;
+                        if ((idx < 0) || (idx >= MAXH)) ok = 0;
+                        else if (pt_val[idx] !== exp_int[i]) ok = 0;
+                    end
+                    if (ok) pt_lat = d;
+                end
+                d = (pt_lat < 0) ? 0 : pt_lat;
+                for (i = 0; i < n_exp; i = i + 1)
+                begin
+                    idx = last_cap[i] + d - pt_base;
+                    if ((idx >= 0) && (idx < MAXH)) v = pt_val[idx];
+                    else                            v = PT_X;
+                    if (v !== exp_int[i])
+                    begin
+                        n_err = n_err + 1;
+                        if (n_err <= MAX_ERR_PRINT)
+                            $display("    pass-through mismatch @%0d : exp=%0d  got=%0d", i, exp_int[i], v);
+                        if (v == PT_X) v = 0;
+                    end
+                    dr  = v / QSCALE;
+                    sig = sig + exp_real[i] * exp_real[i];
+                    noi = noi + (dr - exp_real[i]) * (dr - exp_real[i]);
+                end
+                if (pt_lat >= 0)
+                begin
+                    lmin = pt_lat;
+                    lmax = pt_lat;
+                    lsum = pt_lat;
+                    lcnt = 1;
+                end
+                if (n_got != 0)
+                    $display("    valid_out asserted %0d times while enable=0 (expected 0)", n_got);
+                pass = (pt_lat >= 0) && (n_got == 0) && (x_cnt == 0);
+            end
             else
-                $display(" overall SNR          : %0.2f dB", 10.0 * $log10(tot_sig / tot_noise));
+            begin
+                for (i = 0; i < n_exp; i = i + 1)
+                begin
+                    if ((i < n_got) && (i < MAXO)) v = got_val[i];
+                    else                           v = 0;
+
+                    if ((i >= n_got) || (v !== exp_int[i]))
+                    begin
+                        n_err = n_err + 1;
+                        if (n_err <= MAX_ERR_PRINT)
+                        begin
+                            if (i >= n_got)
+                                $display("    mismatch @%0d : exp=%0d  got=<missing>", i, exp_int[i]);
+                            else
+                                $display("    mismatch @%0d : exp=%0d  got=%0d", i, exp_int[i], v);
+                        end
+                    end
+
+                    if ((i < n_got) && (i < MAXO))
+                    begin
+                        lat  = got_cyc[i] - last_cap[i];
+                        lsum = lsum + lat;
+                        lcnt = lcnt + 1;
+                        if (lat < lmin) lmin = lat;
+                        if (lat > lmax) lmax = lat;
+                    end
+
+                    dr  = v / QSCALE;
+                    sig = sig + exp_real[i] * exp_real[i];
+                    noi = noi + (dr - exp_real[i]) * (dr - exp_real[i]);
+                end
+                if (n_got > n_exp)
+                    $display("    extra outputs : %0d (expected %0d)", n_got - n_exp, n_exp);
+                pass = (n_err == 0) && (n_got == n_exp) && (x_cnt == 0);
+            end
+
+            if (x_cnt > 0)
+                $display("    X/Z on outputs : %0d samples  (timing violation / uninitialized FF?)", x_cnt);
+
+            if (noi == 0.0)      begin kind = 1; snr = 0.0; end
+            else if (sig == 0.0) begin kind = 2; snr = 0.0; end
+            else                 begin kind = 0; snr = 10.0 * $log10(sig / noi); end
+
+            lavg = (lcnt > 0) ? (lsum * 1.0 / lcnt) : 0.0;
+
+            if (bypass)
+                $display("  outputs : inputs=%0d  valid_out=%0d (expect 0)  pass-through mismatches=%0d", n_exp, n_got, n_err);
+            else
+                $display("  outputs : expected=%0d  received=%0d  mismatches=%0d", n_exp, n_got, n_err);
+
+            if (lcnt == 0)
+                $display("  LATENCY : N/A");
+            else if (bypass)
+                $display("  LATENCY : %0d clk  (bypass : data_in -> data_out pass-through, no valid_out)", lmin);
+            else if (lmin == lmax)
+                $display("  LATENCY : %0d clk  (posedges after valid_in(enable) falls)", lmin);
+            else
+                $display("  LATENCY : min %0d / avg %0.2f / max %0d clk  (posedges after valid_in(enable) falls)", lmin, lavg, lmax);
+
+            if (kind == 0)      $display("  SNR     : %8.2f dB", snr);
+            else if (kind == 1) $display("  SNR     :      INF dB  (DUT == ideal reference)");
+            else                $display("  SNR     :      N/A     (reference power = 0)");
+            $display("  RESULT  : %s", pass ? "PASS" : "FAIL");
+
+            r_name[n_case] = name;
+            r_pass[n_case] = pass;
+            r_nexp[n_case] = n_exp;
+            r_ngot[n_case] = n_got;
+            r_nerr[n_case] = n_err;
+            r_lcnt[n_case] = lcnt;
+            r_lmin[n_case] = lmin;
+            r_lmax[n_case] = lmax;
+            r_lavg[n_case] = lavg;
+            r_kind[n_case] = kind;
+            r_snr [n_case] = snr;
+            n_case         = n_case + 1;
         end
-        $display("------------------------------------------");
-        $display(" errors  data mismatch     : %0d", e_data);
-        $display("         latency mismatch  : %0d", e_lat);
-        $display("         unexpected valid  : %0d", e_unexp);
-        $display("         hold/bypass mism. : %0d", e_mux);
-        $display("         valid X/Z         : %0d", e_x);
-        $display("         directed checks   : %0d", e_misc);
-        $display("------------------------------------------");
-        if (e_data + e_lat + e_unexp + e_mux + e_x + e_misc == 0
-            && n_in == n_out + n_flushed && rd_ptr == wr_ptr)
-            $display(" RESULT: PASS");
-        else
-            $display(" RESULT: FAIL");
-        $display(" log file: residual_packed_log.csv");
-        $display("==========================================");
-        $fclose(fd);
+    endtask
+
+    //--------------------------------------------------------------------------
+    // summary
+    //--------------------------------------------------------------------------
+    task print_summary;
+        input [8*32-1:0] title;
+        integer i, npass, nfin, ninf, nlat, lmin_all, lmax_all;
+        real    ssum, smin, smax, lsum_all;
+        reg [8*9-1:0] s_lat;
+        reg [8*9-1:0] s_snr;
+        begin
+            npass    = 0;
+            nfin     = 0;
+            ninf     = 0;
+            nlat     = 0;
+            ssum     = 0.0;
+            smin     = 1.0e9;
+            smax     = -1.0e9;
+            lsum_all = 0.0;
+            lmin_all = 1000000;
+            lmax_all = -1000000;
+
+            $display("");
+            $display("====================================================================================================");
+            $display("  %0s TEST SUMMARY   (CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, EN_MODE %0d)",
+                     title, CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, EN_MODE);
+            $display("====================================================================================================");
+            $display("  No | Result |  Exp |  Got |  Err |  Lat(clk) |  SNR(dB)  | Case");
+            $display(" ----+--------+------+------+------+-----------+-----------+------------------------------------------");
+            for (i = 0; i < n_case; i = i + 1)
+            begin
+                if (r_pass[i]) npass = npass + 1;
+
+                if (r_lcnt[i] == 0)
+                    s_lat = "      -  ";
+                else if (r_lmin[i] == r_lmax[i])
+                    $sformat(s_lat, "%9d", r_lmin[i]);
+                else
+                    $sformat(s_lat, "%4d~%4d", r_lmin[i], r_lmax[i]);
+
+                if (r_lcnt[i] > 0)
+                begin
+                    nlat     = nlat + 1;
+                    lsum_all = lsum_all + r_lavg[i];
+                    if (r_lmin[i] < lmin_all) lmin_all = r_lmin[i];
+                    if (r_lmax[i] > lmax_all) lmax_all = r_lmax[i];
+                end
+
+                if (r_kind[i] == 0)
+                begin
+                    nfin = nfin + 1;
+                    ssum = ssum + r_snr[i];
+                    if (r_snr[i] < smin) smin = r_snr[i];
+                    if (r_snr[i] > smax) smax = r_snr[i];
+                    $sformat(s_snr, "%9.2f", r_snr[i]);
+                end
+                else if (r_kind[i] == 1)
+                begin
+                    ninf  = ninf + 1;
+                    s_snr = "      INF";
+                end
+                else
+                    s_snr = "      N/A";
+
+                $display("  %2d |  %s  | %4d | %4d | %4d | %s | %s | %0s",
+                         i + 1, r_pass[i] ? "PASS" : "FAIL", r_nexp[i], r_ngot[i], r_nerr[i], s_lat, s_snr, r_name[i]);
+            end
+            $display(" ----+--------+------+------+------+-----------+-----------+------------------------------------------");
+            $display("  TOTAL           : %0d / %0d PASS  (%0d FAIL)", npass, n_case, n_case - npass);
+            if (nfin > 0)
+            begin
+                $display("  AVERAGE SNR     : %8.2f dB   (finite cases = %0d, INF cases = %0d excluded)", ssum / nfin, nfin, ninf);
+                $display("  SNR MIN / MAX   : %8.2f dB / %8.2f dB", smin, smax);
+            end
+            else
+                $display("  AVERAGE SNR     :      INF   (all %0d cases bit-exact)", ninf);
+            if (nlat > 0)
+                $display("  AVERAGE LATENCY : %8.2f clk  (min %0d / max %0d, cases = %0d)", lsum_all / nlat, lmin_all, lmax_all, nlat);
+            else
+                $display("  AVERAGE LATENCY :      N/A");
+            $display("  * SNR reference : ideal real-valued model (%0s)", REF_CLIP ? "Q7.8 range clip" : "no clip");
+            $display("  * LATENCY       : posedges after valid_in(enable) falls until valid_out=1  (bypass: pass-through delay)");
+            $display("====================================================================================================");
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // reference helpers
+    //--------------------------------------------------------------------------
+    localparam integer SK_SMALL  = 0;   // skip 랜덤 [-512, 511]
+    localparam integer SK_FULL   = 1;   // skip 랜덤 int16 전 범위
+    localparam integer SK_CONST  = 2;   // skip = sconst 고정 (conv_top bias 방식)
+    localparam integer SK_CUSTOM = 3;   // 호출 전에 stim_s 를 직접 채움
+
+    function integer sat16;
+        input integer v;
+        begin
+            if (v > 32767)       sat16 = 32767;
+            else if (v < -32768) sat16 = -32768;
+            else                 sat16 = v;
+        end
+    endfunction
+
+    function real clipr;
+        input real v;
+        begin
+            if (v > QMAX_R)      clipr = QMAX_R;
+            else if (v < QMIN_R) clipr = QMIN_R;
+            else                 clipr = v;
+        end
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // run_case
+    //   en     : 1 = residual add, 0 = bypass
+    //   n      : 샘플 수
+    //   dmode  : data_in 생성 모드 (DM_*)
+    //   smode  : data_skip 생성 모드 (SK_*), sconst : SK_CONST 일 때 값
+    //   gap    : 샘플마다 뒤에 붙는 idle 클럭 (0 = back-to-back)
+    //   bubble : 1 = 샘플 앞에 1/4 확률로 idle 1클럭
+    //--------------------------------------------------------------------------
+    task run_case;
+        input [8*64-1:0] name;
+        input integer    en;
+        input integer    n;
+        input integer    dmode;
+        input integer    smode;
+        input integer    sconst;
+        input integer    gap;
+        input integer    bubble;
+        integer    j, k, x;
+        reg [31:0] r;
+        real       rv;
+        begin
+            if (dmode != DM_CUSTOM)
+            begin
+                for (j = 0; j < n; j = j + 1)
+                begin
+                    gen_val(dmode, x);
+                    stim_x[j] = x;
+                end
+            end
+            if (smode != SK_CUSTOM)
+            begin
+                for (j = 0; j < n; j = j + 1)
+                begin
+                    if (smode == SK_CONST)
+                        stim_s[j] = sconst;
+                    else
+                    begin
+                        gen_val((smode == SK_SMALL) ? DM_SMALL : DM_FULL, x);
+                        stim_s[j] = x;
+                    end
+                end
+            end
+
+            for (j = 0; j < n; j = j + 1)
+            begin
+                if (en)
+                begin
+                    exp_int[j]  = sat16(stim_x[j] + stim_s[j]);
+                    rv          = (stim_x[j] + stim_s[j]) / QSCALE;
+                    exp_real[j] = REF_CLIP ? clipr(rv) : rv;
+                end
+                else
+                begin
+                    exp_int[j]  = stim_x[j];
+                    exp_real[j] = stim_x[j] / QSCALE;
+                end
+            end
+
+            case_header(name);
+            $display("  config  : enable=%0d  samples=%0d  skip_mode=%0d (0:small 1:full 2:const 3:custom)  const=%0d  gap=%0d  bubble=%0d",
+                     en, n, smode, sconst, gap, bubble);
+
+            en_cfg = en;
+            reset_dut;
+            begin_case;
+
+            for (j = 0; j < n; j = j + 1)
+            begin
+                if (bubble)
+                begin
+                    r = $random(seed);
+                    if (r[1:0] == 2'b00) drive_idle;
+                end
+                drive_in(stim_x[j], stim_s[j]);
+                last_cap[j] = cur_cap;
+                for (k = 0; k < gap; k = k + 1) drive_idle;
+            end
+            repeat (DRAIN) drive_idle;
+            mon_en = 1'b0;
+
+            finish_case(name, n, (en == 0));
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // watchdog
+    //--------------------------------------------------------------------------
+    initial
+    begin
+        #(START_DLY);
+        repeat (400000) @(posedge clk);
+        $display("[TB] GLOBAL TIMEOUT");
+        print_summary("residual_packed");
         $finish;
     end
 
-    initial begin
-        #300000;
-        $display("[ERR] timeout");
+    //--------------------------------------------------------------------------
+    // test sequence
+    //--------------------------------------------------------------------------
+    initial
+    begin
+        cyc       = 0;
+        smp_r     = CLK_PERIOD / 2.0;
+        smp_k     = 0;
+        mon_en    = 1'b0;
+        out_cnt   = 0;
+        x_cnt     = 0;
+        pt_base   = 0;
+        cal_on    = 1'b0;
+        n_case    = 0;
+        seed      = SEED;
+        en_cfg    = 0;
+        cur_cap   = 0;
+        rst_n     = 1'b0;
+        enable    = 1'b0;
+        valid_in  = 1'b0;
+        data_in   = {WORD_W{1'b0}};
+        data_skip = {WORD_W{1'b0}};
+
+        #(START_DLY);
+        tick;
+
+        $display("========================================================================");
+        $display(" tb_residual_packed  (Q7.8, CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, EN_MODE %0d, REF_CLIP %0d)",
+                 CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, EN_MODE, REF_CLIP);
+        $display("========================================================================");
+
+        calibrate;
+
+        //        name                                          en    n  dmode      smode     sconst gap bubble
+        run_case("[RES] small x + small skip, back-to-back",     1,  256, DM_SMALL,  SK_SMALL,      0, 0, 0);
+        run_case("[RES] full x + full skip (saturation)",        1,  256, DM_FULL,   SK_FULL,       0, 0, 0);
+        run_case("[RES] full-range random, random bubble",       1,  256, DM_FULL,   SK_FULL,       0, 0, 1);
+        run_case("[RES] single-shot (gap 5)",                    1,   32, DM_FULL,   SK_SMALL,      0, 5, 0);
+        run_case("[RES] const skip +300 (bias style)",           1,  128, DM_SMALL,  SK_CONST,    300, 0, 0);
+        run_case("[RES] const skip -500, bubble",                1,  128, DM_FULL,   SK_CONST,   -500, 0, 1);
+        run_case("[RES] skip = 0 (identity)",                    1,  128, DM_FULL,   SK_CONST,      0, 0, 0);
+
+        // + saturation boundary
+        set_xs( 0,  32767,      0); set_xs( 1,  32767,      1); set_xs( 2,  32766,      1); set_xs( 3,  16384,  16383);
+        set_xs( 4,  16384,  16384); set_xs( 5,  32767,  32767); set_xs( 6,     -1,  32767); set_xs( 7,    100,  32700);
+        set_xs( 8,      0,      0); set_xs( 9,    256,   -256); set_xs(10,  32000,    767); set_xs(11,  32000,    768);
+        run_case("[RES] + saturation boundary",                  1,   12, DM_CUSTOM, SK_CUSTOM,     0, 0, 0);
+
+        // - saturation boundary
+        set_xs( 0, -32768,      0); set_xs( 1, -32768,     -1); set_xs( 2, -32767,     -1); set_xs( 3, -16384, -16384);
+        set_xs( 4, -16384, -16385); set_xs( 5, -32768, -32768); set_xs( 6,      1, -32768); set_xs( 7,   -100, -32700);
+        set_xs( 8,  32767, -32768); set_xs( 9, -32768,  32767); set_xs(10, -32000,   -768); set_xs(11, -32000,   -769);
+        run_case("[RES] - saturation boundary",                  1,   12, DM_CUSTOM, SK_CUSTOM,     0, 0, 0);
+
+        run_case("[RES] const skip +32767 (+ saturation)",       1,   64, DM_FULL,   SK_CONST,  32767, 0, 0);
+        run_case("[RES] const skip -32768 (- saturation)",       1,   64, DM_FULL,   SK_CONST, -32768, 0, 0);
+        run_case("[RES] long stream (1024, back-to-back)",       1, 1024, DM_FULL,   SK_SMALL,      0, 0, 0);
+        run_case("[RES] bypass (enable=0)",                      0,   64, DM_FULL,   SK_FULL,       0, 0, 1);
+
+        print_summary("residual_packed");
         $finish;
     end
 
