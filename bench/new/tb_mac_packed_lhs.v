@@ -9,7 +9,11 @@
 //               "launch edge + (tco_min + tco_max + T)/2" 시점에 샘플
 //               (behavioral 은 tco = 0 -> launch edge + T/2)
 //  * 데이터 : 16b signed Q7.8  (value = int / 256)
-//  * DUT    : mac_packed  sum(fmap x weight) (Q15.16) -> post_mac 반올림/포화 -> Q7.8
+//  * DUT    : mac_packed  sum(fmap x weight) + (bias_in << FRAC_BITS) -> 반올림/포화 -> 16b
+//             스케일 : fmap/weight/bias_in/data_out = Q7.8, 누산기 = Q15.16
+//             bias 는 양자화 전(누산기 스케일, bias << 8)에 더함 : 반올림 1회 + 포화 1회
+//             bias_in 은 케이스 동안 상수
+//             last_input (선택 포트) : 윈도우 마지막 입력 클럭에 1 인지 확인 (없으면 `define NO_LAST_INPUT)
 //             mac_v3 프로토콜 : 시작(첫 입력) 후 iter 개 입력을 연속으로 받음 (중간 valid_in 무시),
 //                               윈도우 사이에 idle 3클럭 이상 필요 (gap >= 3)
 //             iter 는 첫 입력 시점에만 래치 -> mixed 케이스에서 나머지 시점엔 garbage 인가
@@ -34,6 +38,8 @@ module tb_mac_packed;
     parameter integer EN_MODE      = 0;      // 0: enable 케이스 동안 1 고정 / 1: enable 이 valid_in 과 같이 오르내림
     parameter integer REF_CLIP     = 1;      // SNR ideal 모델  1: Q7.8 범위 clip / 0: clip 없음
     parameter integer SEED         = 1;      // 랜덤 시드
+    parameter integer FRAC_BITS    = 8;      // 소수부 비트 : Q7.8 -> 8 (fmap/weight/bias/data_out 모두 Q7.8)
+    parameter integer CHECK_LAST   = 1;      // 1: last_input 확인 (post-impl timing sim 에서는 0 권장, 조합 출력)
 
     //--------------------------------------------------------------------------
     // derived / fixed
@@ -42,9 +48,9 @@ module tb_mac_packed;
     localparam real    CLK_PERIOD = 1000.0 / CLK_FREQ_MHZ;      // [ns]
     localparam real    IN_DLY     = CLK_PERIOD * IN_DLY_RATIO;  // [ns]
     localparam real    START_DLY  = 200.0;                      // GSR(100ns) 이후 시작 [ns]
-    localparam real    QSCALE     = 256.0;
-    localparam real    QMAX_R     = 32767.0 / 256.0;
-    localparam real    QMIN_R     = -32768.0 / 256.0;
+    localparam real    QSCALE     = 1.0 * (1 << FRAC_BITS);     // Q7.8 -> 256.0
+    localparam real    QMAX_R     = 32767.0 / QSCALE;
+    localparam real    QMIN_R     = -32768.0 / QSCALE;
 
     localparam integer MAXS          = 4096;    // 입력 샘플
     localparam integer MAXO          = 4096;    // 출력 샘플
@@ -73,8 +79,10 @@ module tb_mac_packed;
     reg  [ITER_W-1:0] iter;
     reg  [WORD_W-1:0] fmap_in;
     reg  [WORD_W-1:0] weight_in;
+    reg  [WORD_W-1:0] bias_in;
     wire              valid_out;
     wire [WORD_W-1:0] data_out;
+    wire              last_input;
 
     mac_packed dut
     (
@@ -85,9 +93,19 @@ module tb_mac_packed;
         .iter      (iter),
         .fmap_in   (fmap_in),
         .weight_in (weight_in),
+        .bias_in   (bias_in),
         .valid_out (valid_out),
+`ifndef NO_LAST_INPUT
+        .last_input(last_input),
+`endif
         .data_out  (data_out)
     );
+`ifdef NO_LAST_INPUT
+    assign last_input = 1'b0;
+    localparam integer HAS_LAST = 0;
+`else
+    localparam integer HAS_LAST = 1;
+`endif
 
     //--------------------------------------------------------------------------
     // clock
@@ -102,7 +120,11 @@ module tb_mac_packed;
     integer stim_w   [0:MAXS-1];   // weight
     integer win_n    [0:MAXO-1];   // 윈도우별 iter
     integer iter_static;           // idle 때 iter 포트 값
+    reg [31:0] bias_cfg;           // 케이스 동안 bias_in 값 (Q7.8 정수)
     integer iter_garb;             // 1 = idle / 윈도우 중간에 iter 포트 garbage
+    reg     exp_last;              // 지금 버스에 있는 입력이 윈도우 마지막 입력이면 1
+    integer li_err;                // last_input 불일치 수
+    integer li_cnt;                // last_input 확인 횟수
     integer xx;
     integer exp_int  [0:MAXO-1];
     real    exp_real [0:MAXO-1];
@@ -148,6 +170,16 @@ module tb_mac_packed;
         begin
             @(posedge clk);
             cyc = cyc + 1;
+            if (mon_en && (CHECK_LAST != 0) && (HAS_LAST != 0))
+            begin
+                li_cnt = li_cnt + 1;
+                if (last_input !== exp_last)
+                begin
+                    li_err = li_err + 1;
+                    if (li_err <= MAX_ERR_PRINT)
+                        $display("    last_input mismatch t=%0t : exp=%b got=%b", $time, exp_last, last_input);
+                end
+            end
             #(smp_r);
             lc = cyc - smp_k;
             if (mon_en)
@@ -242,9 +274,12 @@ module tb_mac_packed;
         input integer x;
         input integer w;
         input integer it;
+        input integer is_last;
         begin
             enable    = en_cfg;
             valid_in  = 1'b1;
+            exp_last  = (en_cfg != 0) && (is_last != 0);
+            bias_in   = bias_cfg[WORD_W-1:0];
             iter      = it;
             fmap_in   = x;
             weight_in = w;
@@ -260,6 +295,8 @@ module tb_mac_packed;
             r         = $random(seed);
             enable    = (EN_MODE == 0) ? en_cfg : 1'b0;
             valid_in  = 1'b0;
+            exp_last  = 1'b0;
+            bias_in   = bias_cfg[WORD_W-1:0];
             fmap_in   = r[15:0];
             weight_in = r[31:16];
             if (iter_garb)
@@ -279,6 +316,8 @@ module tb_mac_packed;
             valid_in  = 1'b0;
             enable    = (EN_MODE == 0) ? en_cfg : 1'b0;
             iter      = iter_static;
+            exp_last  = 1'b0;
+            bias_in   = bias_cfg[WORD_W-1:0];
             fmap_in   = {WORD_W{1'b0}};
             weight_in = {WORD_W{1'b0}};
             rst_n     = 1'b0;
@@ -304,6 +343,8 @@ module tb_mac_packed;
             for (k = 0; k < MAXH; k = k + 1) pt_val[k] = PT_X;
             out_cnt = 0;
             x_cnt   = 0;
+            li_err  = 0;
+            li_cnt  = 0;
             pt_base = cyc + 1;
             mon_en  = 1'b1;
         end
@@ -473,6 +514,11 @@ module tb_mac_packed;
 
             if (x_cnt > 0)
                 $display("    X/Z on outputs : %0d samples  (timing violation / uninitialized FF?)", x_cnt);
+            if ((CHECK_LAST != 0) && (HAS_LAST != 0))
+            begin
+                $display("  last_in : checked=%0d  mismatches=%0d", li_cnt, li_err);
+                if (li_err != 0) pass = 0;
+            end
 
             if (noi == 0.0)      begin kind = 1; snr = 0.0; end
             else if (sig == 0.0) begin kind = 2; snr = 0.0; end
@@ -602,13 +648,15 @@ module tb_mac_packed;
     //--------------------------------------------------------------------------
     // reference helpers
     //--------------------------------------------------------------------------
-    // post_mac 와 동일 : (acc + (acc<0 ? 127 : 128)) >>> 8  -> int16 saturate
+    // (acc + (acc<0 ? h-1 : h)) >>> FRAC_BITS  -> int16 saturate   (h = 0.5 LSB)
     function integer mac_round_sat;
         input signed [63:0] a;
+        reg   signed [63:0] h;
         reg   signed [63:0] t;
         begin
-            if (a < 0) t = (a + 64'sd127) >>> 8;
-            else       t = (a + 64'sd128) >>> 8;
+            h = 64'sd1 <<< (FRAC_BITS - 1);
+            if (a < 0) t = (a + h - 64'sd1) >>> FRAC_BITS;
+            else       t = (a + h) >>> FRAC_BITS;
             if (t > 64'sd32767)       mac_round_sat = 32767;
             else if (t < -64'sd32768) mac_round_sat = -32768;
             else                      mac_round_sat = t[31:0];
@@ -632,6 +680,7 @@ module tb_mac_packed;
     //   dmode  : DM_SMALL / DM_FULL / DM_CUSTOM (stim_x, stim_w 를 미리 채움)
     //   gap    : 윈도우 사이 idle 클럭 (>= 3)
     //   imode  : 0 = iter 고정, 1 = 윈도우마다 iter = t % (n_iter+1), 시작 외 시점엔 iter garbage
+    //   bias   : bias_in (Q7.8 정수, 케이스 동안 상수). 기대값 = sat(round(sum + (bias << FRAC_BITS)))
     //--------------------------------------------------------------------------
     task run_case;
         input [8*64-1:0] name;
@@ -641,10 +690,12 @@ module tb_mac_packed;
         input integer    dmode;
         input integer    gap;
         input integer    imode;
+        input integer    bias;
         integer    t, j, k, x, nt, ne, idx, n_in, itv;
         reg [31:0] r;
         reg signed [63:0] acc;
         reg signed [63:0] prod;
+        reg signed [63:0] bb;
         reg signed [33:0] a34;
         real       racc;
         begin
@@ -690,10 +741,13 @@ module tb_mac_packed;
                         acc  = acc + prod;
                     end
                     idx         = idx + ne;
+                    bb          = bias;                   // Q7.8 -> Q15.16 정렬 후 양자화 전 덧셈
+                    bb          = bb <<< FRAC_BITS;
+                    acc         = acc + bb;
                     a34         = acc[33:0];              // RTL 누산기 폭(34b) 그대로
                     exp_int[t]  = mac_round_sat(a34);
                     racc        = acc;
-                    exp_real[t] = REF_CLIP ? clipr(racc / 65536.0) : (racc / 65536.0);
+                    exp_real[t] = REF_CLIP ? clipr(racc / (QSCALE * QSCALE)) : (racc / (QSCALE * QSCALE));
                 end
                 else
                 begin
@@ -703,14 +757,16 @@ module tb_mac_packed;
             end
 
             case_header(name);
-            $display("  config  : enable=%0d  iter=%0d%0s  windows=%0d  gap=%0d",
-                     en, n_iter, imode ? " (mixed 0~iter, iter port garbage)" : " ", n_win, gap);
+            $display("  config  : enable=%0d  iter=%0d%0s  windows=%0d  gap=%0d  bias=%0d (%0.4f)",
+                     en, n_iter, imode ? " (mixed 0~iter, iter port garbage)" : " ", n_win, gap,
+                     bias, bias / QSCALE);
 
             //------------------------------------------------------------------
             // drive
             //------------------------------------------------------------------
             en_cfg      = en;
             iter_static = n_iter;
+            bias_cfg    = bias;
             iter_garb   = 0;
             reset_dut;
             iter_garb   = (en && imode) ? 1 : 0;
@@ -732,13 +788,13 @@ module tb_mac_packed;
                             r   = $random(seed);
                             itv = r[ITER_W-1:0];
                         end
-                        drive_in(stim_x[idx], stim_w[idx], itv);
+                        drive_in(stim_x[idx], stim_w[idx], itv, (k == ne - 1));
                         idx = idx + 1;
                     end
                 end
                 else
                 begin
-                    drive_in(stim_x[t], stim_w[t], n_iter);
+                    drive_in(stim_x[t], stim_w[t], n_iter, 0);
                 end
                 last_cap[t] = cur_cap;
                 for (k = 0; k < gap; k = k + 1) drive_idle;
@@ -782,71 +838,105 @@ module tb_mac_packed;
         cur_cap     = 0;
         iter_static = 0;
         iter_garb   = 0;
+        bias_cfg    = 0;
+        exp_last    = 1'b0;
+        li_err      = 0;
+        li_cnt      = 0;
         rst_n       = 1'b0;
         enable      = 1'b0;
         valid_in    = 1'b0;
         iter        = {ITER_W{1'b0}};
         fmap_in     = {WORD_W{1'b0}};
         weight_in   = {WORD_W{1'b0}};
+        bias_in     = {WORD_W{1'b0}};
 
         #(START_DLY);
         tick;
 
         $display("========================================================================");
-        $display(" tb_mac_packed  (Q7.8, CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, EN_MODE %0d, REF_CLIP %0d)",
-                 CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, EN_MODE, REF_CLIP);
+        $display(" tb_mac_packed  (FRAC_BITS %0d, CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, EN_MODE %0d, REF_CLIP %0d)",
+                 FRAC_BITS, CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, EN_MODE, REF_CLIP);
+        $display(" bias added before quantization : out = sat(round(sum(x*w) + (bias << %0d)))   last_input check %0d",
+                 FRAC_BITS, (CHECK_LAST != 0) && (HAS_LAST != 0));
         $display("========================================================================");
 
         calibrate;
 
-        //        name                                          en  iter  win  dmode      gap imode
-        run_case("[MAC] iter=1",                                 1,    1,  32, DM_SMALL,    4, 0);
-        run_case("[MAC] iter=3",                                 1,    3,  32, DM_SMALL,    4, 0);
-        run_case("[MAC] iter=9 (3x3 kernel)",                    1,    9,  32, DM_SMALL,    4, 0);
-        run_case("[MAC] iter=16",                                1,   16,  16, DM_SMALL,    4, 0);
-        run_case("[MAC] iter=25 (5x5 kernel)",                   1,   25,  16, DM_SMALL,    4, 0);
-        run_case("[MAC] iter=64 (long accumulation)",            1,   64,   8, DM_SMALL,    4, 0);
-        run_case("[MAC] iter=0 (expect 0)",                      1,    0,   8, DM_SMALL,    4, 0);
-        run_case("[MAC] mixed iter 0~9, iter port garbage",      1,    9,  30, DM_SMALL,    4, 1);
-        run_case("[MAC] iter=9, min gap (3 idle clk)",           1,    9,  32, DM_SMALL,    3, 0);
-        run_case("[MAC] iter=9, single-shot (gap 12)",           1,    9,  16, DM_SMALL,   12, 0);
+        //        name                                          en  iter  win  dmode      gap imode  bias
+        run_case("[MAC] iter=1",                                 1,    1,  32, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] iter=3",                                 1,    3,  32, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] iter=9 (3x3 kernel)",                    1,    9,  32, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] iter=16",                                1,   16,  16, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] iter=25 (5x5 kernel)",                   1,   25,  16, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] iter=64 (long accumulation)",            1,   64,   8, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] iter=0 (expect 0)",                      1,    0,   8, DM_SMALL,    4, 0,      0);
+        run_case("[MAC] mixed iter 0~9, iter port garbage",      1,    9,  30, DM_SMALL,    4, 1,      0);
+        run_case("[MAC] iter=9, min gap (3 idle clk)",           1,    9,  32, DM_SMALL,    3, 0,      0);
+        run_case("[MAC] iter=9, single-shot (gap 12)",           1,    9,  16, DM_SMALL,   12, 0,      0);
 
-        // rounding boundary (iter=1) : +-0.5, +-1.5 LSB
-        set_xw(0,    1, 128);   //  128 ->  +0.5  ->  1
-        set_xw(1,   -1, 128);   // -128 ->  -0.5  -> -1
-        set_xw(2,    1, 127);   //  127 ->  0
-        set_xw(3,   -1, 127);   // -127 ->  0
-        set_xw(4,    3, 128);   //  384 ->  +1.5  ->  2
-        set_xw(5,   -3, 128);   // -384 ->  -1.5  -> -2
-        set_xw(6,    1, 129);   //  129 ->  1
-        set_xw(7,   -1, 129);   // -129 -> -1
-        set_xw(8,  128, 128);   // 16384 -> 64
-        set_xw(9, -255,   1);   // -255 -> -1
-        run_case("[MAC] rounding boundary (iter=1)",             1,    1,  10, DM_CUSTOM,   4, 0);
+        // bias (Q7.8) : 양자화 전 덧셈
+        run_case("[BIAS] iter=9, bias=+1.0 (256)",               1,    9,  32, DM_SMALL,    4, 0,    256);
+        run_case("[BIAS] iter=9, bias=-1.171875 (-300)",         1,    9,  32, DM_SMALL,    4, 0,   -300);
+        run_case("[BIAS] iter=1, bias=+0.0039 (1 LSB)",          1,    1,  32, DM_SMALL,    4, 0,      1);
+        run_case("[BIAS] iter=25, bias=+3.5 (896)",              1,   25,  16, DM_SMALL,    4, 0,    896);
+        run_case("[BIAS] iter=0 (expect bias = 100)",            1,    0,   8, DM_SMALL,    4, 0,    100);
+        run_case("[BIAS] iter=0 (expect bias = -32768)",         1,    0,   8, DM_SMALL,    4, 0, -32768);
+        run_case("[BIAS] mixed iter 0~9, bias=-77",              1,    9,  30, DM_SMALL,    4, 1,    -77);
+        run_case("[BIAS] bias=+32767 (+saturation)",             1,    9,  16, DM_SMALL,    4, 0,  32767);
+        run_case("[BIAS] bias=-32768 (-saturation)",             1,    9,  16, DM_SMALL,    4, 0, -32768);
+        run_case("[BIAS] full-range random iter=4, bias=+5000",  1,    4,  32, DM_FULL,     4, 0,   5000);
+
+        // rounding boundary (iter=1) : +-0.5, +-1.5 LSB  (h = 0.5 LSB = 1 << (FRAC_BITS-1))
+        ii = 1 << (FRAC_BITS - 1);
+        set_xw(0,    1, ii);       //  +0.5 LSB ->  1
+        set_xw(1,   -1, ii);       //  -0.5 LSB -> -1
+        set_xw(2,    1, ii - 1);   //  <0.5     ->  0
+        set_xw(3,   -1, ii - 1);   //  >-0.5    ->  0
+        set_xw(4,    3, ii);       //  +1.5     ->  2
+        set_xw(5,   -3, ii);       //  -1.5     -> -2
+        set_xw(6,    1, ii + 1);   //  >0.5     ->  1
+        set_xw(7,   -1, ii + 1);   //  <-0.5    -> -1
+        set_xw(8,   ii, ii);       //  ii*ii / 2^F
+        set_xw(9, 1 - 2*ii, 1);    //  -(1 LSB - 1) -> -1
+        run_case("[MAC] rounding boundary (iter=1)",             1,    1,  10, DM_CUSTOM,   4, 0,      0);
+
+        // bias 와 합친 뒤 반올림 1회 : sum = -0.5 LSB, bias = +1 LSB -> +0.5 LSB -> 1 (따로 반올림하면 0)
+        for (ii = 0; ii < 8; ii = ii + 1) set_xw(ii, -1, 1 << (FRAC_BITS - 1));
+        run_case("[BIAS] round once after bias (-0.5+1 -> 1)",   1,    1,   8, DM_CUSTOM,   4, 0,      1);
 
         // +/- saturation (iter=4, full-scale)
         for (ii = 0;  ii < 4;  ii = ii + 1) set_xw(ii, -32768, -32768);
         for (ii = 4;  ii < 8;  ii = ii + 1) set_xw(ii, -32768,  32767);
         for (ii = 8;  ii < 12; ii = ii + 1) set_xw(ii,  32767,  32767);
         for (ii = 12; ii < 16; ii = ii + 1) set_xw(ii,  32767, -32768);
-        run_case("[MAC] +/- saturation (full-scale, iter=4)",    1,    4,   4, DM_CUSTOM,   4, 0);
+        run_case("[MAC] +/- saturation (full-scale, iter=4)",    1,    4,   4, DM_CUSTOM,   4, 0,      0);
 
         // full-range random : iter=7 = 34b 누산기 overflow 없는 최대
-        run_case("[MAC] full-range random iter=7 (saturation)",  1,    7,  32, DM_FULL,     4, 0);
+        run_case("[MAC] full-range random iter=7 (saturation)",  1,    7,  32, DM_FULL,     4, 0,      0);
 
         // all zero
         for (ii = 0; ii < 36; ii = ii + 1) set_xw(ii, 0, 0);
-        run_case("[MAC] all-zero input",                         1,    9,   4, DM_CUSTOM,   4, 0);
+        run_case("[MAC] all-zero input",                         1,    9,   4, DM_CUSTOM,   4, 0,      0);
 
-        // weight = 1.0 (256) -> 출력 = x 그대로
+        // weight = 1.0 (1 << FRAC_BITS) -> 출력 = x 그대로
         for (ii = 0; ii < 32; ii = ii + 1)
         begin
             gen_val(DM_FULL, xx);
-            set_xw(ii, xx, 256);
+            set_xw(ii, xx, 1 << FRAC_BITS);
         end
-        run_case("[MAC] weight=1.0 identity (iter=1)",           1,    1,  32, DM_CUSTOM,   4, 0);
+        run_case("[MAC] weight=1.0 identity (iter=1)",           1,    1,  32, DM_CUSTOM,   4, 0,      0);
 
-        run_case("[MAC] bypass (enable=0)",                      0,    9,  64, DM_FULL,     0, 0);
+        // weight = 1.0 + bias -> 출력 = sat(x + bias)
+        for (ii = 0; ii < 32; ii = ii + 1)
+        begin
+            gen_val(DM_FULL, xx);
+            set_xw(ii, xx, 1 << FRAC_BITS);
+        end
+        run_case("[BIAS] weight=1.0, bias=-12345 (x + bias)",    1,    1,  32, DM_CUSTOM,   4, 0, -12345);
+
+        // bypass : bias_in 무시
+        run_case("[MAC] bypass (enable=0)",                      0,    9,  64, DM_FULL,     0, 0,      0);
+        run_case("[MAC] bypass (enable=0), bias_in=1234 ignored",0,    9,  64, DM_FULL,     0, 0,   1234);
 
         print_summary("mac_packed");
         $finish;
