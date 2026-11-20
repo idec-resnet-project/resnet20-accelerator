@@ -83,6 +83,10 @@ Windows 배치는 XSim이 기록할 수 있는 전체 계층의 신호를 `.log/
 - [기존 Q7.8 bottleneck 테스트 흐름](docs/bottleneck_flow.md)
 - [기존 Q7.8 데이터 배치 규칙](docs/appendix.md)
 
+
+- [Controller 팀 환경 세팅](docs/How_to_setup_controller_tb.md)
+
+
 ## References
 
 - [IEEE Xplore – Toward Full-Stack Acceleration of Deep Convolutional Neural Networks on FPGAs](https://ieeexplore.ieee.org/document/9354062)
