@@ -10,19 +10,17 @@
 
 | TB | DUT | 입력 포트 | 출력 포트 |
 |---|---|---|---|
-| `tb_mac_packed.v` | `mac_packed` | `clk`, `rst_n`, `enable`, `valid_in`, `iter[15:0]`, `fmap_in[15:0]`, `weight_in[15:0]` | `valid_out`, `data_out[15:0]` |
+| `tb_mac_packed.v` | `mac_packed` | `clk`, `rst_n`, `enable`, `valid_in`, `iter[15:0]`, `fmap_in[15:0]`, `weight_in[15:0]`, `bias_in[15:0]` | `valid_out`, `data_out[15:0]`, `last_input` (선택, 없으면 `NO_LAST_INPUT`) |
 | `tb_ReLU_packed.v` | `ReLU_packed` | `clk`, `rst_n`, `enable`, `valid_in`, `data_in[15:0]` | `valid_out`, `data_out[15:0]` |
 | `tb_residual_packed.v` | `residual_packed` | `clk`, `rst_n`, `enable`, `valid_in`, `data_in[15:0]`, `data_skip[15:0]` | `valid_out`, `data_out[15:0]` |
 | `tb_pooling_packed.v` | `pooling_packed` | `clk`, `rst_n`, `enable_avg`, `enable_max`, `valid_in`, `max_iter[15:0]`, `avg_iter[15:0]`, `data_in[15:0]` | `valid_out`, `data_out[15:0]` |
-| `tb_conv_top.v` | `conv_top_wrapper` (기본) / `conv_top` (`NO_WRAPPER`) | `clk`, `nrst`, `mac_enable`, `mac_iteration[15:0]`, `residual_enable`, `relu_enable`, `pooling_enable`, `pooling_iteration[15:0]`, `gap_enable`, `gap_iteration[15:0]`, `in_enable`, `in_data[15:0]`, `kernel_data[15:0]`, `bias_data[15:0]` | `out_enable`, `out_data[15:0]` |
+| `tb_conv_top.v` | `conv_top_wrapper` (기본) / `conv_top`, `core` 등 (`NO_WRAPPER`, `CORE_MODULE`) | `clk`, `nrst`, `mac_enable`, `mac_iteration[15:0]`, `residual_enable`, `relu_enable`, `pooling_enable`, `pooling_iteration[15:0]`, `gap_enable`, `gap_iteration[15:0]`, `in_enable`, `in_data[15:0]`, `kernel_data[15:0]`, `bias_data[15:0]`, `residual_data[15:0]` (선택, 없으면 `NO_RESIDUAL_PORT`) | `out_enable`, `out_data[15:0]` |
 
-- 데이터 포트는 모두 16b signed Q7.8, 리셋(`rst_n`, `nrst`)은 active-low 입니다.
+- 데이터 포트는 모두 16b signed **Q7.8** (fmap / weight / bias / residual / 출력 동일, MAC 누산기는 Q15.16), 리셋(`rst_n`, `nrst`)은 active-low 입니다.
 - TB 는 DUT 에 parameter 를 넘기지 않으므로, 위 폭이 DUT parameter 기본값이어야 합니다.
 - 보조 파일: `conv_top_wrapper.v` (conv_top 입출력 IOB 레지스터 + reset 동기화 + reset 중 loopback),
   `tb_packed_io.xdc` / `tb_conv_io.xdc` (post-implementation 용 클럭 / 입력 타이밍 제약)
 
-> `post_mac_lhs.v` 와 `post_mac_pipe4.v` 는 모듈 이름(`post_mac`)이 같으므로 **둘 중 하나만** 프로젝트에 넣으세요.
-> TB 는 latency 를 직접 측정하기 때문에 어느 쪽을 써도 그대로 동작합니다 (pipe4 는 latency +1).
 
 ## 판정 기준 / 콘솔 출력
 
@@ -49,8 +47,9 @@
 [CAL] output sample : launch edge +  5.000 ns  (posedge +  5.000 ns, k=0)
 ------------------------------------------------------------------------
 [CASE  3] [MAC] iter=9 (3x3 kernel)
-  config  : enable=1  iter=9  windows=32  gap=4
+  config  : enable=1  iter=9  windows=32  gap=4  bias=0 (0.0000)
   outputs : expected=32  received=32  mismatches=0
+  last_in : checked=xxx  mismatches=0
   LATENCY : 7 clk  (posedges after valid_in(enable) falls)
   SNR     :    xx.xx dB
   RESULT  : PASS
@@ -184,15 +183,30 @@ xsim  tb_mac_sim -R
 | `REF_CLIP` | `1` | SNR 기준 모델 — `1`: Q7.8 범위로 clip / `0`: clip 없음 (포화 오차도 SNR 에 반영) |
 | `SEED` | `1` | 랜덤 시드 |
 
+**`tb_mac_packed` 전용**
+
+| parameter / define | 기본값 | 설명 |
+|---|---|---|
+| `FRAC_BITS` | `8` | 소수부 비트 (Q7.8). 반올림 위치, bias 정렬(`bias << FRAC_BITS`), SNR 스케일에 사용 |
+| `CHECK_LAST` | `1` | `1`: `last_input` 확인 (윈도우 마지막 입력 클럭에 1, 나머지 0) / `0`: 확인 안 함 |
+| `` `define NO_LAST_INPUT `` | – | DUT 에 `last_input` 포트가 없을 때 (iter 내부 카운터 방식으로 결정된 경우) |
+
+`last_input` 은 조합 출력이라 post-implementation timing sim 에서는 입력 인가(0.6 T) 후 출력 경로 지연 때문에
+posedge 시점에 아직 안 바뀌어 있을 수 있습니다. timing sim 에서 `last_input mismatch` 가 나오면 `CHECK_LAST=0` 으로 돌리세요.
+
 ## 테스트 케이스
 
 모든 TB 는 시작 시 calibration 후 케이스마다 reset → 입력 → 결과 출력 순서로 진행하고, 마지막에 요약표를 출력합니다.
 `valid_in = 0` 인 사이클에는 데이터 버스에 랜덤 값(garbage)을 넣어서, 무효 구간의 데이터가 결과에 섞이지 않는지도 함께 확인합니다.
 
 **`tb_mac_packed`**
-iter = 1 / 3 / 9 / 16 / 25 / 64, iter = 0 (출력 0), 윈도우마다 iter 가 바뀌는 mixed (시작 외 시점에 iter 포트 garbage),
-윈도우 간 최소 간격(idle 3 clk), single-shot(idle 12 clk), 반올림 경계, ± 포화(full-scale), full-range 랜덤(iter = 7),
-all-zero, weight = 1.0 identity, bypass
+기대값 = `sat16(round(sum(fmap × weight) + (bias_in << 8)))` — bias 는 **양자화 전** 누산기 스케일(Q15.16)에서 더하고 반올림·포화는 1번만 합니다.
+`bias_in` 은 케이스 동안 상수이고, 모든 케이스에서 `last_input` 도 함께 확인합니다 (`CHECK_LAST`).
+- MAC: iter = 1 / 3 / 9 / 16 / 25 / 64, iter = 0 (출력 0), 윈도우마다 iter 가 바뀌는 mixed (시작 외 시점에 iter 포트 garbage),
+  윈도우 간 최소 간격(idle 3 clk), single-shot(idle 12 clk), 반올림 경계, ± 포화(full-scale), full-range 랜덤(iter = 7),
+  all-zero, weight = 1.0 identity, bypass
+- BIAS: bias = +1.0 / −1.17 / +1 LSB / +3.5, iter = 0 (출력 = bias), mixed iter + bias, bias +32767 / −32768 포화,
+  full-range + bias, bias 후 반올림 1회 확인(−0.5 LSB + 1 LSB → 1, 따로 반올림하면 0), weight = 1.0 + bias (x + bias), bypass 에서 bias 무시
 
 **`tb_ReLU_packed`**
 full-range back-to-back, 랜덤 bubble, single-shot, 작은 범위(±2.0), 전부 양수, 전부 음수, 경계값, 부호 교대,
@@ -205,7 +219,14 @@ skip = 0, + 포화 경계, − 포화 경계, skip = +32767 / −32768, 긴 스�
 **`tb_pooling_packed`**
 MAX: K = 2 / 4 / 9 / 1, 최소 간격(idle 1 clk), 윈도우 내부 bubble, mixed K(1~9), 음수 / 동일값 / 극값
 GAP: K = 2 / 4 / 8 / 16 / 64 / 128 / 1, 최소 간격, 윈도우 내부 bubble, mixed K(2ⁿ), 작은 범위, 음수 floor, full-scale
-MAX + GAP 동시 enable (avg 우선), bypass
+MAX → GAP (동시 enable, ResNet 순서): Kp/Kg = 4/4, 2/8, 9/2, 4/16, 1/4(= GAP), 4/1(= MAX), 최소 간격, 윈도우 내부 bubble, 작은 범위, 음수 / floor / 극값
+bypass
+
+`enable_max` 와 `enable_avg` 를 같이 켜면 **MAXPOOL → GAP 직렬**로 기대합니다 (ResNet 순서).
+`max_iter`(Kp) 개 입력마다 max 1개를 만들고, 그 max 결과 `avg_iter`(Kg) 개를 평균해서 출력 1개를 냅니다.
+즉 입력 Kp × Kg 개당 출력 1개이고, 기대값은 `(Σ max) >>> log2(Kg)` (floor) 입니다.
+max 윈도우 사이에는 idle 을 기본 2 클럭(최소 간격 케이스는 1 클럭) 넣습니다.
+latency 는 출력 1개를 만드는 마지막 max 윈도우의 마지막 입력 기준입니다.
 
 ## 다른 RTL 로 교체해서 테스트하기
 
@@ -224,7 +245,7 @@ MAX + GAP 동시 enable (avg 우선), bypass
 | 모듈 이름 / 포트 | 이름·포트명·폭이 같아야 함 (데이터 16b, iter 16b). TB 가 parameter 를 넘기지 않으므로 (post-impl netlist 호환) **parameter 기본값도 이 폭**이어야 함 | 컴파일 / elaboration 에러 |
 | 리셋 | `rst_n` active-low, 4 클럭 안에 리셋 완료 (동기 / 비동기 무관) | 첫 케이스부터 FAIL |
 | `valid_out` | 결과 1개당 **정확히 1클럭 펄스**, 입력 순서대로 출력 | 2클럭 이상 유지하면 출력 개수 초과로 FAIL |
-| 수치 규칙 | MAC: `+127 / +128` 후 `>>> 8` 반올림 + int16 포화 · GAP: floor (`>>>`) · residual: int16 포화 | 값 불일치로 FAIL (SNR 은 정상 출력되므로 정확도 비교용으로는 사용 가능) |
+| 수치 규칙 | MAC: `sum + (bias << 8)` 에 `+127 / +128` 후 `>>> 8` 반올림 + int16 포화 (bias 는 양자화 전) · GAP: floor (`>>>`) · residual: int16 포화 | 값 불일치로 FAIL (SNR 은 정상 출력되므로 정확도 비교용으로는 사용 가능) |
 
 ### 현재 RTL 의 동작 방식에 맞춰진 케이스
 
@@ -233,12 +254,13 @@ MAX + GAP 동시 enable (avg 우선), bypass
 | 항목 | TB 가 가정하는 동작 | 관련 케이스 |
 |---|---|---|
 | MAC 입력 방식 | 첫 입력(`enable && valid_in`)부터 `iter` 개를 연속 입력, 윈도우 사이 idle 기본 4 클럭 (최소 간격 케이스는 3 클럭) | 모든 MAC 케이스, `[MAC] iter=9, min gap` |
-| MAC iter = 0 | 입력 1개를 받고 0 을 출력 | `[MAC] iter=0 (expect 0)`, `[MAC] mixed iter ...` |
+| MAC iter = 0 | 입력 1개를 받고 bias 만 출력 (bias 0 → 0) | `[MAC] iter=0 (expect 0)`, `[BIAS] iter=0 ...`, `... mixed iter ...` |
+| MAC `last_input` | `enable && valid_in` 이고 윈도우의 마지막 입력(iter = 0 이면 그 1개)일 때 1 (조합) | 모든 MAC 케이스 (`last_in : checked / mismatches` 줄) |
 | iter / K 래치 | `iter`, `max_iter`, `avg_iter` 는 첫 입력 때만 래치 (나머지 시점엔 포트에 garbage 를 넣음) | `[MAC] mixed iter ...`, `[MAX] mixed K ...`, `[GAP] mixed K ...` |
 | ReLU / residual 입력 | 매 클럭 입력 가능 (back-to-back), 입력 사이 bubble 허용 | back-to-back / bubble / long stream 케이스 |
 | pooling 윈도우 내부 bubble | 윈도우 중간에 `valid_in = 0` 이 끼어도 계속 누적 | `[MAX] / [GAP] ... bubble inside window` |
 | pooling 윈도우 간격 | 윈도우 사이 최소 idle 1 클럭 (기본 2 클럭) | 모든 pooling 케이스, `... min gap (1 idle clk)` |
-| MAX + GAP 동시 enable | avg 결과가 출력됨 | `[MAX+GAP] both enabled (avg wins)` |
+| MAX + GAP 동시 enable | MAXPOOL → GAP 직렬: max 결과 `avg_iter` 개를 평균 (입력 `max_iter × avg_iter` 개당 출력 1개) | `[MAX->GAP] ...` |
 | bypass (`enable = 0`) | `valid_out` 이 뜨지 않고, data 만 레지스터 한 단을 거쳐 통과 | `... bypass` 케이스 |
 
 `avgpool` 은 K 가 2ⁿ (≤ 128) 일 때만 나눗셈(`sum >>> log2 K`, floor)을 하므로 GAP 케이스는 2ⁿ 만 사용합니다.
@@ -255,16 +277,31 @@ behavioral sim 은 영향이 없습니다.
 
 ## conv_top 테스트벤치
 
-`tb_conv_top.v` 는 `conv_top` 전체(MAC → residual → ReLU → pooling, ResNet 의 conv → add → ReLU 순서)를 검증합니다.
+`tb_conv_top.v` 는 `conv_top` (또는 같은 포트를 가진 `core` 등) 전체를 검증합니다.
 판정 / SNR / 출력 형식은 packed TB 와 같고, 블록 enable 조합별 케이스를 돌립니다.
+
+### 처리 순서와 입력 규칙
+
+```
+MAC(+bias) -> residual -> ReLU -> MAXPOOL -> GAP      (ResNet : conv -> add -> ReLU)
+```
+
+| 입력 | 의미 / 인가 시점 |
+|---|---|
+| `bias_data` | MAC 결과에 더하는 bias. 케이스 동안 상수 (`sum(x·w) + (bias << FRAC_BITS)` 후 반올림·포화) |
+| `residual_data` | shortcut 값. 출력 1개를 만드는 **MAC 윈도우의 마지막 입력과 같은 클럭**에 인가 (core.v 와 동일) |
+| `residual_enable` | **MAC 이 켜져 있을 때만** 동작 (`mac_enable && residual_enable`). MAC 없이 켜면 residual 은 적용되지 않음 |
+
+`RES_SRC = 1` 이면 `residual_data` 포트 대신 **MAC 윈도우 중앙 입력**(`in_data`, 번호 `iter >> 1`)을 residual 로 기대합니다 (DUT 내부 캡처 방식).
 
 ### DUT 선택 (Verilog define)
 
 | define | 동작 |
 |---|---|
-| (없음, 기본) | DUT = `conv_top_wrapper`, 그 안의 core = `conv_top` |
+| (없음, 기본) | DUT = `conv_top_wrapper`, 그 안의 core = `conv_top`, `residual_data` 포트 연결 |
 | `NO_WRAPPER` | wrapper 없이 core 를 직접 DUT 로 사용 (behavioral 전용, 출력 타이밍 보정 없음) |
-| `CORE_MODULE=<이름>` | core 모듈 이름 변경 (예: `CORE_MODULE=conv_top_v2`). wrapper 와 TB 둘 다 적용 |
+| `CORE_MODULE=<이름>` | core 모듈 이름 변경 (예: `CORE_MODULE=core`). wrapper 와 TB 둘 다 적용 |
+| `NO_RESIDUAL_PORT` | DUT 에 `residual_data` 포트가 없을 때 (wrapper / TB 모두 포트를 빼고 연결). `RES_SRC = 1` 과 함께 사용 |
 | `WRAPPER_PASS_PARAMS` | wrapper 가 core 에 parameter 를 이름으로 넘김 (기본은 넘기지 않음) |
 
 define 설정 방법:
@@ -272,11 +309,11 @@ define 설정 방법:
 - **GUI**: Simulation Settings → *Compilation* 탭 → **Verilog options** 에서 define 추가
 - **Tcl**:
   ```tcl
-  set_property verilog_define {CORE_MODULE=conv_top_v2} [get_filesets sim_1]
+  set_property verilog_define {CORE_MODULE=core} [get_filesets sim_1]
   ```
 - **post-implementation** 용으로 wrapper 를 합성할 때는 synthesis 쪽(`sources_1`)에도 같은 define 을 넣어야 합니다.
   ```tcl
-  set_property verilog_define {CORE_MODULE=conv_top_v2} [get_filesets sources_1]
+  set_property verilog_define {CORE_MODULE=core} [get_filesets sources_1]
   ```
 
 ### Parameters
@@ -285,16 +322,30 @@ define 설정 방법:
 |---|---|---|
 | `CLK_FREQ_MHZ` | `100.0` | 클럭 주파수 [MHz] (변경 방법은 [주파수 변경](#주파수-변경) 과 동일) |
 | `IN_DLY_RATIO` | `0.75` | 입력 인가 시점 = posedge 후 `IN_DLY_RATIO × 주기`. wrapper IOB 입력 기준 (100 MHz 에서 7.5 ns) |
-| `MAC_GAP` | `4` | MAC 윈도우 사이 idle 클럭 (현재 RTL 최소 3) |
-| `POOL_GAP` | `2` | pooling 윈도우 사이 idle 클럭 (현재 RTL 최소 1) |
+| `FRAC_BITS` | `8` | 소수부 비트 수 (Q7.8). MAC 반올림 위치, bias 정렬, SNR 스케일에 사용 |
+| `RES_SRC` | `0` | residual 값 — `0`: `residual_data` 포트 / `1`: MAC 윈도우 중앙 입력 (DUT 내부 캡처) |
+| `POOL_CASCADE` | `1` | MAX + GAP 동시 enable — `1`: MAXPOOL → GAP 직렬 (ResNet 순서, max 결과 `gap_iteration` 개를 평균) / `0`: avg 결과만 (이전 conv_top 방식) |
+| `GAP_ROUND` | `0` | GAP 나눗셈 — `0`: floor (`>>>`) / `1`: 0 방향 절삭 |
+| `GAP_NPOW2` | `0` | `1` 이면 GAP K 가 2ⁿ 이 아닌 케이스(3, 9) 추가 |
+| `MAC_GAP` | `4` | MAC 윈도우 사이 idle 클럭 (현재 conv_top 최소 3) |
+| `POOL_GAP` | `2` | pooling 윈도우 사이 idle 클럭 (현재 conv_top 최소 1) |
 | `RST_WAIT` | `8` | `nrst` 해제 후 첫 입력까지 대기 클럭 (wrapper 동기화 2 + core 내부 리셋 지연 포함) |
-| `REF_CLIP` | `1` | SNR 기준 모델 — `1`: Q7.8 범위로 clip / `0`: clip 없음 |
+| `REF_CLIP` | `1` | SNR 기준 모델 — `1`: 표현 범위로 clip / `0`: clip 없음 |
 | `SEED` | `1` | 랜덤 시드 |
+
+**RTL 별 설정 예**
+
+| 대상 | define | parameter |
+|---|---|---|
+| `conv_top` (`CT_RESI_EXTERNAL` 정의, residual_data 포트 사용) | – | 기본값 |
+| `conv_top` (내부 중앙 캡처, residual_data 포트 없음) | `NO_RESIDUAL_PORT` | `RES_SRC=1` |
+| `core.v` | `CORE_MODULE=core` | `GAP_NPOW2=1`, `GAP_ROUND` 는 core 의 GAP 구현에 맞춤 |
+| 이전 `conv_top` (MAX + GAP 동시 enable 시 avg 만 출력) | – | `POOL_CASCADE=0` |
 
 ### LATENCY
 
 `in_enable` 이 내려간 뒤 `out_enable` 이 1 이 될 때까지 지난 posedge 수입니다.
-출력 1개를 만드는 **마지막 입력**(MAC 이면 윈도우의 마지막 곱, pooling 이면 K 번째 토큰의 마지막 입력)을 캡처한 posedge 기준으로 출력마다 계산하고,
+출력 1개를 만드는 **마지막 입력**(MAC 이면 윈도우의 마지막 곱, pooling 이면 마지막 토큰의 마지막 입력)을 캡처한 posedge 기준으로 출력마다 계산하고,
 **wrapper 의 입출력 레지스터 +2 클럭은 빼고 core 기준**으로 표시합니다. 그래서 `NO_WRAPPER` 로 돌려도 같은 값이 나옵니다.
 
 ### 출력 타이밍 보정 (wrapper)
@@ -305,15 +356,17 @@ core RTL 과 무관한 경로라서 core 를 바꿔도 그대로 동작하고, �
 
 ### wrapper 를 다른 RTL 에 쓸 때
 
-`conv_top_wrapper.v` 는 core 의 **포트에만** 연결하므로, `conv_top` 과 같은 포트를 가진 RTL 이면 그대로 쓸 수 있습니다.
+`conv_top_wrapper.v` 는 core 의 **포트에만** 연결하므로, `conv_top` / `core.v` 와 같은 포트를 가진 RTL 이면 그대로 쓸 수 있습니다.
 
 - core 모듈 이름이 `conv_top` 이 아니면 `CORE_MODULE=<이름>` define 을 줍니다 (post-impl 합성 시 `sources_1` 에도).
+- core 에 `residual_data` 포트가 없으면 `NO_RESIDUAL_PORT` define 을 줍니다.
 - core 에 parameter 를 넘기지 않으므로 core 의 parameter 기본값이 데이터 16b / iteration 16b / `PARALLEL_PC = 1` 이어야 합니다.
   이름이 같으면 `WRAPPER_PASS_PARAMS` 로 값을 넘길 수 있습니다.
 - core 에는 wrapper 안에서 동기화된 `nrst` (active-low) 가 들어갑니다. core 내부의 동기 / 비동기 리셋 방식은 상관없습니다.
 - 입력 / 출력을 한 단씩 등록하므로 core 대비 **latency +2 클럭**입니다 (`tb_conv_top` 은 이 2 클럭을 빼고 표시).
+  `residual_data` 도 다른 입력과 같이 한 단 등록되므로 "마지막 MAC 입력과 같은 클럭" 관계는 그대로 유지됩니다.
 - 리셋 중에는 `out_data` 로 `in_data` 가 나옵니다 (출력 타이밍 보정용, 리셋 중 `out_enable` = 0).
-- 데이터 레지스터(`in_data`, `kernel_data`, `bias_data`, `out_data`)에는 리셋이 없고, enable / config / valid 레지스터만 리셋됩니다.
+- 데이터 레지스터(`in_data`, `kernel_data`, `bias_data`, `residual_data`, `out_data`)에는 리셋이 없고, enable / config / valid 레지스터만 리셋됩니다.
 - 포트 구성이 다른 RTL 에는 그대로 쓸 수 없습니다. 이 경우 wrapper 의 포트 선언과 입출력 레지스터 부분을 그 RTL 포트에 맞게 고쳐야 합니다.
 
 ### post-implementation timing sim
@@ -335,32 +388,47 @@ run all
 ### 다른 RTL 로 교체해서 테스트하기
 
 TB 와 wrapper 는 core 의 **포트만** 사용하고 parameter 도 넘기지 않으므로, 같은 포트를 가진 다른 구현을 그대로 넣을 수 있습니다.
-기대값은 RTL 구조를 흉내 낸 것이 아니라 **conv_top 이 계산해야 하는 기능 모델**입니다.
-
-- 모듈 이름이 `conv_top` 이면 파일만 바꿔 넣으면 되고, 이름이 다르면 `CORE_MODULE` define 을 줍니다.
+기대값은 RTL 구조를 흉내 낸 것이 아니라 **core 가 계산해야 하는 기능 모델**이고, 구현마다 다를 수 있는 부분은 parameter 로 고릅니다.
 
 **반드시 맞춰야 하는 것**
 
 | 항목 | 조건 |
 |---|---|
-| 포트 | `conv_top` 과 같은 포트 이름 / 폭 (데이터 16b, iteration 16b, `PARALLEL_PC = 1`). parameter 기본값도 이 폭이어야 함 |
+| 포트 | 위 *파일 구성* 표의 포트 이름 / 폭 (데이터 16b, iteration 16b, `PARALLEL_PC = 1`). parameter 기본값도 이 폭이어야 함 |
 | 리셋 | `nrst` active-low, 해제 후 `RST_WAIT` 클럭 안에 입력을 받을 수 있어야 함 |
 | `out_enable` | 결과 1개당 정확히 1클럭 펄스, 입력 순서대로 출력 |
-| 수치 규칙 | MAC: `+127 / +128` 후 `>>> 8` 반올림 + int16 포화 · residual: int16 포화 · GAP: floor (`>>>`) |
+| 처리 순서 | MAC(+bias) → residual → ReLU → MAXPOOL → GAP. MAXPOOL 과 GAP 을 같이 켜면 직렬 (MAX 결과 `gap_iteration` 개를 평균) |
 | 블록 bypass | enable 이 0 인 블록은 값을 바꾸지 않고 통과시키며, **valid 와 data 가 같은 클럭에 맞춰져** 다음 블록으로 가야 함 |
+| MAC 반올림 | `sum(x·w) + (bias << FRAC_BITS)` 를 ±0.5 LSB (0 에서 먼 쪽) 반올림 후 int16 포화 |
+| residual | int16 포화 덧셈, MAC 이 켜져 있을 때만 동작 |
 
-**동작 방식에 따라 조정할 수 있는 것**
+**구현에 따라 parameter 로 맞추는 것**
 
-| 항목 | TB 가정 | 다르면 |
+| 항목 | parameter |
+|---|---|
+| 소수부 비트 | `FRAC_BITS` |
+| residual 값 출처 (포트 / 내부 중앙 캡처) | `RES_SRC` (+ 포트가 없으면 `NO_RESIDUAL_PORT`) |
+| MAX + GAP 동시 enable (직렬 MAX → GAP / 이전 방식 avg 만) | `POOL_CASCADE` |
+| GAP 반올림 (floor / 0 방향) | `GAP_ROUND` |
+| GAP K 가 2ⁿ 이 아닌 경우 지원 | `GAP_NPOW2` |
+| MAC / pooling 윈도우 사이 idle | `MAC_GAP`, `POOL_GAP` |
+
+**동작 방식 차이로 해당 케이스만 FAIL 날 수 있는 것**
+
+| 항목 | TB 가정 | 관련 케이스 |
 |---|---|---|
-| MAC 입력 방식 | 첫 입력부터 iter 개를 연속 입력, 윈도우 사이 idle `MAC_GAP` 클럭 | `MAC_GAP` 조정 |
-| pooling 윈도우 간격 | 윈도우 사이 idle `POOL_GAP` 클럭, MAC 출력 간격만큼 윈도우 내부 bubble 허용 | `POOL_GAP` 조정 |
-| MAC iter = 0 | 입력 1개를 받고 0 출력 | `[C] MAC iter=0` 케이스만 FAIL |
-| MAX + GAP 동시 enable | avg 결과 | `[C] MAX+GAP both enabled` 케이스만 FAIL |
-| GAP K | 2ⁿ (≤ 128) 만 사용 | 영향 없음 |
+| MAC 입력 방식 | 첫 입력부터 iter 개를 연속 입력 | 모든 MAC 케이스 |
+| MAC iter = 0 | 입력 1개를 받고 bias 만 출력 (bias 0 → 0) | `[C] MAC iter=0` |
 
 ### 테스트 케이스
 
-블록 0개(bypass), 1개(MAC / ReLU / RES / MAXPOOL / GAP), 2개 · 3개 조합 전부, 4개(MAC + RES + ReLU + MAX | GAP),
-코너 케이스(MAC 반올림 경계, iter = 0, iter = 16, ± 포화, full-range, all-zero, ReLU 경계값, residual ± 포화,
-MAXPOOL / GAP iter = 1, MAXPOOL 음수 / 극값, GAP 음수 floor, GAP full-scale, MAX + GAP 동시, 긴 back-to-back 스트림).
+- 블록 0개: bypass
+- 블록 1개: MAC, MAC + bias, ReLU, MAXPOOL, GAP
+- 블록 2개: MAC+RES (랜덤 / full-range skip + bias), MAC+ReLU, MAC+MAXPOOL, MAC+GAP, ReLU+MAXPOOL, ReLU+GAP
+- 블록 3개: MAC+RES+ReLU, MAC+RES+MAXPOOL, MAC+RES+GAP, MAC+ReLU+MAXPOOL, MAC+ReLU+GAP
+- 블록 4개: MAC+RES+ReLU+MAXPOOL, MAC+RES+ReLU+GAP
+- 블록 5개 (ResNet 전체): MAC+RES+ReLU+MAX→GAP (P/G = 4/4, 2/8)
+- MAX→GAP: P/G = 4/4, 2/8, 9/2, ReLU+MAX→GAP, MAC+MAX→GAP
+- 코너 케이스: MAC 반올림 경계(`FRAC_BITS` 기준), iter = 0, iter = 16, ± 포화, full-range, bias ± 포화, all-zero,
+  ReLU 경계값, MAC+RES skip ± 포화 / skip = 0 / iter = 1, MAXPOOL / GAP iter = 1, MAXPOOL 음수 / 극값,
+  GAP 음수 반올림, GAP full-scale, (GAP K = 3, 9), 긴 back-to-back 스트림
