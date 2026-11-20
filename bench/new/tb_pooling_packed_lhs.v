@@ -13,7 +13,9 @@
 //             윈도우 K 개 입력(중간 bubble 허용) -> K 번째 입력 다음 엣지에 결과
 //             윈도우 사이 idle 1클럭 이상 필요 (gap >= 1)
 //             avgpool 은 K = 2^n (<=128) 만 나눗셈 (sum >>> log2 K, floor)
-//             MAX/AVG 동시 enable 시 pooling_unit mux 는 avg 를 선택
+//             MAX/AVG 동시 enable : ResNet 순서대로 직렬 (MAXPOOL -> GAP)
+//                 max_iter(Kp) 개마다 max 1개 -> 그 max 결과 avg_iter(Kg) 개를 평균 -> 출력 1개
+//                 입력 Kp*Kg 개당 출력 1개, max 윈도우 사이 idle >= 1 클럭
 //  * 판정   : valid_out == 1 인 사이클의 data_out 을 샘플 -> 기대값(bit-exact)과 비교
 //             bypass(enable=0) 케이스 : valid_out 이 한 번도 안 떠야 하고,
 //                                      data_out 이 data_in 을 그대로 통과해야 PASS
@@ -103,7 +105,8 @@ module tb_pooling_packed;
     //--------------------------------------------------------------------------
     integer stim_x   [0:MAXS-1];
     integer win_n    [0:MAXO-1];   // 윈도우별 K
-    integer iter_static;           // idle 때 iter 포트 값
+    integer iter_static;           // idle 때 max_iter 포트 값
+    integer iter_static_a;         // idle 때 avg_iter 포트 값
     integer iter_garb;             // 1 = idle / 윈도우 중간에 iter 포트 garbage
     integer exp_int  [0:MAXO-1];
     real    exp_real [0:MAXO-1];
@@ -239,19 +242,29 @@ module tb_pooling_packed;
     endtask
 
     // en_cfg[0] = enable_max, en_cfg[1] = enable_avg
-    // 유효 입력 1개 (다음 posedge 에 캡처)
-    task drive_in;
+    // 유효 입력 1개 (다음 posedge 에 캡처) : max_iter = itm, avg_iter = ita
+    task drive_in2;
         input integer x;
-        input integer it;
+        input integer itm;
+        input integer ita;
         begin
             enable_max = en_cfg[0];
             enable_avg = en_cfg[1];
             valid_in   = 1'b1;
-            max_iter   = it;
-            avg_iter   = it;
+            max_iter   = itm;
+            avg_iter   = ita;
             data_in    = x;
             cur_cap    = cyc + 1;
             tick;
+        end
+    endtask
+
+    // 유효 입력 1개 : max_iter = avg_iter = it
+    task drive_in;
+        input integer x;
+        input integer it;
+        begin
+            drive_in2(x, it, it);
         end
     endtask
 
@@ -273,7 +286,7 @@ module tb_pooling_packed;
             else
             begin
                 max_iter = iter_static;
-                avg_iter = iter_static;
+                avg_iter = iter_static_a;
             end
             tick;
         end
@@ -286,7 +299,7 @@ module tb_pooling_packed;
             enable_max = (EN_MODE == 0) ? en_cfg[0] : 1'b0;
             enable_avg = (EN_MODE == 0) ? en_cfg[1] : 1'b0;
             max_iter   = iter_static;
-            avg_iter   = iter_static;
+            avg_iter   = iter_static_a;
             data_in    = {WORD_W{1'b0}};
             rst_n      = 1'b0;
             repeat (4) tick;
@@ -638,6 +651,8 @@ module tb_pooling_packed;
         real       rsum;
         begin
             byp = (en_max == 0) && (en_gap == 0);
+            if (en_max && en_gap)
+                $display("  [WARN] run_case : MAX+GAP together -> use run_cascade (MAX -> GAP)");
 
             //------------------------------------------------------------------
             // window sizes / stimulus
@@ -710,8 +725,9 @@ module tb_pooling_packed;
             //------------------------------------------------------------------
             // drive
             //------------------------------------------------------------------
-            en_cfg      = (en_gap ? 2 : 0) + (en_max ? 1 : 0);
-            iter_static = K;
+            en_cfg        = (en_gap ? 2 : 0) + (en_max ? 1 : 0);
+            iter_static   = K;
+            iter_static_a = K;
             iter_garb   = 0;
             reset_dut;
             iter_garb   = (!byp && kmode) ? 1 : 0;
@@ -758,6 +774,104 @@ module tb_pooling_packed;
     endtask
 
     //--------------------------------------------------------------------------
+    // run_cascade : enable_max = enable_avg = 1  (ResNet 순서 : MAXPOOL -> GAP)
+    //   Kp     : max_iter  (MAXPOOL 윈도우)
+    //   Kg     : avg_iter  (GAP 윈도우, max 결과 Kg 개 평균, 2^n)
+    //   n_out  : 출력 개수  (입력 = n_out * Kg * Kp)
+    //   gap    : max 윈도우 사이 idle 클럭 (>= 1)
+    //   bubble : 1 = max 윈도우 내부 입력 사이에 1/4 확률로 idle 1클럭
+    //   기대값 : floor( sum_{g<Kg} max_{k<Kp} x ) >>> log2(Kg)
+    //   latency : 출력 1개를 만드는 마지막 입력(마지막 max 윈도우의 마지막 입력) 기준
+    //--------------------------------------------------------------------------
+    task run_cascade;
+        input [8*64-1:0] name;
+        input integer    Kp;
+        input integer    Kg;
+        input integer    n_out;
+        input integer    dmode;
+        input integer    gap;
+        input integer    bubble;
+        integer    t, g, k, x, idx, n_in, isum, vmax;
+        reg [31:0] r;
+        real       rsum, rmax;
+        begin
+            n_in = n_out * Kg * Kp;
+            if (dmode != DM_CUSTOM)
+            begin
+                for (k = 0; k < n_in; k = k + 1)
+                begin
+                    gen_val(dmode, x);
+                    stim_x[k] = x;
+                end
+            end
+            if (((Kg & (Kg - 1)) != 0) || (Kg > 128))
+                $display("  [WARN] GAP Kg=%0d : avgpool divides only for 2^n (<=128)", Kg);
+            if (gap < 1)
+                $display("  [WARN] gap=%0d : pooling needs >= 1 idle clock between max windows", gap);
+
+            //------------------------------------------------------------------
+            // reference : MAX(Kp) -> GAP(Kg)
+            //------------------------------------------------------------------
+            idx = 0;
+            for (t = 0; t < n_out; t = t + 1)
+            begin
+                isum = 0;
+                rsum = 0.0;
+                for (g = 0; g < Kg; g = g + 1)
+                begin
+                    vmax = stim_x[idx];
+                    for (k = 1; k < Kp; k = k + 1)
+                        if (stim_x[idx + k] > vmax) vmax = stim_x[idx + k];
+                    rmax = vmax / QSCALE;
+                    isum = isum + vmax;
+                    rsum = rsum + rmax;
+                    idx  = idx + Kp;
+                end
+                exp_int[t]  = isum >>> ilog2(Kg);     // floor
+                exp_real[t] = rsum / Kg;
+            end
+
+            case_header(name);
+            $display("  config  : MAX=1 GAP=1 (MAX -> GAP)  Kp=%0d Kg=%0d  outputs=%0d  gap=%0d  bubble=%0d",
+                     Kp, Kg, n_out, gap, bubble);
+
+            //------------------------------------------------------------------
+            // drive
+            //------------------------------------------------------------------
+            en_cfg        = 3;
+            iter_static   = Kp;
+            iter_static_a = Kg;
+            iter_garb     = 0;
+            reset_dut;
+            begin_case;
+
+            idx = 0;
+            for (t = 0; t < n_out; t = t + 1)
+            begin
+                for (g = 0; g < Kg; g = g + 1)
+                begin
+                    for (k = 0; k < Kp; k = k + 1)
+                    begin
+                        if (bubble && (k > 0))
+                        begin
+                            r = $random(seed);
+                            if (r[1:0] == 2'b00) drive_idle;
+                        end
+                        drive_in2(stim_x[idx], Kp, Kg);
+                        idx = idx + 1;
+                    end
+                    for (k = 0; k < gap; k = k + 1) drive_idle;
+                end
+                last_cap[t] = cur_cap;
+            end
+            repeat (DRAIN) drive_idle;
+            mon_en = 1'b0;
+
+            finish_case(name, n_out, 0);
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
     // watchdog
     //--------------------------------------------------------------------------
     initial
@@ -787,6 +901,7 @@ module tb_pooling_packed;
         en_cfg      = 0;
         cur_cap     = 0;
         iter_static = 1;
+        iter_static_a = 1;
         iter_garb   = 0;
         rst_n       = 1'b0;
         enable_avg  = 1'b0;
@@ -851,7 +966,28 @@ module tb_pooling_packed;
         for (ii = 32; ii < 48; ii = ii + 1) set_x(ii, (ii % 2) ? -32768 : 32767);
         run_case("[GAP] full-scale (K=16)",                      0,  1,   16,   3, DM_CUSTOM,   2, 0, 0);
 
-        run_case("[MAX+GAP] both enabled (avg wins)",            1,  1,    4,  32, DM_FULL,     2, 0, 0);
+        // MAX + GAP 동시 enable : ResNet 순서 (MAXPOOL -> GAP)
+        //           name                                           Kp  Kg  out  dmode      gap bub
+        run_cascade("[MAX->GAP] Kp=4 Kg=4",                          4,  4,  16, DM_FULL,     2, 0);
+        run_cascade("[MAX->GAP] Kp=2 Kg=8",                          2,  8,   8, DM_FULL,     2, 0);
+        run_cascade("[MAX->GAP] Kp=9 Kg=2 (3x3 max)",                9,  2,  16, DM_FULL,     2, 0);
+        run_cascade("[MAX->GAP] Kp=4 Kg=16",                         4, 16,   4, DM_FULL,     2, 0);
+        run_cascade("[MAX->GAP] Kp=1 Kg=4 (= GAP)",                  1,  4,  16, DM_FULL,     2, 0);
+        run_cascade("[MAX->GAP] Kp=4 Kg=1 (= MAX)",                  4,  1,  32, DM_FULL,     2, 0);
+        run_cascade("[MAX->GAP] Kp=4 Kg=4, min gap (1 idle clk)",    4,  4,  16, DM_FULL,     1, 0);
+        run_cascade("[MAX->GAP] Kp=4 Kg=4, bubble inside window",    4,  4,  16, DM_FULL,     2, 1);
+        run_cascade("[MAX->GAP] Kp=4 Kg=4, small range (+-2.0)",     4,  4,  16, DM_SMALL,    2, 0);
+
+        // 음수 max -> GAP floor (Kp=2, Kg=2) : max 결과와 floor 확인
+        set_x( 0,     -4); set_x( 1,     -1);   // max -1
+        set_x( 2,     -8); set_x( 3,     -2);   // max -2   -> (-1 + -2) >>> 1 = -2
+        set_x( 4, -32768); set_x( 5, -32768);   // max -32768
+        set_x( 6, -32768); set_x( 7, -32768);   // max -32768 -> -32768
+        set_x( 8,  32767); set_x( 9, -32768);   // max 32767
+        set_x(10,      0); set_x(11,  32766);   // max 32766 -> 32766
+        set_x(12,      1); set_x(13,      0);   // max 1
+        set_x(14,     -1); set_x(15,     -5);   // max -1   -> 0 >>> 1 = 0
+        run_cascade("[MAX->GAP] negative / floor / extreme",         2,  2,   4, DM_CUSTOM,   2, 0);
         run_case("[POOL] bypass (enable_max=enable_avg=0)",      0,  0,    1,  64, DM_FULL,     0, 1, 0);
 
         print_summary("pooling_packed");

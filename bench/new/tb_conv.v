@@ -1,20 +1,29 @@
 `timescale 1ns / 1ps
 //==============================================================================
-// tb_conv_top.v  -  conv_top self-checking testbench
+// tb_conv_top.v  -  conv_top / core self-checking testbench
 //------------------------------------------------------------------------------
 //  * behavioral sim / post-implementation timing sim 둘 다 같은 파일로 동작
 //  * 다른 RTL 교체
 //      - DUT 는 parameter override 없이 인스턴스 (post-impl netlist / 다른 RTL 그대로 연결)
 //      - 포트만 사용, 내부 신호 참조 없음, latency 는 고정값이 아니라 측정
 //      - 기본 DUT  : conv_top_wrapper (안의 core = `CORE_MODULE, 기본 conv_top)
-//      - NO_WRAPPER 매크로 : wrapper 없이 `CORE_MODULE 을 직접 DUT 로 사용
-//            xvlog -d NO_WRAPPER  /  xvlog -d CORE_MODULE=conv_top_v2
+//      - NO_WRAPPER       : wrapper 없이 `CORE_MODULE 을 직접 DUT 로 사용
+//      - NO_RESIDUAL_PORT : DUT 에 residual_data 포트가 없을 때 (RES_SRC = 1 로 사용)
+//            예) xvlog -d CORE_MODULE=core   /   xvlog -d NO_RESIDUAL_PORT
+//  * 처리 순서 : MAC(+bias) -> RES -> ReLU -> MAXPOOL -> GAP  (ResNet : conv -> add -> ReLU)
+//      - MAXPOOL + GAP 동시 enable : 직렬 (MAX 결과 Kg 개를 GAP 으로 평균), 입력 토큰 Kp*Kg 개당 출력 1개
+//                                    (POOL_CASCADE = 0 이면 이전 conv_top 방식 : avg 결과만 출력)
+//      - bias_data     : MAC 결과에 더하는 bias (케이스마다 상수)
+//      - residual_data : shortcut 값. 출력 1개를 만드는 MAC 윈도우의 "마지막 입력" 과 같은 클럭에 인가
+//                        (RES_SRC = 1 이면 포트 대신 MAC 윈도우 중앙 입력 in_data 를 residual 로 기대)
+//      - residual 은 MAC 이 켜져 있을 때만 동작 (mac_enable && residual_enable)
 //  * 입력 : posedge 후 IN_DLY (= IN_DLY_RATIO x 주기) 에 인가
 //  * 출력 : wrapper 의 reset loopback (in_data -> out_data, 2클럭) 으로 clk->out 을 자동 측정해서
 //           "launch edge + (tco_min + tco_max + T)/2" 시점에 샘플
 //           (behavioral 은 tco = 0 -> launch edge + T/2,  NO_WRAPPER 는 측정 없이 tco = 0 가정)
-//  * 데이터 : 16b signed Q7.8 (value = int / 256)
-//      - MAC : Q7.8 x Q7.8 = Q15.16 누적 -> 반올림(+127/+128, >>>8) + 포화 -> Q7.8
+//  * 데이터 : 16b signed Q7.8 (FRAC_BITS = 8) : fmap / weight / bias_data / residual_data / out_data
+//             누산기 Q15.16, bias 는 << 8 해서 양자화 전에 더함
+//      - MAC : sum(x*w) + (bias << FRAC_BITS) -> 반올림(+-0.5 LSB, 0 에서 먼 쪽) + 포화
 //  * 기준 모델 (RTL 구조와 무관한 기능 모델)
 //      - exp_int  : bit-exact 고정소수점 모델 -> PASS/FAIL
 //      - exp_real : 반올림/절삭 없는 실수 모델  -> SNR
@@ -23,8 +32,6 @@
 //  * latency: in_enable 이 내려간 뒤 out_enable 이 1 이 될 때까지 지난 posedge 수
 //             (= 출력 1개를 만드는 마지막 입력을 캡처한 posedge 부터 결과를 낸 posedge 까지)
 //             wrapper 의 입출력 레지스터 +2 클럭은 빼고 core 기준으로 표시
-//  * 처리 순서 : MAC -> RES -> ReLU -> POOL (ResNet : conv -> add -> ReLU)
-//  * 케이스 : A. bypass  B. 블록 1개  C. 2개  D. 3개  E. 4개  F. 코너 케이스
 //
 //  주파수 변경 : CLK_FREQ_MHZ  (예: xelab ... -generic_top "CLK_FREQ_MHZ=50.0")
 //  Vivado xsim : 기본 run time(1000ns)으로는 안 끝납니다 -> Tcl 콘솔에서  run all
@@ -46,10 +53,15 @@ module tb_conv_top;
     //--------------------------------------------------------------------------
     parameter real    CLK_FREQ_MHZ = 100.0;  // 클럭 주파수 [MHz]
     parameter real    IN_DLY_RATIO = 0.75;   // 입력 인가 시점 = posedge 후 (IN_DLY_RATIO x 주기)
-    parameter integer MAC_GAP      = 4;      // MAC 윈도우 사이 idle 클럭 (현재 RTL 최소 3)
-    parameter integer POOL_GAP     = 2;      // pooling 윈도우 사이 idle 클럭 (현재 RTL 최소 1)
+    parameter integer FRAC_BITS    = 8;      // 소수부 비트 : Q7.8 -> 8
+    parameter integer RES_SRC      = 0;      // residual 값  0: residual_data 포트 / 1: MAC 윈도우 중앙 입력 (내부 캡처)
+    parameter integer POOL_CASCADE = 1;      // MAX+GAP 동시 enable  1: MAX -> GAP 직렬 (ResNet 순서) / 0: avg 결과만 (이전 conv_top)
+    parameter integer GAP_ROUND    = 0;      // GAP 나눗셈  0: floor (>>>) / 1: 0 방향 절삭
+    parameter integer GAP_NPOW2    = 0;      // 1: GAP K 가 2^n 이 아닌 케이스 포함
+    parameter integer MAC_GAP      = 4;      // MAC 윈도우 사이 idle 클럭 (현재 conv_top 최소 3)
+    parameter integer POOL_GAP     = 2;      // pooling 윈도우 사이 idle 클럭 (현재 conv_top 최소 1)
     parameter integer RST_WAIT     = 8;      // nrst 해제 후 첫 입력까지 대기 클럭
-    parameter integer REF_CLIP     = 1;      // SNR ideal 모델  1: Q7.8 범위 clip / 0: clip 없음
+    parameter integer REF_CLIP     = 1;      // SNR ideal 모델  1: 표현 범위 clip / 0: clip 없음
     parameter integer SEED         = 1;      // 랜덤 시드
 
     //--------------------------------------------------------------------------
@@ -63,9 +75,9 @@ module tb_conv_top;
     localparam real    CLK_PERIOD = 1000.0 / CLK_FREQ_MHZ;      // [ns]
     localparam real    IN_DLY     = CLK_PERIOD * IN_DLY_RATIO;  // [ns]
     localparam real    START_DLY  = 200.0;                      // GSR(100ns) 이후 시작 [ns]
-    localparam real    QSCALE     = 256.0;
-    localparam real    QMAX_R     = 32767.0 / 256.0;
-    localparam real    QMIN_R     = -32768.0 / 256.0;
+    localparam real    QSCALE     = 1.0 * (1 << FRAC_BITS);     // 1.0 에 해당하는 정수
+    localparam real    QMAX_R     = 32767.0 / QSCALE;
+    localparam real    QMIN_R     = -32768.0 / QSCALE;
 
 `ifdef NO_WRAPPER
     localparam integer WRAP_LAT   = 0;       // wrapper 입출력 레지스터 지연
@@ -73,6 +85,11 @@ module tb_conv_top;
 `else
     localparam integer WRAP_LAT   = 2;
     localparam integer CAL_EN     = 1;
+`endif
+`ifdef NO_RESIDUAL_PORT
+    localparam integer HAS_RES_PORT = 0;
+`else
+    localparam integer HAS_RES_PORT = 1;
 `endif
 
     localparam integer MAXS          = 8192;  // 입력 샘플
@@ -83,9 +100,13 @@ module tb_conv_top;
     localparam integer CAL_N         = 8;     // calibration 패턴 수
     localparam integer MAX_ERR_PRINT = 5;
 
-    localparam integer DM_SMALL  = 0;   // x,w 랜덤 [-512, 511]  (+-2.0)
+    localparam integer DM_SMALL  = 0;   // x,w 랜덤 [-512, 511]
     localparam integer DM_FULL   = 1;   // x,w 랜덤 int16 전 범위
     localparam integer DM_CUSTOM = 2;   // 호출 전에 stim_x / stim_w 를 직접 채움
+
+    localparam integer RM_SMALL  = 0;   // residual 랜덤 [-512, 511]
+    localparam integer RM_FULL   = 1;   // residual 랜덤 int16 전 범위
+    localparam integer RM_CONST  = 2;   // residual = rconst 고정
 
     //--------------------------------------------------------------------------
     // DUT  (parameter override 없음)
@@ -104,6 +125,7 @@ module tb_conv_top;
     reg  [PC*WORD_W-1:0]        in_data;
     reg  [PC*WORD_W-1:0]        kernel_data;
     reg  [PC*WORD_W-1:0]        bias_data;
+    reg  [PC*WORD_W-1:0]        residual_data;
     wire                        out_enable;
     wire [WORD_W-1:0]           out_data;
 
@@ -123,6 +145,9 @@ module tb_conv_top;
         .in_data           (in_data),
         .kernel_data       (kernel_data),
         .bias_data         (bias_data),
+`ifndef NO_RESIDUAL_PORT
+        .residual_data     (residual_data),
+`endif
         .out_enable        (out_enable),
         .out_data          (out_data)
     );
@@ -141,6 +166,7 @@ module tb_conv_top;
     integer t_int    [0:MAXT-1];
     real    t_real   [0:MAXT-1];
     integer tok_cap  [0:MAXT-1];   // 1단 토큰별 마지막 입력을 캡처한 posedge 번호
+    integer res_v    [0:MAXT-1];   // 토큰별 residual 값
     integer exp_int  [0:MAXO-1];
     real    exp_real [0:MAXO-1];
     integer last_cap [0:MAXO-1];   // 최종 출력별 마지막 입력을 캡처한 posedge 번호
@@ -240,6 +266,7 @@ module tb_conv_top;
         end
     end
 
+
     //--------------------------------------------------------------------------
     // reference model helpers
     //--------------------------------------------------------------------------
@@ -252,16 +279,31 @@ module tb_conv_top;
         end
     endfunction
 
-    // (acc + (acc<0 ? 127 : 128)) >>> 8  -> int16 saturate
+    // (acc + (acc<0 ? h-1 : h)) >>> FRAC_BITS  -> int16 saturate   (h = 0.5 LSB)
     function integer mac_round_sat;
         input signed [63:0] a;
+        reg   signed [63:0] h;
         reg   signed [63:0] t;
         begin
-            if (a < 0) t = (a + 64'sd127) >>> 8;
-            else       t = (a + 64'sd128) >>> 8;
+            h = 64'sd1 <<< (FRAC_BITS - 1);
+            if (a < 0) t = (a + h - 64'sd1) >>> FRAC_BITS;
+            else       t = (a + h) >>> FRAC_BITS;
             if (t > 64'sd32767)       mac_round_sat = 32767;
             else if (t < -64'sd32768) mac_round_sat = -32768;
             else                      mac_round_sat = t[31:0];
+        end
+    endfunction
+
+    // GAP 정수 나눗셈 : GAP_ROUND 0 = floor, 1 = 0 방향 절삭
+    function integer gap_div;
+        input integer s;
+        input integer k;
+        integer q;
+        begin
+            q = s / k;
+            if ((GAP_ROUND == 0) && (s < 0) && (q * k != s))
+                q = q - 1;
+            gap_div = q;
         end
     endfunction
 
@@ -272,20 +314,6 @@ module tb_conv_top;
             else if (v > QMAX_R) clipr = QMAX_R;
             else if (v < QMIN_R) clipr = QMIN_R;
             else                 clipr = v;
-        end
-    endfunction
-
-    function integer ilog2;
-        input integer v;
-        integer t;
-        begin
-            ilog2 = 0;
-            t     = v;
-            while (t > 1)
-            begin
-                t     = t >> 1;
-                ilog2 = ilog2 + 1;
-            end
         end
     endfunction
 
@@ -303,11 +331,13 @@ module tb_conv_top;
     task drive_in;
         input integer x;
         input integer w;
+        input integer r;
         begin
-            in_enable   = 1'b1;
-            in_data     = {PC{x[WORD_W-1:0]}};
-            kernel_data = {PC{w[WORD_W-1:0]}};
-            cur_cap     = cyc + 1;
+            in_enable     = 1'b1;
+            in_data       = {PC{x[WORD_W-1:0]}};
+            kernel_data   = {PC{w[WORD_W-1:0]}};
+            residual_data = {PC{r[WORD_W-1:0]}};
+            cur_cap       = cyc + 1;
             tick;
         end
     endtask
@@ -316,10 +346,12 @@ module tb_conv_top;
     task drive_idle;
         reg [31:0] r;
         begin
-            r           = $random(seed);
-            in_enable   = 1'b0;
-            in_data     = {PC{r[15:0]}};
-            kernel_data = {PC{r[31:16]}};
+            r             = $random(seed);
+            in_enable     = 1'b0;
+            in_data       = {PC{r[15:0]}};
+            kernel_data   = {PC{r[31:16]}};
+            r             = $random(seed);
+            residual_data = {PC{r[15:0]}};
             tick;
         end
     endtask
@@ -396,11 +428,15 @@ module tb_conv_top;
         end
     endtask
 
+
     //--------------------------------------------------------------------------
     // run_case
+    //   enable 플래그 : MAC ReLU RES MAX GAP  (처리 순서는 MAC -> RES -> ReLU -> MAX -> GAP)
+    //   n_iter / p_iter / g_iter : MAC / MAXPOOL / GAP iteration
+    //   bias   : MAC bias (bias_data, 케이스 동안 상수)
+    //   rmode, rconst : residual 값 (RM_SMALL / RM_FULL / RM_CONST)  - RES_SRC = 0 일 때
     //   n_out  : 기대 최종 출력 개수
-    //   K      : pooling window (pool 미사용 시 1)
-    //   1단 토큰 수 S = n_out*K, MAC 사용 시 토큰 1개당 iter 개의 (x,w) 입력
+    //   토큰(1단 출력) 수 S = n_out * Kp * Kg, MAC 사용 시 토큰 1개당 iter 개의 (x,w) 입력
     //--------------------------------------------------------------------------
     task run_case;
         input [8*64-1:0] name;
@@ -413,37 +449,50 @@ module tb_conv_top;
         input integer    p_iter;
         input integer    g_iter;
         input integer    bias;
+        input integer    rmode;
+        input integer    rconst;
         input integer    n_out;
         input integer    dmode;
         input integer    bubble;
 
-        integer K, Neff, S, n_in, n_exp;
-        integer i, j, k, idx, vmax, isum, sh;
+        integer Kp, Kg, K, Kw, Neff, S, n_in, n_exp, use_res, cidx;
+        integer i, j, k, g, idx, base, vmax, isum, rv;
         reg     [31:0]     rnd;
         reg signed [63:0]  acc;
         reg signed [63:0]  prod;
+        reg signed [63:0]  bb;
         real    racc, rmax, rsum;
         begin
             //------------------------------------------------------------------
             // sizes
+            //   Kp : MAXPOOL window, Kg : GAP window, K = 출력 1개당 토큰 수
             //------------------------------------------------------------------
-            if (en_max || en_gap) K = en_gap ? g_iter : p_iter;
-            else                  K = 1;
-            if (K < 1) K = 1;
+            use_res = (en_mac && en_res) ? 1 : 0;
+            if (en_max && en_gap && (POOL_CASCADE != 0)) begin Kp = p_iter; Kg = g_iter; end
+            else if (en_gap)                             begin Kp = 1;      Kg = g_iter; end
+            else if (en_max)                             begin Kp = p_iter; Kg = 1;      end
+            else                                         begin Kp = 1;      Kg = 1;      end
+            if (Kp < 1) Kp = 1;
+            if (Kg < 1) Kg = 1;
+            K     = Kp * Kg;
+            Kw    = (en_max && en_gap && (POOL_CASCADE != 0)) ? Kp : K;   // pooling 윈도우 단위 (idle 삽입)
             if (en_mac) Neff = (n_iter < 1) ? 1 : n_iter;
             else        Neff = 1;
+            cidx  = (n_iter >= 1) ? (n_iter >> 1) : 0;                     // MAC 윈도우 중앙 입력 번호
             S     = n_out * K;
             n_in  = S * Neff;
             n_exp = n_out;
 
             $display("------------------------------------------------------------------------");
             $display("[CASE %2d] %0s", n_case + 1, name);
-            $display("  config  : MAC=%0d(iter=%0d) RES=%0d(bias=%0d) ReLU=%0d MAX=%0d(iter=%0d) GAP=%0d(iter=%0d)",
-                     en_mac, n_iter, en_res, bias, en_relu, en_max, p_iter, en_gap, g_iter);
-            if (en_gap && (((K & (K-1)) != 0) || (K > 128)))
-                $display("  [WARN] GAP iter=%0d : reference uses floor(sum / 2^n), 2^n (<=128) only", K);
-            if (en_max && en_gap && (p_iter != g_iter))
-                $display("  [WARN] MAX+GAP both enabled : pooling_iteration must equal gap_iteration");
+            $display("  config  : MAC=%0d(iter=%0d,bias=%0d) RES=%0d ReLU=%0d MAX=%0d(iter=%0d) GAP=%0d(iter=%0d)",
+                     en_mac, n_iter, bias, en_res, en_relu, en_max, p_iter, en_gap, g_iter);
+            if (en_res && !en_mac)
+                $display("  [NOTE] RES without MAC : residual is not applied (mac_enable && residual_enable)");
+            if (use_res && (RES_SRC == 0) && (HAS_RES_PORT == 0))
+                $display("  [WARN] RES_SRC=0 but NO_RESIDUAL_PORT : set RES_SRC=1 for internal capture");
+            if (en_max && en_gap && (POOL_CASCADE == 0) && (p_iter != g_iter))
+                $display("  [WARN] MAX+GAP parallel : pooling_iteration must equal gap_iteration");
 
             //------------------------------------------------------------------
             // stimulus
@@ -465,8 +514,25 @@ module tb_conv_top;
                 end
             end
 
+            // residual 값 (토큰마다 1개)
+            for (j = 0; j < S; j = j + 1)
+            begin
+                if (RES_SRC == 1)
+                    res_v[j] = stim_x[j*Neff + cidx];
+                else if (rmode == RM_SMALL)
+                begin
+                    rnd = $random(seed); res_v[j] = (rnd % 1024) - 512;
+                end
+                else if (rmode == RM_FULL)
+                begin
+                    rnd = $random(seed); res_v[j] = $signed(rnd[15:0]);
+                end
+                else
+                    res_v[j] = rconst;
+            end
+
             //------------------------------------------------------------------
-            // reference : MAC -> RES -> ReLU   (ResNet : conv -> (BN) -> add -> ReLU)
+            // reference : MAC(+bias) -> RES -> ReLU
             //------------------------------------------------------------------
             for (j = 0; j < S; j = j + 1)
             begin
@@ -479,9 +545,12 @@ module tb_conv_top;
                         prod = prod * stim_w[j*Neff + k];
                         acc  = acc + prod;
                     end
+                    bb        = bias;
+                    bb        = bb <<< FRAC_BITS;
+                    acc       = acc + bb;
                     t_int[j]  = mac_round_sat(acc);
                     racc      = acc;
-                    t_real[j] = clipr(racc / 65536.0);
+                    t_real[j] = clipr(racc / (QSCALE * QSCALE));
                 end
                 else
                 begin
@@ -489,10 +558,10 @@ module tb_conv_top;
                     t_real[j] = stim_x[j] / QSCALE;
                 end
 
-                if (en_res)
+                if (use_res)
                 begin
-                    t_int[j]  = sat16(t_int[j] + bias);
-                    t_real[j] = clipr(t_real[j] + bias / QSCALE);
+                    t_int[j]  = sat16(t_int[j] + res_v[j]);
+                    t_real[j] = clipr(t_real[j] + res_v[j] / QSCALE);
                 end
 
                 if (en_relu)
@@ -503,40 +572,34 @@ module tb_conv_top;
             end
 
             //------------------------------------------------------------------
-            // reference : POOL (K 개 연속 유효 출력 단위)
-            //   MAX/GAP 동시 enable 시 avg 결과
+            // reference : MAXPOOL (Kp) -> GAP (Kg)
             //------------------------------------------------------------------
             for (j = 0; j < n_exp; j = j + 1)
             begin
-                if (en_max || en_gap)
+                isum = 0;
+                rsum = 0.0;
+                for (g = 0; g < Kg; g = g + 1)
                 begin
-                    vmax = t_int[j*K];
-                    rmax = t_real[j*K];
-                    isum = 0;
-                    rsum = 0.0;
-                    for (k = 0; k < K; k = k + 1)
+                    base = j*K + g*Kp;
+                    vmax = t_int[base];
+                    rmax = t_real[base];
+                    for (k = 1; k < Kp; k = k + 1)
                     begin
-                        if (t_int[j*K+k]  > vmax) vmax = t_int[j*K+k];
-                        if (t_real[j*K+k] > rmax) rmax = t_real[j*K+k];
-                        isum = isum + t_int[j*K+k];
-                        rsum = rsum + t_real[j*K+k];
+                        if (t_int[base+k]  > vmax) vmax = t_int[base+k];
+                        if (t_real[base+k] > rmax) rmax = t_real[base+k];
                     end
-                    if (en_gap)
-                    begin
-                        sh          = ilog2(K);
-                        exp_int[j]  = isum >>> sh;     // floor (arith shift)
-                        exp_real[j] = rsum / K;
-                    end
-                    else
-                    begin
-                        exp_int[j]  = vmax;
-                        exp_real[j] = rmax;
-                    end
+                    isum = isum + vmax;
+                    rsum = rsum + rmax;
+                end
+                if (en_gap)
+                begin
+                    exp_int[j]  = gap_div(isum, Kg);
+                    exp_real[j] = rsum / Kg;
                 end
                 else
                 begin
-                    exp_int[j]  = t_int[j];
-                    exp_real[j] = t_real[j];
+                    exp_int[j]  = isum;
+                    exp_real[j] = rsum;
                 end
             end
 
@@ -549,6 +612,7 @@ module tb_conv_top;
             in_enable         = 1'b0;
             in_data           = {(PC*WORD_W){1'b0}};
             kernel_data       = {(PC*WORD_W){1'b0}};
+            residual_data     = {(PC*WORD_W){1'b0}};
             bias_data         = {PC{idx[WORD_W-1:0]}};
             mac_enable        = en_mac;
             relu_enable       = en_relu;
@@ -572,12 +636,19 @@ module tb_conv_top;
             idx = 0;
             if (en_mac)
             begin
-                // MAC : iter 개 연속 입력 -> idle MAC_GAP 클럭
+                // MAC : iter 개 연속 입력 (마지막 입력과 같은 클럭에 residual_data) -> idle MAC_GAP 클럭
                 for (j = 0; j < S; j = j + 1)
                 begin
                     for (k = 0; k < Neff; k = k + 1)
                     begin
-                        drive_in(stim_x[idx], stim_w[idx]);
+                        if (k == Neff - 1)
+                            rv = res_v[j];
+                        else
+                        begin
+                            rnd = $random(seed);
+                            rv  = $signed(rnd[15:0]);
+                        end
+                        drive_in(stim_x[idx], stim_w[idx], rv);
                         idx = idx + 1;
                     end
                     tok_cap[j] = cur_cap;
@@ -595,9 +666,10 @@ module tb_conv_top;
                         rnd = $random(seed);
                         if (rnd[1:0] == 2'b00) drive_idle;
                     end
-                    drive_in(stim_x[j], stim_w[j]);
+                    rnd = $random(seed);
+                    drive_in(stim_x[j], stim_w[j], $signed(rnd[15:0]));
                     tok_cap[j] = cur_cap;
-                    if ((en_max || en_gap) && ((j % K) == (K-1)))
+                    if ((en_max || en_gap) && ((j % Kw) == (Kw-1)))
                         repeat (POOL_GAP) drive_idle;
                 end
             end
@@ -724,6 +796,7 @@ module tb_conv_top;
             $display("====================================================================================================");
             $display("  conv_top TEST SUMMARY   (CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, wrapper latency %0d excluded)",
                      CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, WRAP_LAT);
+            $display("  FRAC_BITS %0d, RES_SRC %0d, POOL_CASCADE %0d, GAP_ROUND %0d", FRAC_BITS, RES_SRC, POOL_CASCADE, GAP_ROUND);
             $display("====================================================================================================");
             $display("  No | Result |  Exp |  Got |  Err |  Lat(clk) |  SNR(dB)  | Case");
             $display(" ----+--------+------+------+------+-----------+-----------+------------------------------------------");
@@ -778,7 +851,7 @@ module tb_conv_top;
                 $display("  AVERAGE LATENCY : %8.2f clk  (min %0d / max %0d, cases = %0d)", lsum_all / nlat, lmin_all, lmax_all, nlat);
             else
                 $display("  AVERAGE LATENCY :      N/A");
-            $display("  * SNR reference : ideal real-valued model (%0s)", REF_CLIP ? "Q7.8 range clip" : "no clip");
+            $display("  * SNR reference : ideal real-valued model (%0s)", REF_CLIP ? "range clip" : "no clip");
             $display("  * LATENCY       : posedges after in_enable falls until out_enable=1 (core, wrapper +%0d excluded)", WRAP_LAT);
             $display("====================================================================================================");
         end
@@ -795,6 +868,7 @@ module tb_conv_top;
         print_summary;
         $finish;
     end
+
 
     //--------------------------------------------------------------------------
     // test sequence
@@ -824,113 +898,128 @@ module tb_conv_top;
         in_data           = {(PC*WORD_W){1'b0}};
         kernel_data       = {(PC*WORD_W){1'b0}};
         bias_data         = {(PC*WORD_W){1'b0}};
+        residual_data     = {(PC*WORD_W){1'b0}};
 
         #(START_DLY);
         tick;
 
         $display("========================================================================");
-        $display(" tb_conv_top  (Q7.8, CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, wrapper latency %0d, REF_CLIP %0d)",
-                 CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, WRAP_LAT, REF_CLIP);
-        $display(" MAC_GAP %0d, POOL_GAP %0d, RST_WAIT %0d", MAC_GAP, POOL_GAP, RST_WAIT);
+        $display(" tb_conv_top  (CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, wrapper latency %0d)",
+                 CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, WRAP_LAT);
+        $display(" FRAC_BITS %0d, RES_SRC %0d (%0s), residual_data port %0d, POOL_CASCADE %0d, GAP_ROUND %0d (%0s)",
+                 FRAC_BITS, RES_SRC, RES_SRC ? "MAC center tap" : "residual_data port", HAS_RES_PORT,
+                 POOL_CASCADE, GAP_ROUND, GAP_ROUND ? "trunc to 0" : "floor");
+        $display(" MAC_GAP %0d, POOL_GAP %0d, RST_WAIT %0d, REF_CLIP %0d", MAC_GAP, POOL_GAP, RST_WAIT, REF_CLIP);
         $display("========================================================================");
+        if ((RES_SRC == 0) && (HAS_RES_PORT == 0))
+            $display("[WARN] RES_SRC=0 needs residual_data port. Use RES_SRC=1 with NO_RESIDUAL_PORT.");
 
         calibrate;
 
-        //  처리 순서 : MAC -> RES -> ReLU -> POOL  (아래 플래그 열 순서는 run_case 인자 순서일 뿐)
-        //        name                                     MAC ReLU RES MAX GAP   N  P  G  bias  n_out dmode     bubble
+        //  처리 순서 : MAC(+bias) -> RES -> ReLU -> MAX -> GAP  (residual 은 MAC 이 켜져 있을 때만)
+        //        name                                   MAC ReLU RES MAX GAP   N  P  G   bias  rmode     rconst n_out dmode     bubble
         //======================================================================
         // A. 0 block
         //======================================================================
-        run_case("[0] BYPASS (all disabled)",            0,0,0,0,0,  1, 1, 1,    0,  64, DM_FULL,  1);
+        run_case("[0] BYPASS (all disabled)",            0,0,0,0,0,  1, 1, 1,     0, RM_SMALL,     0,  64, DM_FULL,  1);
 
         //======================================================================
         // B. 1 block
         //======================================================================
-        run_case("[1] MAC",                              1,0,0,0,0,  9, 1, 1,    0,  32, DM_SMALL, 0);
-        run_case("[1] ReLU",                             0,1,0,0,0,  1, 1, 1,    0,  64, DM_FULL,  1);
-        run_case("[1] RES",                              0,0,1,0,0,  1, 1, 1,  300,  64, DM_FULL,  1);
-        run_case("[1] MAXPOOL",                          0,0,0,1,0,  1, 4, 1,    0,  16, DM_FULL,  0);
-        run_case("[1] GAP",                              0,0,0,0,1,  1, 1, 8,    0,  16, DM_FULL,  0);
+        run_case("[1] MAC",                              1,0,0,0,0,  9, 1, 1,     0, RM_SMALL,     0,  32, DM_SMALL, 0);
+        run_case("[1] MAC + bias",                       1,0,0,0,0,  9, 1, 1,   300, RM_SMALL,     0,  32, DM_SMALL, 0);
+        run_case("[1] ReLU",                             0,1,0,0,0,  1, 1, 1,     0, RM_SMALL,     0,  64, DM_FULL,  1);
+        run_case("[1] MAXPOOL",                          0,0,0,1,0,  1, 4, 1,     0, RM_SMALL,     0,  16, DM_FULL,  0);
+        run_case("[1] GAP",                              0,0,0,0,1,  1, 1, 8,     0, RM_SMALL,     0,  16, DM_FULL,  0);
 
         //======================================================================
         // C. 2 blocks
         //======================================================================
-        run_case("[2] MAC+ReLU",                         1,1,0,0,0,  9, 1, 1,    0,  32, DM_SMALL, 0);
-        run_case("[2] MAC+RES",                          1,0,1,0,0,  4, 1, 1, -150,  32, DM_SMALL, 0);
-        run_case("[2] MAC+MAXPOOL",                      1,0,0,1,0,  9, 4, 1,    0,   8, DM_SMALL, 0);
-        run_case("[2] MAC+GAP",                          1,0,0,0,1,  9, 1, 4,    0,   8, DM_SMALL, 0);
-        run_case("[2] RES+ReLU",                         0,1,1,0,0,  1, 1, 1, -500,  64, DM_FULL,  1);
-        run_case("[2] ReLU+MAXPOOL",                     0,1,0,1,0,  1, 4, 1,    0,  16, DM_FULL,  0);
-        run_case("[2] ReLU+GAP",                         0,1,0,0,1,  1, 1, 4,    0,  16, DM_FULL,  0);
-        run_case("[2] RES+MAXPOOL",                      0,0,1,1,0,  1, 2, 1,  200,  16, DM_FULL,  0);
-        run_case("[2] RES+GAP",                          0,0,1,0,1,  1, 1,16, -100,  16, DM_FULL,  0);
+        run_case("[2] MAC+RES",                          1,0,1,0,0,  9, 1, 1,     0, RM_SMALL,     0,  32, DM_SMALL, 0);
+        run_case("[2] MAC+RES (bias, full-range skip)",  1,0,1,0,0,  4, 1, 1,  -150, RM_FULL,      0,  32, DM_SMALL, 0);
+        run_case("[2] MAC+ReLU",                         1,1,0,0,0,  9, 1, 1,     0, RM_SMALL,     0,  32, DM_SMALL, 0);
+        run_case("[2] MAC+MAXPOOL",                      1,0,0,1,0,  9, 4, 1,     0, RM_SMALL,     0,   8, DM_SMALL, 0);
+        run_case("[2] MAC+GAP",                          1,0,0,0,1,  9, 1, 4,     0, RM_SMALL,     0,   8, DM_SMALL, 0);
+        run_case("[2] ReLU+MAXPOOL",                     0,1,0,1,0,  1, 4, 1,     0, RM_SMALL,     0,  16, DM_FULL,  0);
+        run_case("[2] ReLU+GAP",                         0,1,0,0,1,  1, 1, 4,     0, RM_SMALL,     0,  16, DM_FULL,  0);
 
         //======================================================================
         // D. 3 blocks
         //======================================================================
-        run_case("[3] MAC+RES+ReLU",                     1,1,1,0,0,  9, 1, 1,  128,  32, DM_SMALL, 0);
-        run_case("[3] MAC+ReLU+MAXPOOL",                 1,1,0,1,0,  9, 4, 1,    0,   8, DM_SMALL, 0);
-        run_case("[3] MAC+ReLU+GAP",                     1,1,0,0,1,  9, 1, 4,    0,   8, DM_SMALL, 0);
-        run_case("[3] MAC+RES+MAXPOOL",                  1,0,1,1,0,  9, 4, 1,  -64,   8, DM_SMALL, 0);
-        run_case("[3] MAC+RES+GAP",                      1,0,1,0,1,  9, 1, 4,   64,   8, DM_SMALL, 0);
-        run_case("[3] RES+ReLU+MAXPOOL",                 0,1,1,1,0,  1, 4, 1, -300,  16, DM_FULL,  0);
-        run_case("[3] RES+ReLU+GAP",                     0,1,1,0,1,  1, 1, 8,  256,  16, DM_FULL,  0);
+        run_case("[3] MAC+RES+ReLU",                     1,1,1,0,0,  9, 1, 1,   128, RM_SMALL,     0,  32, DM_SMALL, 0);
+        run_case("[3] MAC+RES+MAXPOOL",                  1,0,1,1,0,  9, 4, 1,   -64, RM_SMALL,     0,   8, DM_SMALL, 0);
+        run_case("[3] MAC+RES+GAP",                      1,0,1,0,1,  9, 1, 4,    64, RM_SMALL,     0,   8, DM_SMALL, 0);
+        run_case("[3] MAC+ReLU+MAXPOOL",                 1,1,0,1,0,  9, 4, 1,     0, RM_SMALL,     0,   8, DM_SMALL, 0);
+        run_case("[3] MAC+ReLU+GAP",                     1,1,0,0,1,  9, 1, 4,     0, RM_SMALL,     0,   8, DM_SMALL, 0);
 
         //======================================================================
         // E. 4 blocks
         //======================================================================
-        run_case("[4] MAC+RES+ReLU+MAXPOOL",             1,1,1,1,0,  9, 4, 1,  100,   8, DM_SMALL, 0);
-        run_case("[4] MAC+RES+ReLU+GAP",                 1,1,1,0,1,  9, 1, 4, -100,   8, DM_SMALL, 0);
+        run_case("[4] MAC+RES+ReLU+MAXPOOL",             1,1,1,1,0,  9, 4, 1,   100, RM_SMALL,     0,   8, DM_SMALL, 0);
+        run_case("[4] MAC+RES+ReLU+GAP",                 1,1,1,0,1,  9, 1, 4,  -100, RM_SMALL,     0,   8, DM_SMALL, 0);
+
+        //======================================================================
+        // E2. 5 blocks (ResNet 전체 : conv -> add -> ReLU -> MAXPOOL -> GAP)
+        //======================================================================
+        run_case("[5] MAC+RES+ReLU+MAX->GAP",            1,1,1,1,1,  9, 4, 4,    50, RM_SMALL,     0,   4, DM_SMALL, 0);
+        run_case("[5] MAC+RES+ReLU+MAX->GAP (P=2,G=8)",  1,1,1,1,1,  9, 2, 8,   -50, RM_SMALL,     0,   4, DM_SMALL, 0);
 
         //======================================================================
         // F. corner cases
         //======================================================================
-        // F1. MAC rounding boundary (iter=1) : +-0.5, +-1.5 LSB 등 반올림 경계
-        set_xw(0,    1, 128);   //  128 ->  +0.5  ->  1
-        set_xw(1,   -1, 128);   // -128 ->  -0.5  -> -1
-        set_xw(2,    1, 127);   //  127 ->  0
-        set_xw(3,   -1, 127);   // -127 ->  0
-        set_xw(4,    3, 128);   //  384 ->  +1.5  ->  2
-        set_xw(5,   -3, 128);   // -384 ->  -1.5  -> -2
-        set_xw(6,    1, 129);   //  129 ->  1
-        set_xw(7,   -1, 129);   // -129 -> -1
-        set_xw(8,  128, 128);   // 16384 -> 64
-        set_xw(9, -255,   1);   // -255 -> -1
-        run_case("[C] MAC rounding boundary (iter=1)",    1,0,0,0,0,  1, 1, 1,    0,  10, DM_CUSTOM, 0);
+        // F1. MAC rounding boundary (iter=1) : +-0.5, +-1.5 LSB (FRAC_BITS 기준)
+        ii = 1 << (FRAC_BITS - 1);
+        set_xw(0,    1,    ii);   //  +0.5 LSB ->  1
+        set_xw(1,   -1,    ii);   //  -0.5 LSB -> -1
+        set_xw(2,    1,  ii-1);   //  < +0.5   ->  0
+        set_xw(3,   -1,  ii-1);   //  > -0.5   ->  0
+        set_xw(4,    3,    ii);   //  +1.5 LSB ->  2
+        set_xw(5,   -3,    ii);   //  -1.5 LSB -> -2
+        set_xw(6,    1,  ii+1);   //  > +0.5   ->  1
+        set_xw(7,   -1,  ii+1);   //  < -0.5   -> -1
+        set_xw(8,   ii,    ii);
+        set_xw(9, -255,     1);
+        run_case("[C] MAC rounding boundary (iter=1)",    1,0,0,0,0,  1, 1, 1,     0, RM_SMALL,     0,  10, DM_CUSTOM, 0);
 
-        // F2. MAC iter=0 -> 0 출력
-        run_case("[C] MAC iter=0 (expect 0)",             1,0,0,0,0,  0, 1, 1,    0,   8, DM_SMALL, 0);
+        // F2. MAC iter=0 -> bias 만 출력 (bias 0 -> 0)
+        run_case("[C] MAC iter=0 (expect 0)",             1,0,0,0,0,  0, 1, 1,     0, RM_SMALL,     0,   8, DM_SMALL, 0);
 
         // F3. MAC iter=16 (long accumulation)
-        run_case("[C] MAC iter=16",                       1,0,0,0,0, 16, 1, 1,    0,  16, DM_SMALL, 0);
+        run_case("[C] MAC iter=16",                       1,0,0,0,0, 16, 1, 1,     0, RM_SMALL,     0,  16, DM_SMALL, 0);
 
         // F4. MAC +/- saturation (iter=4, full-scale)
         for (ii = 0;  ii < 4;  ii = ii + 1) set_xw(ii, -32768, -32768);
         for (ii = 4;  ii < 8;  ii = ii + 1) set_xw(ii, -32768,  32767);
         for (ii = 8;  ii < 12; ii = ii + 1) set_xw(ii,  32767,  32767);
         for (ii = 12; ii < 16; ii = ii + 1) set_xw(ii,  32767, -32768);
-        run_case("[C] MAC +/- saturation (full-scale)",   1,0,0,0,0,  4, 1, 1,    0,   4, DM_CUSTOM, 0);
+        run_case("[C] MAC +/- saturation (full-scale)",   1,0,0,0,0,  4, 1, 1,     0, RM_SMALL,     0,   4, DM_CUSTOM, 0);
 
-        // F5. MAC full-range random (iter=7 : 34b acc overflow 없는 최대) -> 잦은 saturation
-        run_case("[C] MAC full-range random (iter=7)",    1,0,0,0,0,  7, 1, 1,    0,  32, DM_FULL,  0);
+        // F5. MAC full-range random (iter=7) -> 잦은 saturation
+        run_case("[C] MAC full-range random (iter=7)",    1,0,0,0,0,  7, 1, 1,     0, RM_SMALL,     0,  32, DM_FULL,  0);
 
-        // F6. MAC zero input
+        // F6. MAC bias saturation
+        run_case("[C] MAC bias +32767 (saturation)",      1,0,0,0,0,  9, 1, 1, 32767, RM_SMALL,     0,  16, DM_SMALL, 0);
+        run_case("[C] MAC bias -32768 (saturation)",      1,0,0,0,0,  9, 1, 1,-32768, RM_SMALL,     0,  16, DM_SMALL, 0);
+
+        // F7. MAC zero input
         for (ii = 0; ii < 36; ii = ii + 1) set_xw(ii, 0, 0);
-        run_case("[C] MAC all-zero input",                1,0,0,0,0,  9, 1, 1,    0,   4, DM_CUSTOM, 0);
+        run_case("[C] MAC all-zero input",                1,0,0,0,0,  9, 1, 1,     0, RM_SMALL,     0,   4, DM_CUSTOM, 0);
 
-        // F7. ReLU boundary values
+        // F8. ReLU boundary values
         set_xw( 0, -32768, 0); set_xw( 1, -32767, 0); set_xw( 2,   -256, 0); set_xw( 3,     -1, 0);
         set_xw( 4,      0, 0); set_xw( 5,      1, 0); set_xw( 6,    255, 0); set_xw( 7,    256, 0);
         set_xw( 8,  32766, 0); set_xw( 9,  32767, 0); set_xw(10, -12345, 0); set_xw(11,  12345, 0);
         set_xw(12,     -2, 0); set_xw(13,      2, 0); set_xw(14,   -129, 0); set_xw(15,    128, 0);
-        run_case("[C] ReLU boundary values",              0,1,0,0,0,  1, 1, 1,    0,  16, DM_CUSTOM, 0);
+        run_case("[C] ReLU boundary values",              0,1,0,0,0,  1, 1, 1,     0, RM_SMALL,     0,  16, DM_CUSTOM, 0);
 
-        // F8/F9. residual saturation
-        run_case("[C] RES + saturation (bias=+32767)",    0,0,1,0,0,  1, 1, 1, 32767, 64, DM_FULL,  0);
-        run_case("[C] RES - saturation (bias=-32768)",    0,0,1,0,0,  1, 1, 1,-32768, 64, DM_FULL,  0);
+        // F9. residual saturation / identity (MAC + RES)
+        run_case("[C] MAC+RES skip=+32767 (+ saturation)",1,0,1,0,0,  4, 1, 1,     0, RM_CONST, 32767,  32, DM_SMALL, 0);
+        run_case("[C] MAC+RES skip=-32768 (- saturation)",1,0,1,0,0,  4, 1, 1,     0, RM_CONST,-32768,  32, DM_SMALL, 0);
+        run_case("[C] MAC+RES skip=0 (identity)",         1,0,1,0,0,  9, 1, 1,     0, RM_CONST,     0,  32, DM_SMALL, 0);
+        run_case("[C] MAC+RES iter=1",                    1,0,1,0,0,  1, 1, 1,     0, RM_FULL,      0,  32, DM_SMALL, 0);
 
         // F10. MAXPOOL iter=1 (pass-through)
-        run_case("[C] MAXPOOL iter=1",                    0,0,0,1,0,  1, 1, 1,    0,  16, DM_FULL,  0);
+        run_case("[C] MAXPOOL iter=1",                    0,0,0,1,0,  1, 1, 1,     0, RM_SMALL,     0,  16, DM_FULL,  0);
 
         // F11. MAXPOOL negative / equal / extreme windows (iter=4)
         set_xw( 0,     -5, 0); set_xw( 1,     -3, 0); set_xw( 2,     -7, 0); set_xw( 3,   -100, 0);
@@ -939,31 +1028,42 @@ module tb_conv_top;
         set_xw(12,  32767, 0); set_xw(13, -32768, 0); set_xw(14,      0, 0); set_xw(15,      1, 0);
         set_xw(16,     -1, 0); set_xw(17, -32768, 0); set_xw(18,     -2, 0); set_xw(19,     -3, 0);
         set_xw(20,      0, 0); set_xw(21,      0, 0); set_xw(22,      0, 0); set_xw(23,     -1, 0);
-        run_case("[C] MAXPOOL negative/equal/extreme",    0,0,0,1,0,  1, 4, 1,    0,   6, DM_CUSTOM, 0);
+        run_case("[C] MAXPOOL negative/equal/extreme",    0,0,0,1,0,  1, 4, 1,     0, RM_SMALL,     0,   6, DM_CUSTOM, 0);
 
         // F12. GAP iter=1 (pass-through)
-        run_case("[C] GAP iter=1",                        0,0,0,0,1,  1, 1, 1,    0,  16, DM_FULL,  0);
+        run_case("[C] GAP iter=1",                        0,0,0,0,1,  1, 1, 1,     0, RM_SMALL,     0,  16, DM_FULL,  0);
 
-        // F13. GAP negative floor (iter=2)
-        set_xw( 0,     -1, 0); set_xw( 1,     -2, 0);   // -3 >>> 1 = -2
-        set_xw( 2,     -1, 0); set_xw( 3,      0, 0);   // -1 >>> 1 = -1
-        set_xw( 4,      1, 0); set_xw( 5,      0, 0);   //  1 >>> 1 =  0
-        set_xw( 6,      3, 0); set_xw( 7,      4, 0);   //  7 >>> 1 =  3
+        // F13. GAP negative rounding (iter=2) : floor / 0 방향 절삭은 GAP_ROUND 로 선택
+        set_xw( 0,     -1, 0); set_xw( 1,     -2, 0);   // -3/2 : floor -2, trunc -1
+        set_xw( 2,     -1, 0); set_xw( 3,      0, 0);   // -1/2 : floor -1, trunc  0
+        set_xw( 4,      1, 0); set_xw( 5,      0, 0);   //  1/2 :  0
+        set_xw( 6,      3, 0); set_xw( 7,      4, 0);   //  7/2 :  3
         set_xw( 8, -32768, 0); set_xw( 9, -32768, 0);   // -32768
         set_xw(10,  32767, 0); set_xw(11,  32766, 0);   //  32766
-        run_case("[C] GAP negative floor (iter=2)",       0,0,0,0,1,  1, 1, 2,    0,   6, DM_CUSTOM, 0);
+        run_case("[C] GAP negative rounding (iter=2)",    0,0,0,0,1,  1, 1, 2,     0, RM_SMALL,     0,   6, DM_CUSTOM, 0);
 
         // F14. GAP iter=16 full-scale
         for (ii = 0;  ii < 16; ii = ii + 1) set_xw(ii,  32767, 0);
         for (ii = 16; ii < 32; ii = ii + 1) set_xw(ii, -32768, 0);
         for (ii = 32; ii < 48; ii = ii + 1) set_xw(ii, (ii % 2) ? -32768 : 32767, 0);
-        run_case("[C] GAP iter=16 full-scale",            0,0,0,0,1,  1, 1,16,    0,   3, DM_CUSTOM, 0);
+        run_case("[C] GAP iter=16 full-scale",            0,0,0,0,1,  1, 1,16,     0, RM_SMALL,     0,   3, DM_CUSTOM, 0);
 
-        // F15. MAX+GAP 동시 enable (avg 결과)
-        run_case("[C] MAX+GAP both enabled (avg wins)",   0,0,0,1,1,  1, 4, 4,    0,  16, DM_FULL,  0);
+        // F15. GAP K 가 2^n 이 아닌 경우 (GAP_NPOW2 = 1 일 때만)
+        if (GAP_NPOW2 != 0)
+        begin
+            run_case("[C] GAP iter=3 (non 2^n)",          0,0,0,0,1,  1, 1, 3,     0, RM_SMALL,     0,  16, DM_FULL,  0);
+            run_case("[C] GAP iter=9 (non 2^n)",          0,0,0,0,1,  1, 1, 9,     0, RM_SMALL,     0,  16, DM_FULL,  0);
+        end
 
-        // F16. 긴 연속 스트림 (back-to-back, bubble 없음)
-        run_case("[C] RES+ReLU long back-to-back stream", 0,1,1,0,0,  1, 1, 1,  -77, 256, DM_FULL,  0);
+        // F16. MAX+GAP 동시 enable : MAX -> GAP 직렬 (POOL_CASCADE = 0 이면 avg 결과만)
+        run_case("[C] MAX->GAP (P=4, G=4)",               0,0,0,1,1,  1, 4, 4,     0, RM_SMALL,     0,   8, DM_FULL,  0);
+        run_case("[C] MAX->GAP (P=2, G=8)",               0,0,0,1,1,  1, 2, 8,     0, RM_SMALL,     0,   8, DM_FULL,  0);
+        run_case("[C] MAX->GAP (P=9, G=2)",               0,0,0,1,1,  1, 9, 2,     0, RM_SMALL,     0,   8, DM_FULL,  0);
+        run_case("[C] ReLU+MAX->GAP",                     0,1,0,1,1,  1, 4, 4,     0, RM_SMALL,     0,   8, DM_FULL,  0);
+        run_case("[C] MAC+MAX->GAP",                      1,0,0,1,1,  9, 4, 4,     0, RM_SMALL,     0,   4, DM_SMALL, 0);
+
+        // F17. 긴 연속 스트림 (back-to-back, bubble 없음)
+        run_case("[C] ReLU long back-to-back stream",     0,1,0,0,0,  1, 1, 1,     0, RM_SMALL,     0, 256, DM_FULL,  0);
 
         print_summary;
         $finish;
