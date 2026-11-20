@@ -21,9 +21,6 @@
 - 보조 파일: `conv_top_wrapper.v` (conv_top 입출력 IOB 레지스터 + reset 동기화 + reset 중 loopback),
   `tb_packed_io.xdc` / `tb_conv_io.xdc` (post-implementation 용 클럭 / 입력 타이밍 제약)
 
-> `post_mac_lhs.v` 와 `post_mac_pipe4.v` 는 모듈 이름(`post_mac`)이 같으므로 **둘 중 하나만** 프로젝트에 넣으세요.
-> TB 는 latency 를 직접 측정하기 때문에 어느 쪽을 써도 그대로 동작합니다 (pipe4 는 latency +1).
-
 ## 판정 기준 / 콘솔 출력
 
 모든 결과는 `$display` 로 **Vivado Tcl 콘솔**에 출력됩니다.
