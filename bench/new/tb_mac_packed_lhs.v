@@ -29,7 +29,7 @@
 //  Vivado xsim : 기본 run time(1000ns)으로는 안 끝납니다 -> Tcl 콘솔에서  run all
 //==============================================================================
 module tb_mac_packed;
-
+`define NO_LAST_INPUT
     //--------------------------------------------------------------------------
     // user parameters  (xelab -generic_top "NAME=VALUE" 로 변경 가능)
     //--------------------------------------------------------------------------
@@ -40,6 +40,9 @@ module tb_mac_packed;
     parameter integer SEED         = 1;      // 랜덤 시드
     parameter integer FRAC_BITS    = 8;      // 소수부 비트 : Q7.8 -> 8 (fmap/weight/bias/data_out 모두 Q7.8)
     parameter integer CHECK_LAST   = 1;      // 1: last_input 확인 (post-impl timing sim 에서는 0 권장, 조합 출력)
+    parameter integer DBG_CASE     = -1;     // 계산 과정 출력 케이스  -1: 모든 케이스 / 0: 끔 / n: [CASE n] 만
+    parameter integer DBG_WIN      = 1;      // 계산 과정 출력 시작 출력 번호 (1 = 케이스의 첫 출력)
+    parameter integer DBG_NWIN     = 1;      // 케이스당 출력 개수 (0 이하 = 케이스의 모든 출력)
 
     //--------------------------------------------------------------------------
     // derived / fixed
@@ -146,6 +149,7 @@ module tb_mac_packed;
     real    r_snr  [0:MAXC-1];
 
     integer n_case;
+    integer pt_lat_g;              // 마지막 bypass 케이스의 pass-through 지연 (dbg 용)
     integer seed;
     integer en_cfg;
     integer cur_cap;
@@ -448,6 +452,7 @@ module tb_mac_packed;
                     if (ok) pt_lat = d;
                 end
                 d = (pt_lat < 0) ? 0 : pt_lat;
+                pt_lat_g = d;
                 for (i = 0; i < n_exp; i = i + 1)
                 begin
                     idx = last_cap[i] + d - pt_base;
@@ -673,6 +678,136 @@ module tb_mac_packed;
     endfunction
 
     //--------------------------------------------------------------------------
+    // dbg 대상 선택
+    //   dbg_on  : 이 케이스를 출력할지 (DBG_CASE -1 = 전부, 0 = 끔, n = n 번만)
+    //   dbg_sel : 케이스 안에서 출력 t(0부터)를 출력할지 (DBG_WIN 부터 DBG_NWIN 개, 0 이하 = 전부)
+    //--------------------------------------------------------------------------
+    function integer dbg_on;
+        input integer cnum;
+        begin
+            dbg_on = (DBG_CASE < 0) || ((DBG_CASE != 0) && (DBG_CASE == cnum));
+        end
+    endfunction
+
+    function integer dbg_sel;
+        input integer t;
+        begin
+            if (DBG_NWIN <= 0) dbg_sel = (t >= DBG_WIN - 1);
+            else               dbg_sel = (t >= DBG_WIN - 1) && (t < DBG_WIN - 1 + DBG_NWIN);
+        end
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // dbg_bypass : bypass 케이스 (enable = 0) 의 pass-through 과정 출력
+    //   fmap_in -> (bias / weight 무시) -> data_out, pass-through 지연 d 클럭 뒤 값과 비교
+    //--------------------------------------------------------------------------
+    task dbg_bypass;
+        input integer cnum;
+        input integer n_win;
+        input integer bias;
+        integer t, ix, v;
+        begin
+            for (t = 0; t < n_win; t = t + 1)
+            begin
+                if (dbg_sel(t))
+                begin
+                    $display("  ---- [DBG] CASE %0d, sample #%0d : bypass (enable=0), bias_in=%0d ignored ----", cnum, t + 1, bias);
+                    $display("    fmap_in   = %0d  (0x%04h, %0.6f)", stim_x[t], stim_x[t] & 16'hFFFF, stim_x[t] / QSCALE);
+                    $display("    weight_in = %0d  (ignored)", stim_w[t]);
+                    $display("    EXPECTED data_out      = %0d  (= fmap_in, pass-through)", exp_int[t]);
+                    ix = last_cap[t] + pt_lat_g - pt_base;
+                    if ((ix >= 0) && (ix < MAXH)) v = pt_val[ix];
+                    else                          v = PT_X;
+                    if (v == PT_X)
+                        $display("    DUT      data_out      = X / out of range  (+%0d clk)  -> MISMATCH", pt_lat_g);
+                    else
+                        $display("    DUT      data_out      = %0d  (0x%04h, +%0d clk)  -> %0s", v, v & 16'hFFFF, pt_lat_g,
+                                 (v == exp_int[t]) ? "MATCH" : "MISMATCH");
+                end
+            end
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // dbg_calc : 케이스 cnum 의 윈도우 w0 ~ w0+nw-1 (1부터) 계산 과정 출력
+    //   x, w, x*w, 누적합 -> + (bias << FRAC_BITS) -> 34b -> 반올림 -> 포화 -> 기대값 vs DUT
+    //--------------------------------------------------------------------------
+    task dbg_calc;
+        input integer cnum;
+        input integer n_win;
+        input integer bias;
+        integer t, k, nt, ne, idx, h;
+        reg signed [63:0] acc, prod, bb, a64, rnd;
+        reg signed [33:0] a34;
+        begin
+            h   = 1 << (FRAC_BITS - 1);
+            idx = 0;
+            for (t = 0; t < n_win; t = t + 1)
+            begin
+                nt = win_n[t];
+                ne = (nt < 1) ? 1 : nt;
+                if (dbg_sel(t))
+                begin
+                    $display("  ---- [DBG] CASE %0d, output #%0d : iter=%0d, bias=%0d (%0.6f) ----",
+                             cnum, t + 1, nt, bias, bias / QSCALE);
+                    $display("     k |  fmap_in (int /  real)        | weight_in (int /  real)       |      x*w (Q15.16) |   running sum (Q15.16)");
+                    acc = 0;
+                    for (k = 0; k < ne; k = k + 1)
+                    begin
+                        prod = stim_x[idx + k];
+                        prod = prod * stim_w[idx + k];
+                        if (k < nt)
+                        begin
+                            acc = acc + prod;
+                            $display("    %2d | %6d / %12.6f  | %6d / %12.6f  | %17d | %17d  (%0.6f)",
+                                     k, stim_x[idx + k], stim_x[idx + k] / QSCALE,
+                                     stim_w[idx + k], stim_w[idx + k] / QSCALE,
+                                     prod, acc, acc / (QSCALE * QSCALE));
+                        end
+                        else
+                            $display("    %2d | %6d / %12.6f  | %6d / %12.6f  |   (iter=0 : not accumulated)",
+                                     k, stim_x[idx + k], stim_x[idx + k] / QSCALE,
+                                     stim_w[idx + k], stim_w[idx + k] / QSCALE);
+                    end
+                    bb  = bias;
+                    bb  = bb <<< FRAC_BITS;
+                    a64 = acc + bb;
+                    a34 = a64[33:0];
+                    $display("    sum(x*w)               = %0d  (%0.6f)", acc, acc / (QSCALE * QSCALE));
+                    $display("    bias << %0d             = %0d << %0d = %0d  (%0.6f)", FRAC_BITS, bias, FRAC_BITS, bb, bb / (QSCALE * QSCALE));
+                    $display("    acc = sum + bias       = %0d  (%0.6f)", a64, a64 / (QSCALE * QSCALE));
+                    if (a34 != a64)
+                        $display("    acc 34b wrap           = %0d  (RTL accumulator width)", a34);
+                    if (a34 < 0)
+                    begin
+                        rnd = (a34 + h - 1) >>> FRAC_BITS;
+                        $display("    round (acc < 0)        = (%0d + %0d) >>> %0d = %0d", a34, h - 1, FRAC_BITS, rnd);
+                    end
+                    else
+                    begin
+                        rnd = (a34 + h) >>> FRAC_BITS;
+                        $display("    round (acc >= 0)       = (%0d + %0d) >>> %0d = %0d", a34, h, FRAC_BITS, rnd);
+                    end
+                    if (rnd > 32767)
+                        $display("    saturate               = %0d -> 32767", rnd);
+                    else if (rnd < -32768)
+                        $display("    saturate               = %0d -> -32768", rnd);
+                    else
+                        $display("    saturate               = none");
+                    $display("    EXPECTED data_out      = %0d  (0x%04h, %0.6f)", exp_int[t], exp_int[t] & 16'hFFFF, exp_int[t] / QSCALE);
+                    if (t < out_cnt)
+                        $display("    DUT      data_out      = %0d  (0x%04h, %0.6f)  -> %0s", got_val[t], got_val[t] & 16'hFFFF,
+                                 got_val[t] / QSCALE, (got_val[t] == exp_int[t]) ? "MATCH" : "MISMATCH");
+                    else
+                        $display("    DUT      data_out      = <missing>");
+                    $display("    ideal (real, SNR ref)  = %0.6f", exp_real[t]);
+                end
+                idx = idx + ne;
+            end
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
     // run_case
     //   en     : 1 = MAC, 0 = bypass (n_win 개 샘플 pass-through)
     //   n_iter : 윈도우당 곱셈 수 (iter 포트)
@@ -804,6 +939,11 @@ module tb_mac_packed;
             iter_garb = 0;
 
             finish_case(name, n_win, (en == 0));
+            if (dbg_on(n_case))
+            begin
+                if (en) dbg_calc(n_case, n_win, bias);
+                else    dbg_bypass(n_case, n_win, bias);
+            end
         end
     endtask
 
@@ -833,6 +973,7 @@ module tb_mac_packed;
         pt_base     = 0;
         cal_on      = 1'b0;
         n_case      = 0;
+        pt_lat_g    = 0;
         seed        = SEED;
         en_cfg      = 0;
         cur_cap     = 0;
@@ -858,6 +999,9 @@ module tb_mac_packed;
                  FRAC_BITS, CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, EN_MODE, REF_CLIP);
         $display(" bias added before quantization : out = sat(round(sum(x*w) + (bias << %0d)))   last_input check %0d",
                  FRAC_BITS, (CHECK_LAST != 0) && (HAS_LAST != 0));
+        if (DBG_CASE != 0)
+            $display(" debug trace : DBG_CASE=%0d (-1 = all cases), DBG_WIN=%0d, DBG_NWIN=%0d (<= 0 = all outputs)",
+                     DBG_CASE, DBG_WIN, DBG_NWIN);
         $display("========================================================================");
 
         calibrate;
