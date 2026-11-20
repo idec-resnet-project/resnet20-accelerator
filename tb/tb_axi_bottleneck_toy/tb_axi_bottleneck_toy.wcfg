@@ -3,7 +3,7 @@
    <wave_state>
    </wave_state>
    <db_ref_list>
-      <db_ref path="C:/Users/idec/Desktop/chohyunkeon/github/resnet20-accelerator/.log/wave_viewer/19182-15556-4991/behav_tb.wdb" id="1">
+      <db_ref path="behav_tb.wdb" id="1">
          <top_modules>
             <top_module name="model_contract_pkg" />
             <top_module name="model_pkg" />
@@ -16,568 +16,1399 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0.000000 us"></ZoomStartTime>
-      <ZoomEndTime time="47.650001 us"></ZoomEndTime>
-      <Cursor1Time time="0.697000 us"></Cursor1Time>
+      <ZoomEndTime time="11.000000 us"></ZoomEndTime>
+      <Cursor1Time time="0.000000 us"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="239"></NameColumnWidth>
+      <NameColumnWidth column_width="340"></NameColumnWidth>
       <ValueColumnWidth column_width="84"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="50" />
-   <wvobject type="divider" fp_name="divider24">
-      <obj_property name="label">Configure</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-   </wvobject>
-   <wvobject fp_name="vbus43" type="vbus">
-      <obj_property name="label">cfg</obj_property>
+   <WVObjectSize size="7" />
+   <wvobject fp_name="group1" type="group">
+      <obj_property name="label">Run Overview</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="isExpanded"></obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_input_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_input_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_input_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_output_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_output_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_output_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_mac_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_mac_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_mac_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/nrst" type="logic">
+         <obj_property name="ElementShortName">nrst</obj_property>
+         <obj_property name="ObjectShortName">nrst</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_residual_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_residual_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_residual_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_enable" type="logic">
+         <obj_property name="ElementShortName">cfg_enable</obj_property>
+         <obj_property name="ObjectShortName">cfg_enable</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_relu_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_relu_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_relu_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg" type="array">
+         <obj_property name="ElementShortName">cfg[31:0]</obj_property>
+         <obj_property name="ObjectShortName">cfg[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_pooling_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_pooling_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_pooling_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_response" type="array">
+         <obj_property name="ElementShortName">cfg_response[3:0]</obj_property>
+         <obj_property name="ObjectShortName">cfg_response[3:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_gap_enable" type="logic">
-         <obj_property name="ElementShortName">cfg_gap_enable</obj_property>
-         <obj_property name="ObjectShortName">cfg_gap_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/in_enable" type="logic">
+         <obj_property name="ElementShortName">in_enable</obj_property>
+         <obj_property name="ObjectShortName">in_enable</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_is_skip" type="logic">
-         <obj_property name="ElementShortName">cfg_is_skip</obj_property>
-         <obj_property name="ObjectShortName">cfg_is_skip</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/out_enable" type="logic">
+         <obj_property name="ElementShortName">out_enable</obj_property>
+         <obj_property name="ObjectShortName">out_enable</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_stride" type="logic">
-         <obj_property name="ElementShortName">cfg_stride</obj_property>
-         <obj_property name="ObjectShortName">cfg_stride</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_valid" type="logic">
+         <obj_property name="ElementShortName">dma_result_valid</obj_property>
+         <obj_property name="ObjectShortName">dma_result_valid</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_padding" type="logic">
-         <obj_property name="ElementShortName">cfg_padding</obj_property>
-         <obj_property name="ObjectShortName">cfg_padding</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_ready" type="logic">
+         <obj_property name="ElementShortName">dma_result_ready</obj_property>
+         <obj_property name="ObjectShortName">dma_result_ready</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_w" type="array">
-         <obj_property name="ElementShortName">cfg_w[5:0]</obj_property>
-         <obj_property name="ObjectShortName">cfg_w[5:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/dma_result_hk" type="logic">
+         <obj_property name="ElementShortName">dma_result_hk</obj_property>
+         <obj_property name="ObjectShortName">dma_result_hk</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_h" type="array">
-         <obj_property name="ElementShortName">cfg_h[5:0]</obj_property>
-         <obj_property name="ObjectShortName">cfg_h[5:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_last" type="logic">
+         <obj_property name="ElementShortName">dma_result_last</obj_property>
+         <obj_property name="ObjectShortName">dma_result_last</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_c" type="array">
-         <obj_property name="ElementShortName">cfg_c[5:0]</obj_property>
-         <obj_property name="ObjectShortName">cfg_c[5:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-      </wvobject>
-   </wvobject>
-   <wvobject type="divider" fp_name="divider6">
-      <obj_property name="label">top_DMA</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-   </wvobject>
-   <wvobject fp_name="group29" type="group">
-      <obj_property name="label">DMAs</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <wvobject fp_name="group119" type="group">
-         <obj_property name="label">feature</obj_property>
+      <wvobject fp_name="group2" type="group">
+         <obj_property name="label">Reading the waves</obj_property>
          <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="isExpanded"></obj_property>
+         <wvobject fp_name="divider3" type="divider">
+            <obj_property name="label">01 IDLE   02 DECODE   04 IN_FEATURE   08 IN_KERNEL</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+         </wvobject>
+         <wvobject fp_name="divider4" type="divider">
+            <obj_property name="label">10 IN_BIAS   20 RUN   40 OUTPUT   80 ERROR</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+         </wvobject>
+         <wvobject fp_name="divider5" type="divider">
+            <obj_property name="label">cfg_response (hex): 0 IDLE   1 DONE   2 INPUT   6 OUTPUT   8 ERROR</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+         </wvobject>
+         <wvobject fp_name="divider6" type="divider">
+            <obj_property name="label">cfg low byte (hex): 01 INPUT   C0 SKIP_CONV   50 CONV_RELU</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+         </wvobject>
+         <wvobject fp_name="divider7" type="divider">
+            <obj_property name="label">74 RESIDUAL_GAP   42 FC_OUT</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+         </wvobject>
+         <wvobject fp_name="divider8" type="divider">
+            <obj_property name="label">Blue Interface   Green Data   Yellow Address   Purple Coordinates</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group9" type="group">
+      <obj_property name="label">AXI-Lite / Command Decode</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="group10" type="group">
+         <obj_property name="label">Write command</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_awvalid" type="logic">
+            <obj_property name="ElementShortName">s_axi_awvalid</obj_property>
+            <obj_property name="ObjectShortName">s_axi_awvalid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_awready" type="logic">
+            <obj_property name="ElementShortName">s_axi_awready</obj_property>
+            <obj_property name="ObjectShortName">s_axi_awready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_awaddr" type="array">
+            <obj_property name="ElementShortName">s_axi_awaddr[31:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_awaddr[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_wvalid" type="logic">
+            <obj_property name="ElementShortName">s_axi_wvalid</obj_property>
+            <obj_property name="ObjectShortName">s_axi_wvalid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_wready" type="logic">
+            <obj_property name="ElementShortName">s_axi_wready</obj_property>
+            <obj_property name="ObjectShortName">s_axi_wready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_wdata" type="array">
+            <obj_property name="ElementShortName">s_axi_wdata[31:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_wdata[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_wstrb" type="array">
+            <obj_property name="ElementShortName">s_axi_wstrb[3:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_wstrb[3:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_bvalid" type="logic">
+            <obj_property name="ElementShortName">s_axi_bvalid</obj_property>
+            <obj_property name="ObjectShortName">s_axi_bvalid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_bready" type="logic">
+            <obj_property name="ElementShortName">s_axi_bready</obj_property>
+            <obj_property name="ObjectShortName">s_axi_bready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_bresp" type="array">
+            <obj_property name="ElementShortName">s_axi_bresp[1:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_bresp[1:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg" type="array">
+            <obj_property name="ElementShortName">cfg[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cfg[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group11" type="group">
+         <obj_property name="label">Read status</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_arvalid" type="logic">
+            <obj_property name="ElementShortName">s_axi_arvalid</obj_property>
+            <obj_property name="ObjectShortName">s_axi_arvalid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_arready" type="logic">
+            <obj_property name="ElementShortName">s_axi_arready</obj_property>
+            <obj_property name="ObjectShortName">s_axi_arready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_araddr" type="array">
+            <obj_property name="ElementShortName">s_axi_araddr[31:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_araddr[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_rvalid" type="logic">
+            <obj_property name="ElementShortName">s_axi_rvalid</obj_property>
+            <obj_property name="ObjectShortName">s_axi_rvalid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_rready" type="logic">
+            <obj_property name="ElementShortName">s_axi_rready</obj_property>
+            <obj_property name="ObjectShortName">s_axi_rready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_rdata" type="array">
+            <obj_property name="ElementShortName">s_axi_rdata[31:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_rdata[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/s_axi_rresp" type="array">
+            <obj_property name="ElementShortName">s_axi_rresp[1:0]</obj_property>
+            <obj_property name="ObjectShortName">s_axi_rresp[1:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_response" type="array">
+            <obj_property name="ElementShortName">cfg_response[3:0]</obj_property>
+            <obj_property name="ObjectShortName">cfg_response[3:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group12" type="group">
+         <obj_property name="label">Instruction fields</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg" type="array">
+            <obj_property name="ElementShortName">cfg[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cfg[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_input_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_input_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_input_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_output_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_output_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_output_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_is_skip" type="logic">
+            <obj_property name="ElementShortName">cfg_is_skip</obj_property>
+            <obj_property name="ObjectShortName">cfg_is_skip</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_mac_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_mac_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_mac_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_residual_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_residual_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_residual_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_relu_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_relu_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_relu_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_pooling_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_pooling_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_pooling_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_gap_enable" type="logic">
+            <obj_property name="ElementShortName">cfg_gap_enable</obj_property>
+            <obj_property name="ObjectShortName">cfg_gap_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_stride" type="logic">
+            <obj_property name="ElementShortName">cfg_stride</obj_property>
+            <obj_property name="ObjectShortName">cfg_stride</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_padding" type="logic">
+            <obj_property name="ElementShortName">cfg_padding</obj_property>
+            <obj_property name="ObjectShortName">cfg_padding</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_w" type="array">
+            <obj_property name="ElementShortName">cfg_w[5:0]</obj_property>
+            <obj_property name="ObjectShortName">cfg_w[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_h" type="array">
+            <obj_property name="ElementShortName">cfg_h[5:0]</obj_property>
+            <obj_property name="ObjectShortName">cfg_h[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_c" type="array">
+            <obj_property name="ElementShortName">cfg_c[5:0]</obj_property>
+            <obj_property name="ObjectShortName">cfg_c[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group13" type="group">
+         <obj_property name="label">Applied sizes (last indices)</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_input_enable" type="logic">
+            <obj_property name="ElementShortName">ctrl_input_enable</obj_property>
+            <obj_property name="ObjectShortName">ctrl_input_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_output_enable" type="logic">
+            <obj_property name="ElementShortName">ctrl_output_enable</obj_property>
+            <obj_property name="ObjectShortName">ctrl_output_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_fw" type="array">
+            <obj_property name="ElementShortName">ctrl_fw[5:0]</obj_property>
+            <obj_property name="ObjectShortName">ctrl_fw[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_fc" type="array">
+            <obj_property name="ElementShortName">ctrl_fc[5:0]</obj_property>
+            <obj_property name="ObjectShortName">ctrl_fc[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_kw" type="array">
+            <obj_property name="ElementShortName">ctrl_kw[5:0]</obj_property>
+            <obj_property name="ObjectShortName">ctrl_kw[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_kc" type="array">
+            <obj_property name="ElementShortName">ctrl_kc[5:0]</obj_property>
+            <obj_property name="ObjectShortName">ctrl_kc[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_ow" type="array">
+            <obj_property name="ElementShortName">ctrl_ow[5:0]</obj_property>
+            <obj_property name="ObjectShortName">ctrl_ow[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_oc" type="array">
+            <obj_property name="ElementShortName">ctrl_oc[5:0]</obj_property>
+            <obj_property name="ObjectShortName">ctrl_oc[5:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_stride" type="logic">
+            <obj_property name="ElementShortName">ctrl_stride</obj_property>
+            <obj_property name="ObjectShortName">ctrl_stride</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_padding" type="logic">
+            <obj_property name="ElementShortName">ctrl_padding</obj_property>
+            <obj_property name="ObjectShortName">ctrl_padding</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group14" type="group">
+      <obj_property name="label">Input DMA</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="group15" type="group">
+         <obj_property name="label">Feature</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_feature_valid" type="logic">
             <obj_property name="ElementShortName">dma_feature_valid</obj_property>
             <obj_property name="ObjectShortName">dma_feature_valid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_feature_ready" type="logic">
             <obj_property name="ElementShortName">dma_feature_ready</obj_property>
             <obj_property name="ObjectShortName">dma_feature_ready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/dma_feature_hk" type="logic">
+            <obj_property name="ElementShortName">dma_feature_hk</obj_property>
+            <obj_property name="ObjectShortName">dma_feature_hk</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_feature_last" type="logic">
             <obj_property name="ElementShortName">dma_feature_last</obj_property>
             <obj_property name="ObjectShortName">dma_feature_last</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_feature" type="array">
+            <obj_property name="ElementShortName">cnt_feature[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cnt_feature[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_feature" type="array">
+            <obj_property name="ElementShortName">len_feature[31:0]</obj_property>
+            <obj_property name="ObjectShortName">len_feature[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_feature_data" type="array">
             <obj_property name="ElementShortName">dma_feature_data[15:0]</obj_property>
             <obj_property name="ObjectShortName">dma_feature_data[15:0]</obj_property>
-            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
       </wvobject>
-      <wvobject fp_name="group120" type="group">
-         <obj_property name="label">kernel</obj_property>
+      <wvobject fp_name="group16" type="group">
+         <obj_property name="label">Kernel</obj_property>
          <obj_property name="DisplayName">label</obj_property>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_kernel_valid" type="logic">
             <obj_property name="ElementShortName">dma_kernel_valid</obj_property>
             <obj_property name="ObjectShortName">dma_kernel_valid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_kernel_ready" type="logic">
             <obj_property name="ElementShortName">dma_kernel_ready</obj_property>
             <obj_property name="ObjectShortName">dma_kernel_ready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/dma_kernel_hk" type="logic">
+            <obj_property name="ElementShortName">dma_kernel_hk</obj_property>
+            <obj_property name="ObjectShortName">dma_kernel_hk</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_kernel_last" type="logic">
             <obj_property name="ElementShortName">dma_kernel_last</obj_property>
             <obj_property name="ObjectShortName">dma_kernel_last</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_kernel" type="array">
+            <obj_property name="ElementShortName">cnt_kernel[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cnt_kernel[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_kernel" type="array">
+            <obj_property name="ElementShortName">len_kernel[31:0]</obj_property>
+            <obj_property name="ObjectShortName">len_kernel[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_kernel_data" type="array">
             <obj_property name="ElementShortName">dma_kernel_data[15:0]</obj_property>
             <obj_property name="ObjectShortName">dma_kernel_data[15:0]</obj_property>
-            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
       </wvobject>
-      <wvobject fp_name="group121" type="group">
-         <obj_property name="label">bias</obj_property>
+      <wvobject fp_name="group17" type="group">
+         <obj_property name="label">Bias</obj_property>
          <obj_property name="DisplayName">label</obj_property>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_bias_valid" type="logic">
             <obj_property name="ElementShortName">dma_bias_valid</obj_property>
             <obj_property name="ObjectShortName">dma_bias_valid</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_bias_ready" type="logic">
             <obj_property name="ElementShortName">dma_bias_ready</obj_property>
             <obj_property name="ObjectShortName">dma_bias_ready</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/dma_bias_hk" type="logic">
+            <obj_property name="ElementShortName">dma_bias_hk</obj_property>
+            <obj_property name="ObjectShortName">dma_bias_hk</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_bias_last" type="logic">
             <obj_property name="ElementShortName">dma_bias_last</obj_property>
             <obj_property name="ObjectShortName">dma_bias_last</obj_property>
+            <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_bias" type="array">
+            <obj_property name="ElementShortName">cnt_bias[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cnt_bias[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_bias" type="array">
+            <obj_property name="ElementShortName">len_bias[31:0]</obj_property>
+            <obj_property name="ObjectShortName">len_bias[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
          <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_bias_data" type="array">
             <obj_property name="ElementShortName">dma_bias_data[15:0]</obj_property>
             <obj_property name="ObjectShortName">dma_bias_data[15:0]</obj_property>
-            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
          </wvobject>
       </wvobject>
-      <wvobject fp_name="group123" type="group">
-         <obj_property name="label">output</obj_property>
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="isExpanded"></obj_property>
-         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_valid" type="logic">
-            <obj_property name="ElementShortName">dma_result_valid</obj_property>
-            <obj_property name="ObjectShortName">dma_result_valid</obj_property>
-         </wvobject>
-         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_last" type="logic">
-            <obj_property name="ElementShortName">dma_result_last</obj_property>
-            <obj_property name="ObjectShortName">dma_result_last</obj_property>
-         </wvobject>
-         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_ready" type="logic">
-            <obj_property name="ElementShortName">dma_result_ready</obj_property>
-            <obj_property name="ObjectShortName">dma_result_ready</obj_property>
-         </wvobject>
-         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_data" type="array">
-            <obj_property name="ElementShortName">dma_result_data[15:0]</obj_property>
-            <obj_property name="ObjectShortName">dma_result_data[15:0]</obj_property>
-            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-         </wvobject>
-      </wvobject>
-      <wvobject type="divider" fp_name="divider6">
-         <obj_property name="label">Buffer</obj_property>
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="BkColor">#00FF00</obj_property>
-      </wvobject>
    </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
-      <obj_property name="ElementShortName">cstate[7:0]</obj_property>
-      <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_fmem0_in" type="logic">
-      <obj_property name="ElementShortName">is_fmem0_in</obj_property>
-      <obj_property name="ObjectShortName">is_fmem0_in</obj_property>
-   </wvobject>
-   <wvobject fp_name="group146" type="group">
-      <obj_property name="label">fmem 0</obj_property>
+   <wvobject fp_name="group18" type="group">
+      <obj_property name="label">Address Generation</obj_property>
       <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="group19" type="group">
+         <obj_property name="label">Window / Padding</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_stride" type="logic">
+            <obj_property name="ElementShortName">ctrl_stride</obj_property>
+            <obj_property name="ObjectShortName">ctrl_stride</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_padding" type="logic">
+            <obj_property name="ElementShortName">ctrl_padding</obj_property>
+            <obj_property name="ObjectShortName">ctrl_padding</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_frow" type="array">
+            <obj_property name="ElementShortName">addr_frow[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_frow[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_fcol" type="array">
+            <obj_property name="ElementShortName">addr_fcol[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_fcol[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cin" type="array">
+            <obj_property name="ElementShortName">addr_cin[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_cin[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_krow" type="array">
+            <obj_property name="ElementShortName">addr_krow[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_krow[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_kcol" type="array">
+            <obj_property name="ElementShortName">addr_kcol[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_kcol[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cout" type="array">
+            <obj_property name="ElementShortName">addr_cout[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_cout[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_frow_slided" type="array">
+            <obj_property name="ElementShortName">addr_frow_slided[3:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_frow_slided[3:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_fcol_slided" type="array">
+            <obj_property name="ElementShortName">addr_fcol_slided[3:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_fcol_slided[3:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/slide_frow_carry" type="logic">
+            <obj_property name="ElementShortName">slide_frow_carry</obj_property>
+            <obj_property name="ObjectShortName">slide_frow_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/slide_fcol_carry" type="logic">
+            <obj_property name="ElementShortName">slide_fcol_carry</obj_property>
+            <obj_property name="ObjectShortName">slide_fcol_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_zero" type="logic">
+            <obj_property name="ElementShortName">is_zero</obj_property>
+            <obj_property name="ObjectShortName">is_zero</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/in_enable" type="logic">
+            <obj_property name="ElementShortName">in_enable</obj_property>
+            <obj_property name="ObjectShortName">in_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/in_data" type="array">
+            <obj_property name="ElementShortName">in_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">in_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_in_f_addr" type="array">
+            <obj_property name="ElementShortName">core_in_f_addr[8:0]</obj_property>
+            <obj_property name="ObjectShortName">core_in_f_addr[8:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_in_k_addr" type="array">
+            <obj_property name="ElementShortName">core_in_k_addr[11:0]</obj_property>
+            <obj_property name="ObjectShortName">core_in_k_addr[11:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_in_b_addr" type="array">
+            <obj_property name="ElementShortName">core_in_b_addr[2:0]</obj_property>
+            <obj_property name="ObjectShortName">core_in_b_addr[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group20" type="group">
+         <obj_property name="label">Loop carries</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_krow_carry" type="logic">
+            <obj_property name="ElementShortName">addr_krow_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_krow_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_kcol_carry" type="logic">
+            <obj_property name="ElementShortName">addr_kcol_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_kcol_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cin_carry" type="logic">
+            <obj_property name="ElementShortName">addr_cin_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_cin_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_frow_carry" type="logic">
+            <obj_property name="ElementShortName">addr_frow_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_frow_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_fcol_carry" type="logic">
+            <obj_property name="ElementShortName">addr_fcol_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_fcol_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cout_carry" type="logic">
+            <obj_property name="ElementShortName">addr_cout_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_cout_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group21" type="group">
+         <obj_property name="label">Output position</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/out_enable" type="logic">
+            <obj_property name="ElementShortName">out_enable</obj_property>
+            <obj_property name="ObjectShortName">out_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_orow" type="array">
+            <obj_property name="ElementShortName">addr_orow[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_orow[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_ocol" type="array">
+            <obj_property name="ElementShortName">addr_ocol[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_ocol[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_oc" type="array">
+            <obj_property name="ElementShortName">addr_oc[2:0]</obj_property>
+            <obj_property name="ObjectShortName">addr_oc[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_orow_carry" type="logic">
+            <obj_property name="ElementShortName">addr_orow_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_orow_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_ocol_carry" type="logic">
+            <obj_property name="ElementShortName">addr_ocol_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_ocol_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_oc_carry" type="logic">
+            <obj_property name="ElementShortName">addr_oc_carry</obj_property>
+            <obj_property name="ObjectShortName">addr_oc_carry</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_out_f_addr" type="array">
+            <obj_property name="ElementShortName">core_out_f_addr[8:0]</obj_property>
+            <obj_property name="ObjectShortName">core_out_f_addr[8:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group22" type="group">
+      <obj_property name="label">Buffers / Skip Path</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/dma_feature_hk" type="logic">
+         <obj_property name="ElementShortName">dma_feature_hk</obj_property>
+         <obj_property name="ObjectShortName">dma_feature_hk</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/out_enable" type="logic">
+         <obj_property name="ElementShortName">out_enable</obj_property>
+         <obj_property name="ObjectShortName">out_enable</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_is_skip" type="logic">
+         <obj_property name="ElementShortName">ctrl_is_skip</obj_property>
+         <obj_property name="ObjectShortName">ctrl_is_skip</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_is_after_skip" type="logic">
+         <obj_property name="ElementShortName">ctrl_is_after_skip</obj_property>
+         <obj_property name="ObjectShortName">ctrl_is_after_skip</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_feature_in" type="logic">
+         <obj_property name="ElementShortName">is_feature_in</obj_property>
+         <obj_property name="ObjectShortName">is_feature_in</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_fmem0_in" type="logic">
+         <obj_property name="ElementShortName">is_fmem0_in</obj_property>
+         <obj_property name="ObjectShortName">is_fmem0_in</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
       <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_en[0]" type="logic">
+         <obj_property name="ElementShortName">fmem_wr_en[0]</obj_property>
+         <obj_property name="ObjectShortName">fmem_wr_en[0]</obj_property>
          <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[0]</obj_property>
-         <obj_property name="ObjectShortName">[0]</obj_property>
-         <obj_property name="label">fmem_wr_en</obj_property>
+         <obj_property name="label">fmem_wr_en[0]</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_addr[0]" type="array">
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[0][8:0]</obj_property>
-         <obj_property name="ObjectShortName">[0][8:0]</obj_property>
-         <obj_property name="label">fmem_wr_addr</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_data[0]" type="array">
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[0][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[0][15:0]</obj_property>
-         <obj_property name="label">fmem_wr_data</obj_property>
-         <obj_property name="Radix">HEXRADIX</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_addr[0]" type="array">
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[0][8:0]</obj_property>
-         <obj_property name="ObjectShortName">[0][8:0]</obj_property>
-         <obj_property name="label">fmem_rd_addr</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_data[0]" type="array">
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[0][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[0][15:0]</obj_property>
-         <obj_property name="label">fmem_rd_data</obj_property>
-         <obj_property name="Radix">HEXRADIX</obj_property>
-      </wvobject>
-   </wvobject>
-   <wvobject fp_name="group152" type="group">
-      <obj_property name="label">fmem 1</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
       <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_en[1]" type="logic">
+         <obj_property name="ElementShortName">fmem_wr_en[1]</obj_property>
+         <obj_property name="ObjectShortName">fmem_wr_en[1]</obj_property>
          <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[1]</obj_property>
-         <obj_property name="ObjectShortName">[1]</obj_property>
-         <obj_property name="label">fmem_wr_en</obj_property>
+         <obj_property name="label">fmem_wr_en[1]</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_addr[1]" type="array">
+      <wvobject fp_name="group23" type="group">
+         <obj_property name="label">Feature Bank 0</obj_property>
          <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[1][8:0]</obj_property>
-         <obj_property name="ObjectShortName">[1][8:0]</obj_property>
-         <obj_property name="label">fmem_wr_addr</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_en[0]" type="logic">
+            <obj_property name="ElementShortName">fmem_wr_en[0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_wr_en[0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_wr_en[0]</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_addr[0]" type="array">
+            <obj_property name="ElementShortName">fmem_wr_addr[0][8:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_wr_addr[0][8:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_wr_addr[0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_data[0]" type="array">
+            <obj_property name="ElementShortName">fmem_wr_data[0][15:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_wr_data[0][15:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_wr_data[0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_addr[0]" type="array">
+            <obj_property name="ElementShortName">fmem_rd_addr[0][8:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_rd_addr[0][8:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_rd_addr[0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_data[0]" type="array">
+            <obj_property name="ElementShortName">fmem_rd_data[0][15:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_rd_data[0][15:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_rd_data[0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_data[1]" type="array">
+      <wvobject fp_name="group24" type="group">
+         <obj_property name="label">Feature Bank 1</obj_property>
          <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[1][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[1][15:0]</obj_property>
-         <obj_property name="label">fmem_wr_data</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_en[1]" type="logic">
+            <obj_property name="ElementShortName">fmem_wr_en[1]</obj_property>
+            <obj_property name="ObjectShortName">fmem_wr_en[1]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_wr_en[1]</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_addr[1]" type="array">
+            <obj_property name="ElementShortName">fmem_wr_addr[1][8:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_wr_addr[1][8:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_wr_addr[1]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_data[1]" type="array">
+            <obj_property name="ElementShortName">fmem_wr_data[1][15:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_wr_data[1][15:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_wr_data[1]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_addr[1]" type="array">
+            <obj_property name="ElementShortName">fmem_rd_addr[1][8:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_rd_addr[1][8:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_rd_addr[1]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_data[1]" type="array">
+            <obj_property name="ElementShortName">fmem_rd_data[1][15:0]</obj_property>
+            <obj_property name="ObjectShortName">fmem_rd_data[1][15:0]</obj_property>
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="label">fmem_rd_data[1]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group25" type="group">
+         <obj_property name="label">Kernel</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_en" type="logic">
+            <obj_property name="ElementShortName">kmem_wr_en</obj_property>
+            <obj_property name="ObjectShortName">kmem_wr_en</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_addr" type="array">
+            <obj_property name="ElementShortName">kmem_wr_addr[11:0]</obj_property>
+            <obj_property name="ObjectShortName">kmem_wr_addr[11:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_data" type="array">
+            <obj_property name="ElementShortName">kmem_wr_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">kmem_wr_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_rd_addr" type="array">
+            <obj_property name="ElementShortName">kmem_rd_addr[11:0]</obj_property>
+            <obj_property name="ObjectShortName">kmem_rd_addr[11:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_rd_data" type="array">
+            <obj_property name="ElementShortName">kmem_rd_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">kmem_rd_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group26" type="group">
+         <obj_property name="label">Bias</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_en" type="logic">
+            <obj_property name="ElementShortName">bmem_wr_en</obj_property>
+            <obj_property name="ObjectShortName">bmem_wr_en</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_addr" type="array">
+            <obj_property name="ElementShortName">bmem_wr_addr[2:0]</obj_property>
+            <obj_property name="ObjectShortName">bmem_wr_addr[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_data" type="array">
+            <obj_property name="ElementShortName">bmem_wr_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">bmem_wr_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_rd_addr" type="array">
+            <obj_property name="ElementShortName">bmem_rd_addr[2:0]</obj_property>
+            <obj_property name="ObjectShortName">bmem_rd_addr[2:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_rd_data" type="array">
+            <obj_property name="ElementShortName">bmem_rd_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">bmem_rd_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group27" type="group">
+         <obj_property name="label">Residual</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_residual_addr" type="array">
+            <obj_property name="ElementShortName">core_residual_addr[8:0]</obj_property>
+            <obj_property name="ObjectShortName">core_residual_addr[8:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_en" type="logic">
+            <obj_property name="ElementShortName">rmem_wr_en</obj_property>
+            <obj_property name="ObjectShortName">rmem_wr_en</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_addr" type="array">
+            <obj_property name="ElementShortName">rmem_wr_addr[8:0]</obj_property>
+            <obj_property name="ObjectShortName">rmem_wr_addr[8:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_data" type="array">
+            <obj_property name="ElementShortName">rmem_wr_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">rmem_wr_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_addr" type="array">
+            <obj_property name="ElementShortName">rmem_rd_addr[8:0]</obj_property>
+            <obj_property name="ObjectShortName">rmem_rd_addr[8:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_data" type="array">
+            <obj_property name="ElementShortName">rmem_rd_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">rmem_rd_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group28" type="group">
+      <obj_property name="label">RUN / Core Control</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
          <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_addr[1]" type="array">
-         <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[1][8:0]</obj_property>
-         <obj_property name="ObjectShortName">[1][8:0]</obj_property>
-         <obj_property name="label">fmem_rd_addr</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/out_enable" type="logic">
+         <obj_property name="ElementShortName">out_enable</obj_property>
+         <obj_property name="ObjectShortName">out_enable</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
+         <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
+         <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_data[1]" type="array">
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_output" type="array">
+         <obj_property name="ElementShortName">len_output[31:0]</obj_property>
+         <obj_property name="ObjectShortName">len_output[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="group29" type="group">
+         <obj_property name="label">Core setup</obj_property>
          <obj_property name="DisplayName">label</obj_property>
-         <obj_property name="ElementShortName">[1][15:0]</obj_property>
-         <obj_property name="ObjectShortName">[1][15:0]</obj_property>
-         <obj_property name="label">fmem_rd_data</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/mac_enable" type="logic">
+            <obj_property name="ElementShortName">mac_enable</obj_property>
+            <obj_property name="ObjectShortName">mac_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/mac_iteration" type="array">
+            <obj_property name="ElementShortName">mac_iteration[15:0]</obj_property>
+            <obj_property name="ObjectShortName">mac_iteration[15:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/residual_enable" type="logic">
+            <obj_property name="ElementShortName">residual_enable</obj_property>
+            <obj_property name="ObjectShortName">residual_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/relu_enable" type="logic">
+            <obj_property name="ElementShortName">relu_enable</obj_property>
+            <obj_property name="ObjectShortName">relu_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/pooling_enable" type="logic">
+            <obj_property name="ElementShortName">pooling_enable</obj_property>
+            <obj_property name="ObjectShortName">pooling_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/gap_enable" type="logic">
+            <obj_property name="ElementShortName">gap_enable</obj_property>
+            <obj_property name="ObjectShortName">gap_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/gap_iteration" type="array">
+            <obj_property name="ElementShortName">gap_iteration[15:0]</obj_property>
+            <obj_property name="ObjectShortName">gap_iteration[15:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group30" type="group">
+         <obj_property name="label">Core inputs</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/in_enable" type="logic">
+            <obj_property name="ElementShortName">in_enable</obj_property>
+            <obj_property name="ObjectShortName">in_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_run" type="array">
+            <obj_property name="ElementShortName">cnt_run[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cnt_run[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_zero" type="logic">
+            <obj_property name="ElementShortName">is_zero</obj_property>
+            <obj_property name="ObjectShortName">is_zero</obj_property>
+            <obj_property name="CustomSignalColor">#DAA6FF</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/in_data" type="array">
+            <obj_property name="ElementShortName">in_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">in_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_rd_data" type="array">
+            <obj_property name="ElementShortName">kmem_rd_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">kmem_rd_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_rd_data" type="array">
+            <obj_property name="ElementShortName">bmem_rd_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">bmem_rd_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_data" type="array">
+            <obj_property name="ElementShortName">rmem_rd_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">rmem_rd_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group31" type="group">
+         <obj_property name="label">Writeback</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/out_enable" type="logic">
+            <obj_property name="ElementShortName">out_enable</obj_property>
+            <obj_property name="ObjectShortName">out_enable</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/out_data" type="array">
+            <obj_property name="ElementShortName">out_data[15:0]</obj_property>
+            <obj_property name="ObjectShortName">out_data[15:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
+            <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
+            <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_output" type="array">
+            <obj_property name="ElementShortName">len_output[31:0]</obj_property>
+            <obj_property name="ObjectShortName">len_output[31:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_out_f_addr" type="array">
+            <obj_property name="ElementShortName">core_out_f_addr[8:0]</obj_property>
+            <obj_property name="ObjectShortName">core_out_f_addr[8:0]</obj_property>
+            <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+            <obj_property name="CustomSignalColor">#FFD166</obj_property>
+            <obj_property name="UseCustomSignalColor">true</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="group32" type="group">
+      <obj_property name="label">Output DMA</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
+         <obj_property name="ElementShortName">clk</obj_property>
+         <obj_property name="ObjectShortName">clk</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
+         <obj_property name="ElementShortName">cstate[7:0]</obj_property>
+         <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
          <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-   </wvobject>
-   <wvobject fp_name="group451" type="group">
-      <obj_property name="label">kmem</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_en" type="logic">
-         <obj_property name="ElementShortName">kmem_wr_en</obj_property>
-         <obj_property name="ObjectShortName">kmem_wr_en</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/output_init_flag" type="logic">
+         <obj_property name="ElementShortName">output_init_flag</obj_property>
+         <obj_property name="ObjectShortName">output_init_flag</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_addr" type="array">
-         <obj_property name="ElementShortName">kmem_wr_addr[11:0]</obj_property>
-         <obj_property name="ObjectShortName">kmem_wr_addr[11:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_rd_data" type="array">
-         <obj_property name="ElementShortName">kmem_rd_data[15:0]</obj_property>
-         <obj_property name="ObjectShortName">kmem_rd_data[15:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_rd_addr" type="array">
-         <obj_property name="ElementShortName">kmem_rd_addr[11:0]</obj_property>
-         <obj_property name="ObjectShortName">kmem_rd_addr[11:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/kmem_wr_data" type="array">
-         <obj_property name="ElementShortName">kmem_wr_data[15:0]</obj_property>
-         <obj_property name="ObjectShortName">kmem_wr_data[15:0]</obj_property>
-      </wvobject>
-   </wvobject>
-   <wvobject fp_name="group457" type="group">
-      <obj_property name="label">bias</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_en" type="logic">
-         <obj_property name="ElementShortName">bmem_wr_en</obj_property>
-         <obj_property name="ObjectShortName">bmem_wr_en</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_addr" type="array">
-         <obj_property name="ElementShortName">bmem_wr_addr[2:0]</obj_property>
-         <obj_property name="ObjectShortName">bmem_wr_addr[2:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_wr_data" type="array">
-         <obj_property name="ElementShortName">bmem_wr_data[15:0]</obj_property>
-         <obj_property name="ObjectShortName">bmem_wr_data[15:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_rd_addr" type="array">
-         <obj_property name="ElementShortName">bmem_rd_addr[2:0]</obj_property>
-         <obj_property name="ObjectShortName">bmem_rd_addr[2:0]</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/bmem_rd_data" type="array">
-         <obj_property name="ElementShortName">bmem_rd_data[15:0]</obj_property>
-         <obj_property name="ObjectShortName">bmem_rd_data[15:0]</obj_property>
-      </wvobject>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/is_skip_connection" type="logic">
-      <obj_property name="ElementShortName">is_skip_connection</obj_property>
-      <obj_property name="ObjectShortName">is_skip_connection</obj_property>
-   </wvobject>
-   <wvobject fp_name="group702" type="group">
-      <obj_property name="label">rmem</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="isExpanded"></obj_property>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_en" type="logic">
-         <obj_property name="ElementShortName">rmem_wr_en</obj_property>
-         <obj_property name="ObjectShortName">rmem_wr_en</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_addr" type="array">
-         <obj_property name="ElementShortName">rmem_wr_addr[8:0]</obj_property>
-         <obj_property name="ObjectShortName">rmem_wr_addr[8:0]</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/output_read_addr" type="array">
+         <obj_property name="ElementShortName">output_read_addr[8:0]</obj_property>
+         <obj_property name="ObjectShortName">output_read_addr[8:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#FFD166</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_wr_data" type="array">
-         <obj_property name="ElementShortName">rmem_wr_data[15:0]</obj_property>
-         <obj_property name="ObjectShortName">rmem_wr_data[15:0]</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_data_temp" type="array">
+         <obj_property name="ElementShortName">dma_result_data_temp[15:0]</obj_property>
+         <obj_property name="ObjectShortName">dma_result_data_temp[15:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_valid" type="logic">
+         <obj_property name="ElementShortName">dma_result_valid</obj_property>
+         <obj_property name="ObjectShortName">dma_result_valid</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_ready" type="logic">
+         <obj_property name="ElementShortName">dma_result_ready</obj_property>
+         <obj_property name="ObjectShortName">dma_result_ready</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/dma_result_hk" type="logic">
+         <obj_property name="ElementShortName">dma_result_hk</obj_property>
+         <obj_property name="ObjectShortName">dma_result_hk</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_last" type="logic">
+         <obj_property name="ElementShortName">dma_result_last</obj_property>
+         <obj_property name="ObjectShortName">dma_result_last</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_dma_output" type="array">
+         <obj_property name="ElementShortName">cnt_dma_output[31:0]</obj_property>
+         <obj_property name="ObjectShortName">cnt_dma_output[31:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_addr" type="array">
-         <obj_property name="ElementShortName">rmem_rd_addr[8:0]</obj_property>
-         <obj_property name="ObjectShortName">rmem_rd_addr[8:0]</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_output" type="array">
+         <obj_property name="ElementShortName">len_output[31:0]</obj_property>
+         <obj_property name="ObjectShortName">len_output[31:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/rmem_rd_data" type="array">
-         <obj_property name="ElementShortName">rmem_rd_data[15:0]</obj_property>
-         <obj_property name="ObjectShortName">rmem_rd_data[15:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/dma_result_data" type="array">
+         <obj_property name="ElementShortName">dma_result_data[15:0]</obj_property>
+         <obj_property name="ObjectShortName">dma_result_data[15:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#69DB7C</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-   </wvobject>
-   <wvobject type="divider" fp_name="divider6">
-      <obj_property name="label">addressing</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="BkColor">#00FF00</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/clk" type="logic">
-      <obj_property name="ElementShortName">clk</obj_property>
-      <obj_property name="ObjectShortName">clk</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cstate" type="array">
-      <obj_property name="ElementShortName">cstate[7:0]</obj_property>
-      <obj_property name="ObjectShortName">cstate[7:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_frow" type="array">
-      <obj_property name="ElementShortName">addr_frow[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_frow[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_fcol" type="array">
-      <obj_property name="ElementShortName">addr_fcol[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_fcol[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cin" type="array">
-      <obj_property name="ElementShortName">addr_cin[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_cin[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_krow" type="array">
-      <obj_property name="ElementShortName">addr_krow[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_krow[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_kcol" type="array">
-      <obj_property name="ElementShortName">addr_kcol[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_kcol[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cout" type="array">
-      <obj_property name="ElementShortName">addr_cout[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_cout[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/out_enable" type="logic">
-      <obj_property name="ElementShortName">out_enable</obj_property>
-      <obj_property name="ObjectShortName">out_enable</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_orow" type="array">
-      <obj_property name="ElementShortName">addr_orow[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_orow[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
-      <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
-      <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_ocol" type="array">
-      <obj_property name="ElementShortName">addr_ocol[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_ocol[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_oc" type="array">
-      <obj_property name="ElementShortName">addr_oc[2:0]</obj_property>
-      <obj_property name="ObjectShortName">addr_oc[2:0]</obj_property>
-      <obj_property name="CustomSignalColor">#FFFF00</obj_property>
-      <obj_property name="UseCustomSignalColor">true</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_fw" type="array">
-      <obj_property name="ElementShortName">ctrl_fw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_fw[5:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_fc" type="array">
-      <obj_property name="ElementShortName">ctrl_fc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_fc[5:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_kw" type="array">
-      <obj_property name="ElementShortName">ctrl_kw[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_kw[5:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_kc" type="array">
-      <obj_property name="ElementShortName">ctrl_kc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_kc[5:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_ow" type="array">
-      <obj_property name="ElementShortName">ctrl_ow[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_ow[5:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/ctrl_oc" type="array">
-      <obj_property name="ElementShortName">ctrl_oc[5:0]</obj_property>
-      <obj_property name="ObjectShortName">ctrl_oc[5:0]</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_frow_carry" type="logic">
-      <obj_property name="ElementShortName">addr_frow_carry</obj_property>
-      <obj_property name="ObjectShortName">addr_frow_carry</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_fcol_carry" type="logic">
-      <obj_property name="ElementShortName">addr_fcol_carry</obj_property>
-      <obj_property name="ObjectShortName">addr_fcol_carry</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/addr_cin_carry" type="logic">
-      <obj_property name="ElementShortName">addr_cin_carry</obj_property>
-      <obj_property name="ObjectShortName">addr_cin_carry</obj_property>
-   </wvobject>
-   <wvobject type="divider" fp_name="divider6">
-      <obj_property name="label">core</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="BkColor">#00FF00</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/clk" type="logic">
-      <obj_property name="ElementShortName">clk</obj_property>
-      <obj_property name="ObjectShortName">clk</obj_property>
-   </wvobject>
-   <wvobject fp_name="group101" type="group">
-      <obj_property name="label">setup</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/mac_enable" type="logic">
-         <obj_property name="ElementShortName">mac_enable</obj_property>
-         <obj_property name="ObjectShortName">mac_enable</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/m_axis_output_tkeep" type="array">
+         <obj_property name="ElementShortName">m_axis_output_tkeep[1:0]</obj_property>
+         <obj_property name="ObjectShortName">m_axis_output_tkeep[1:0]</obj_property>
+         <obj_property name="Radix">BINRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#74C0FC</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/mac_iteration" type="array">
-         <obj_property name="ElementShortName">mac_iteration[15:0]</obj_property>
-         <obj_property name="ObjectShortName">mac_iteration[15:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cfg_response" type="array">
+         <obj_property name="ElementShortName">cfg_response[3:0]</obj_property>
+         <obj_property name="ObjectShortName">cfg_response[3:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <obj_property name="CustomSignalColor">#C3CBD4</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/residual_enable" type="logic">
-         <obj_property name="ElementShortName">residual_enable</obj_property>
-         <obj_property name="ObjectShortName">residual_enable</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/relu_enable" type="logic">
-         <obj_property name="ElementShortName">relu_enable</obj_property>
-         <obj_property name="ObjectShortName">relu_enable</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/pooling_enable" type="logic">
-         <obj_property name="ElementShortName">pooling_enable</obj_property>
-         <obj_property name="ObjectShortName">pooling_enable</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/pooling_iteration" type="array">
-         <obj_property name="ElementShortName">pooling_iteration[15:0]</obj_property>
-         <obj_property name="ObjectShortName">pooling_iteration[15:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/gap_enable" type="logic">
-         <obj_property name="ElementShortName">gap_enable</obj_property>
-         <obj_property name="ObjectShortName">gap_enable</obj_property>
-      </wvobject>
-      <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/gap_iteration" type="array">
-         <obj_property name="ElementShortName">gap_iteration[15:0]</obj_property>
-         <obj_property name="ObjectShortName">gap_iteration[15:0]</obj_property>
-         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-      </wvobject>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/in_enable" type="logic">
-      <obj_property name="ElementShortName">in_enable</obj_property>
-      <obj_property name="ObjectShortName">in_enable</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_rd_addr[0]" type="array">
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="ElementShortName">[0][8:0]</obj_property>
-      <obj_property name="ObjectShortName">[0][8:0]</obj_property>
-      <obj_property name="label">fmem_rd_addr</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/out_enable" type="logic">
-      <obj_property name="ElementShortName">out_enable</obj_property>
-      <obj_property name="ObjectShortName">out_enable</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/fmem_wr_addr[1]" type="array">
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="ElementShortName">[1][8:0]</obj_property>
-      <obj_property name="ObjectShortName">[1][8:0]</obj_property>
-      <obj_property name="label">fmem_wr_addr</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject type="divider" fp_name="divider6">
-      <obj_property name="label">core_config</obj_property>
-      <obj_property name="DisplayName">label</obj_property>
-      <obj_property name="BkColor">#00FF00</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_feature" type="array">
-      <obj_property name="ElementShortName">len_feature[31:0]</obj_property>
-      <obj_property name="ObjectShortName">len_feature[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_kernel" type="array">
-      <obj_property name="ElementShortName">len_kernel[31:0]</obj_property>
-      <obj_property name="ObjectShortName">len_kernel[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_bias" type="array">
-      <obj_property name="ElementShortName">len_bias[31:0]</obj_property>
-      <obj_property name="ObjectShortName">len_bias[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/len_output" type="array">
-      <obj_property name="ElementShortName">len_output[31:0]</obj_property>
-      <obj_property name="ObjectShortName">len_output[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_run" type="array">
-      <obj_property name="ElementShortName">cnt_run[31:0]</obj_property>
-      <obj_property name="ObjectShortName">cnt_run[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/cnt_output" type="array">
-      <obj_property name="ElementShortName">cnt_output[31:0]</obj_property>
-      <obj_property name="ObjectShortName">cnt_output[31:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
-   </wvobject>
-   <wvobject fp_name="/tb_axi_bottleneck_toy/dut/u_top_bottleneck/u_controller/core_out_f_addr" type="array">
-      <obj_property name="ElementShortName">core_out_f_addr[8:0]</obj_property>
-      <obj_property name="ObjectShortName">core_out_f_addr[8:0]</obj_property>
    </wvobject>
 </wave_config>
