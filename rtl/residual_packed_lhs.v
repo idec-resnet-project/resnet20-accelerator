@@ -33,8 +33,8 @@ parameter integer WORD_W = 16
       input  wire signed [WORD_W-1:0] data_in,  
       input  wire signed [WORD_W-1:0] data_skip,
                                                   
-      output wire                                valid_out,
-      output wire  signed [WORD_W-1:0]           data_out   
+      output reg                                valid_out,
+      output reg  signed [WORD_W-1:0]           data_out   
            
     );
     
@@ -43,8 +43,23 @@ parameter integer WORD_W = 16
     wire                    proc_resi;
     wire                    valid_resi;
     wire                    done_resi;
+    wire    signed [WORD_W-1:0] data_out_wire;
     assign                  valid_mux = valid_resi || proc_resi || done_resi;
-    assign                  valid_out = valid_resi;
+    
+    always @ (posedge clk or negedge rst_n)
+    begin
+        if(!rst_n)
+        begin
+            valid_out   <= 0;
+            data_out    <= 0;
+        end
+        else
+        begin
+            valid_out   <= valid_resi;
+            data_out    <= data_out_wire;
+        end
+    end
+    //assign                  valid_out = valid_resi;
     residual_unit 
     #(
     .WORD_W(WORD_W)
@@ -71,6 +86,6 @@ parameter integer WORD_W = 16
         .data_x     (data_in), 
         .data_y     (resi_data), 
         .enable     (valid_mux), 
-        .data_out   (data_out)    
+        .data_out   (data_out_wire)    
     );
 endmodule

@@ -47,9 +47,9 @@ module conv_valid_dcd
 );
 
     wire v_mac  = mac_enable                     ? mac_valid_out      : in_valid;
-    wire v_relu = relu_enable                    ? relu_valid_out     : v_mac;
-    wire v_res  = residual_enable                ? residual_valid_out : v_relu;
-    wire v_pool = (pooling_enable || gap_enable) ? pooling_valid_out  : v_res;
+    wire v_res  = residual_enable                ? residual_valid_out : v_mac;
+    wire v_relu = relu_enable                    ? relu_valid_out     : v_res;    
+    wire v_pool = (pooling_enable || gap_enable) ? pooling_valid_out  : v_relu;
 
     assign mac_valid_in      = in_valid;
     assign relu_valid_in     = v_mac;

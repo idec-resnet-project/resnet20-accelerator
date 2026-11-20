@@ -21,7 +21,6 @@
 - 보조 파일: `conv_top_wrapper.v` (conv_top 입출력 IOB 레지스터 + reset 동기화 + reset 중 loopback),
   `tb_packed_io.xdc` / `tb_conv_io.xdc` (post-implementation 용 클럭 / 입력 타이밍 제약)
 
-
 ## 판정 기준 / 콘솔 출력
 
 모든 결과는 `$display` 로 **Vivado Tcl 콘솔**에 출력됩니다.

@@ -14,6 +14,7 @@ module mac_v3
     input  wire        [ITER_CNT-1:0]   iter,
     input  wire signed [WORD_W-1:0]     fmap_in,
     input  wire signed [WORD_W-1:0]     weight_in,
+    input  wire signed [WORD_W-1:0]     bias_in,
     
     output reg                          proc,
     output reg                          valid_out,
@@ -22,6 +23,7 @@ module mac_v3
 
     reg signed [WORD_W-1:0]    fmap;
     reg signed [WORD_W-1:0]    weight;
+    //reg signed [WORD_W-1:0]    bias;
     reg signed [WORD_W*2-1:0]  multi;
     reg signed [ACC_W:0]       acc;
     reg        [ITER_CNT-1:0]  iter_cnt;
@@ -103,6 +105,7 @@ module mac_v3
                 weight   <= {WORD_W{1'b0}};
                 multi    <= {(WORD_W*2){1'b0}};
                 acc      <= {(ACC_W+1){1'b0}};
+                //bias     <= {WORD_W{1'b0}};
                 data_out <= {(ACC_W+1){1'b0}};
             end 
     
@@ -114,10 +117,11 @@ module mac_v3
                 
                 if (enable && valid_in && !proc) 
                     begin
+                        //bias     <= bias_in;
                         fmap     <= fmap_in;
                         weight   <= weight_in;
                         multi    <= $signed(fmap) * $signed(weight);
-                        acc      <= acc + multi;
+                        acc      <= bias_in; //acc + multi;
                         data_out <= {(ACC_W+1){1'b0}};
                     end 
     //=======================================================================

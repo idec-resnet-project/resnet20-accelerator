@@ -38,13 +38,27 @@ module pooling_packed #(
     input wire signed [WORD_W-1:0]  data_in, 
     
 
-    output wire                     valid_out,                   
-    output wire signed [WORD_W-1:0] data_out
+    output reg                     valid_out,                   
+    output reg signed [WORD_W-1:0] data_out
     );
 
-    //wire    valid_out;
+    wire                        valid_out_wire;
+    wire    signed [WORD_W-1:0] data_out_wire;
     wire    signed [WORD_W-1:0] data_out_pool;
-
+    always @ (posedge clk or negedge rst_n)
+    begin
+        if(!rst_n)
+        begin
+            valid_out   <= 0;
+            data_out    <= 0;
+        end
+        
+        else
+        begin
+            valid_out   <= valid_out_wire;
+            data_out    <= data_out_wire;
+        end
+    end
 
     pooling_unit 
     #(
@@ -62,7 +76,7 @@ module pooling_packed #(
         .max_iter(max_iter),
         .avg_iter(avg_iter),
         .data_in(data_in),
-        .valid_out(valid_out),
+        .valid_out(valid_out_wire),
         .data_out(data_out_pool)
     );
 
@@ -73,7 +87,7 @@ module pooling_packed #(
         .data_x(data_in),
         .data_y(data_out_pool),    
         .enable(valid_out),   
-        .data_out(data_out)  
+        .data_out(data_out_wire)  
     );
 
     endmodule

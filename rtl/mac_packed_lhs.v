@@ -30,21 +30,40 @@ module mac_packed#(
     input   wire                            valid_in, //valid_in = 1 -> data is valid, valid_in = 0 -> data is invalid   
     input   wire           [ITER_CNT-1:0]   iter, //if iteration = 3 -> Y = X0W0 + X1W1 + X2W2  
     input   wire    signed [WORD_W-1:0]     fmap_in,     //feature value
-    input   wire    signed [WORD_W-1:0]     weight_in, //weight value      
+    input   wire    signed [WORD_W-1:0]     weight_in, //weight value   
+    input   wire    signed [WORD_W-1:0]     bias_in, //bias value   
     
-    output  wire                            valid_out, //valid_out = 1 -> data is valid, valid_out = 0 -> data is invalid
-    output  wire    signed [WORD_W-1:0]     data_out //mac --out_data--> other
+    output  reg                             valid_out, //valid_out = 1 -> data is valid, valid_out = 0 -> data is invalid
+    output  reg     signed [WORD_W-1:0]     data_out //mac --out_data--> other
     );
     
     
-    wire    [ACC_W:0]       proc_data;
-    wire    [WORD_W-1:0]    rounded_data;
-    wire                    mac_proc;
-    wire                    valid_out_mac;
-    wire                    valid_out_post_mac;
-    wire                    valid_mux;
+    wire          [ACC_W:0]     proc_data;
+    wire          [WORD_W-1:0]  rounded_data;
+    wire                        mac_proc;
+    wire                        valid_out_mac;
+    wire                        valid_out_post_mac;
+    wire                        valid_mux;   
+    wire   signed [WORD_W-1:0]  data_out_wire;
+    
     assign  valid_mux = valid_out_post_mac||mac_proc||enable||valid_out_mac;
-    assign  valid_out = valid_out_post_mac;
+    
+    always @ (posedge clk or negedge rst_n)
+    begin
+        if(!rst_n)
+        begin
+            valid_out   <= 0;
+            data_out    <= 0;
+        end
+        
+        else
+        begin
+            valid_out   <= valid_out_post_mac;
+            data_out    <= data_out_wire;
+        end
+        
+    end
+   // assign  valid_out = valid_out_post_mac;
     
     mux#(
     .WORD_W(WORD_W)
@@ -53,7 +72,7 @@ module mac_packed#(
     .data_x(fmap_in),
     .data_y(rounded_data),    
     .enable(valid_mux),   
-    .data_out(data_out)  
+    .data_out(data_out_wire)  
     );
     
     mac_v3 
@@ -70,7 +89,8 @@ module mac_packed#(
     .valid_in(valid_in), //valid_in = 1 -> data is valid, valid_in = 0 -> data is invalid
     .iter(iter),    
     .fmap_in(fmap_in),    
-    .weight_in(weight_in),     
+    .weight_in(weight_in), 
+    .bias_in(bias_in),
     .proc(mac_proc),       
     .valid_out(valid_out_mac), 
     .data_out(proc_data) //m

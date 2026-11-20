@@ -30,13 +30,28 @@ parameter integer WORD_W = 16
     input  wire                     valid_in,  
     input  wire signed [WORD_W-1:0] data_in,
     
-    output wire                     valid_out,
-    output wire signed [WORD_W-1:0] data_out    
+    output reg                     valid_out,
+    output reg signed [WORD_W-1:0] data_out    
     );
 
     wire              valid_relu;
-    wire [WORD_W-1:0] relu_out;
-    assign valid_out = valid_relu;
+    wire signed [WORD_W-1:0] relu_out;
+    wire signed [WORD_W-1:0] data_out_wire;
+    
+    always @ (posedge clk or negedge rst_n)
+    begin
+        if(!rst_n)
+        begin
+            valid_out   <= 0;
+            data_out    <= 0;
+        end
+        begin
+            valid_out   <= valid_relu;
+            data_out    <= data_out_wire;
+        end
+       
+    end
+    //assign valid_out = valid_relu;
 
     mux 
     #(
@@ -46,7 +61,7 @@ parameter integer WORD_W = 16
     .data_x(data_in),
     .data_y(relu_out),
     .enable(valid_relu),      
-    .data_out(data_out)
+    .data_out(data_out_wire)
     );
     
     ReLU
