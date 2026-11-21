@@ -189,6 +189,19 @@ xsim  tb_mac_sim -R
 | `FRAC_BITS` | `8` | 소수부 비트 (Q7.8). 반올림 위치, bias 정렬(`bias << FRAC_BITS`), SNR 스케일에 사용 |
 | `CHECK_LAST` | `1` | `1`: `last_input` 확인 (윈도우 마지막 입력 클럭에 1, 나머지 0) / `0`: 확인 안 함 |
 | `` `define NO_LAST_INPUT `` | – | DUT 에 `last_input` 포트가 없을 때 (iter 내부 카운터 방식으로 결정된 경우) |
+| `DBG_FAIL` | `1` | `1`: **FAIL 난 케이스만** 틀린 출력의 계산 과정을 자동 출력 / `0`: 끔 |
+| `DBG_FAIL_MAX` | `3` | FAIL 케이스당 계산 과정을 출력할 틀린 출력 수 (`0` 이하 = 틀린 출력 전부) |
+| `DBG_CASE` | `0` | PASS / FAIL 과 무관하게 강제 출력 — `0`: 끔 / `-1`: 모든 케이스 / `n`: `[CASE n]` 만 |
+| `DBG_WIN` | `1` | 강제 출력 시작 출력 번호 (1 = 케이스의 첫 출력) |
+| `DBG_NWIN` | `1` | 강제 출력 케이스당 출력 개수 (`0` 이하 = 케이스의 모든 출력) |
+
+**FAIL 디버깅 로그** (기본 켜짐): 케이스가 FAIL 이면 결과 바로 아래에 `[DBG] FAIL detail` 과 함께 틀린 출력의 계산 과정을 출력합니다. PASS 케이스는 아무것도 추가로 출력하지 않습니다.
+- MAC 케이스: `x`, `w`, `x·w`, 누적합 → `+ (bias << 8)` → (34b wrap) → 반올림 → 포화 → 기대값과 DUT 값
+- bypass 케이스: `fmap_in` → 기대값(= `fmap_in`) 과 pass-through 지연 뒤 DUT 값 (`weight_in`, `bias_in` 은 무시)
+- 값은 다 맞는데 FAIL 인 경우 (출력 개수 부족 / 초과, X/Z, `last_input` 불일치) 는 원인만 출력
+
+예: `-generic_top "DBG_FAIL_MAX=10"` (틀린 출력 10개까지), `-generic_top "DBG_FAIL=0"` (FAIL 로그 끄기),
+`-generic_top "DBG_CASE=11"` (11번 케이스는 PASS 여도 첫 출력 계산 과정 출력), `-generic_top "DBG_CASE=-1"` (모든 케이스).
 
 `last_input` 은 조합 출력이라 post-implementation timing sim 에서는 입력 인가(0.6 T) 후 출력 경로 지연 때문에
 posedge 시점에 아직 안 바뀌어 있을 수 있습니다. timing sim 에서 `last_input mismatch` 가 나오면 `CHECK_LAST=0` 으로 돌리세요.
@@ -218,14 +231,10 @@ skip = 0, + 포화 경계, − 포화 경계, skip = +32767 / −32768, 긴 스�
 **`tb_pooling_packed`**
 MAX: K = 2 / 4 / 9 / 1, 최소 간격(idle 1 clk), 윈도우 내부 bubble, mixed K(1~9), 음수 / 동일값 / 극값
 GAP: K = 2 / 4 / 8 / 16 / 64 / 128 / 1, 최소 간격, 윈도우 내부 bubble, mixed K(2ⁿ), 작은 범위, 음수 floor, full-scale
-MAX → GAP (동시 enable, ResNet 순서): Kp/Kg = 4/4, 2/8, 9/2, 4/16, 1/4(= GAP), 4/1(= MAX), 최소 간격, 윈도우 내부 bubble, 작은 범위, 음수 / floor / 극값
 bypass
 
-`enable_max` 와 `enable_avg` 를 같이 켜면 **MAXPOOL → GAP 직렬**로 기대합니다 (ResNet 순서).
-`max_iter`(Kp) 개 입력마다 max 1개를 만들고, 그 max 결과 `avg_iter`(Kg) 개를 평균해서 출력 1개를 냅니다.
-즉 입력 Kp × Kg 개당 출력 1개이고, 기대값은 `(Σ max) >>> log2(Kg)` (floor) 입니다.
-max 윈도우 사이에는 idle 을 기본 2 클럭(최소 간격 케이스는 1 클럭) 넣습니다.
-latency 는 출력 1개를 만드는 마지막 max 윈도우의 마지막 입력 기준입니다.
+`enable_max` 와 `enable_avg` 는 **둘 중 하나만** 켭니다. ResNet 을 포함한 CNN 에서 같은 데이터에 MAXPOOL 과 GAP 를 동시에 쓰는 경우가 없어서
+동시 enable 은 테스트하지 않습니다 (MAX / GAP 병렬 구조 + 출력 mux 기준).
 
 ## 다른 RTL 로 교체해서 테스트하기
 
@@ -259,7 +268,6 @@ latency 는 출력 1개를 만드는 마지막 max 윈도우의 마지막 입력
 | ReLU / residual 입력 | 매 클럭 입력 가능 (back-to-back), 입력 사이 bubble 허용 | back-to-back / bubble / long stream 케이스 |
 | pooling 윈도우 내부 bubble | 윈도우 중간에 `valid_in = 0` 이 끼어도 계속 누적 | `[MAX] / [GAP] ... bubble inside window` |
 | pooling 윈도우 간격 | 윈도우 사이 최소 idle 1 클럭 (기본 2 클럭) | 모든 pooling 케이스, `... min gap (1 idle clk)` |
-| MAX + GAP 동시 enable | MAXPOOL → GAP 직렬: max 결과 `avg_iter` 개를 평균 (입력 `max_iter × avg_iter` 개당 출력 1개) | `[MAX->GAP] ...` |
 | bypass (`enable = 0`) | `valid_out` 이 뜨지 않고, data 만 레지스터 한 단을 거쳐 통과 | `... bypass` 케이스 |
 
 `avgpool` 은 K 가 2ⁿ (≤ 128) 일 때만 나눗셈(`sum >>> log2 K`, floor)을 하므로 GAP 케이스는 2ⁿ 만 사용합니다.
@@ -282,8 +290,11 @@ behavioral sim 은 영향이 없습니다.
 ### 처리 순서와 입력 규칙
 
 ```
-MAC(+bias) -> residual -> ReLU -> MAXPOOL -> GAP      (ResNet : conv -> add -> ReLU)
+MAC(+bias) -> residual -> ReLU -> MAXPOOL or GAP      (ResNet : conv -> add -> ReLU)
 ```
+
+MAXPOOL 과 GAP 은 둘 중 하나만 켭니다 (병렬 구조 + 출력 mux). CNN 에서 동시에 쓰는 경우가 없어 동시 enable 케이스는 없습니다.
+ResNet 에서 실제로 쓰는 경로는 stem `MAC -> ReLU -> MAXPOOL` 과 마지막 층 `MAC -> RES -> ReLU -> GAP` 입니다.
 
 | 입력 | 의미 / 인가 시점 |
 |---|---|
@@ -323,7 +334,6 @@ define 설정 방법:
 | `IN_DLY_RATIO` | `0.75` | 입력 인가 시점 = posedge 후 `IN_DLY_RATIO × 주기`. wrapper IOB 입력 기준 (100 MHz 에서 7.5 ns) |
 | `FRAC_BITS` | `8` | 소수부 비트 수 (Q7.8). MAC 반올림 위치, bias 정렬, SNR 스케일에 사용 |
 | `RES_SRC` | `0` | residual 값 — `0`: `residual_data` 포트 / `1`: MAC 윈도우 중앙 입력 (DUT 내부 캡처) |
-| `POOL_CASCADE` | `1` | MAX + GAP 동시 enable — `1`: MAXPOOL → GAP 직렬 (ResNet 순서, max 결과 `gap_iteration` 개를 평균) / `0`: avg 결과만 (이전 conv_top 방식) |
 | `GAP_ROUND` | `0` | GAP 나눗셈 — `0`: floor (`>>>`) / `1`: 0 방향 절삭 |
 | `GAP_NPOW2` | `0` | `1` 이면 GAP K 가 2ⁿ 이 아닌 케이스(3, 9) 추가 |
 | `MAC_GAP` | `4` | MAC 윈도우 사이 idle 클럭 (현재 conv_top 최소 3) |
@@ -339,7 +349,6 @@ define 설정 방법:
 | `conv_top` (`CT_RESI_EXTERNAL` 정의, residual_data 포트 사용) | – | 기본값 |
 | `conv_top` (내부 중앙 캡처, residual_data 포트 없음) | `NO_RESIDUAL_PORT` | `RES_SRC=1` |
 | `core.v` | `CORE_MODULE=core` | `GAP_NPOW2=1`, `GAP_ROUND` 는 core 의 GAP 구현에 맞춤 |
-| 이전 `conv_top` (MAX + GAP 동시 enable 시 avg 만 출력) | – | `POOL_CASCADE=0` |
 
 ### LATENCY
 
@@ -396,7 +405,7 @@ TB 와 wrapper 는 core 의 **포트만** 사용하고 parameter 도 넘기지 �
 | 포트 | 위 *파일 구성* 표의 포트 이름 / 폭 (데이터 16b, iteration 16b, `PARALLEL_PC = 1`). parameter 기본값도 이 폭이어야 함 |
 | 리셋 | `nrst` active-low, 해제 후 `RST_WAIT` 클럭 안에 입력을 받을 수 있어야 함 |
 | `out_enable` | 결과 1개당 정확히 1클럭 펄스, 입력 순서대로 출력 |
-| 처리 순서 | MAC(+bias) → residual → ReLU → MAXPOOL → GAP. MAXPOOL 과 GAP 을 같이 켜면 직렬 (MAX 결과 `gap_iteration` 개를 평균) |
+| 처리 순서 | MAC(+bias) → residual → ReLU → MAXPOOL 또는 GAP (pooling 은 둘 중 하나만 enable, 동시 enable 은 테스트하지 않음) |
 | 블록 bypass | enable 이 0 인 블록은 값을 바꾸지 않고 통과시키며, **valid 와 data 가 같은 클럭에 맞춰져** 다음 블록으로 가야 함 |
 | MAC 반올림 | `sum(x·w) + (bias << FRAC_BITS)` 를 ±0.5 LSB (0 에서 먼 쪽) 반올림 후 int16 포화 |
 | residual | int16 포화 덧셈, MAC 이 켜져 있을 때만 동작 |
@@ -407,7 +416,6 @@ TB 와 wrapper 는 core 의 **포트만** 사용하고 parameter 도 넘기지 �
 |---|---|
 | 소수부 비트 | `FRAC_BITS` |
 | residual 값 출처 (포트 / 내부 중앙 캡처) | `RES_SRC` (+ 포트가 없으면 `NO_RESIDUAL_PORT`) |
-| MAX + GAP 동시 enable (직렬 MAX → GAP / 이전 방식 avg 만) | `POOL_CASCADE` |
 | GAP 반올림 (floor / 0 방향) | `GAP_ROUND` |
 | GAP K 가 2ⁿ 이 아닌 경우 지원 | `GAP_NPOW2` |
 | MAC / pooling 윈도우 사이 idle | `MAC_GAP`, `POOL_GAP` |
@@ -426,8 +434,6 @@ TB 와 wrapper 는 core 의 **포트만** 사용하고 parameter 도 넘기지 �
 - 블록 2개: MAC+RES (랜덤 / full-range skip + bias), MAC+ReLU, MAC+MAXPOOL, MAC+GAP, ReLU+MAXPOOL, ReLU+GAP
 - 블록 3개: MAC+RES+ReLU, MAC+RES+MAXPOOL, MAC+RES+GAP, MAC+ReLU+MAXPOOL, MAC+ReLU+GAP
 - 블록 4개: MAC+RES+ReLU+MAXPOOL, MAC+RES+ReLU+GAP
-- 블록 5개 (ResNet 전체): MAC+RES+ReLU+MAX→GAP (P/G = 4/4, 2/8)
-- MAX→GAP: P/G = 4/4, 2/8, 9/2, ReLU+MAX→GAP, MAC+MAX→GAP
 - 코너 케이스: MAC 반올림 경계(`FRAC_BITS` 기준), iter = 0, iter = 16, ± 포화, full-range, bias ± 포화, all-zero,
   ReLU 경계값, MAC+RES skip ± 포화 / skip = 0 / iter = 1, MAXPOOL / GAP iter = 1, MAXPOOL 음수 / 극값,
   GAP 음수 반올림, GAP full-scale, (GAP K = 3, 9), 긴 back-to-back 스트림

@@ -86,7 +86,7 @@ module pooling_packed #(
     (
         .data_x(data_in),
         .data_y(data_out_pool),    
-        .enable(valid_out),   
+        .enable(valid_out_wire),   
         .data_out(data_out_wire)  
     );
 

@@ -11,10 +11,12 @@
 //      - NO_RESIDUAL_PORT : DUT 에 residual_data 포트가 없을 때 (RES_SRC = 1 로 사용)
 //            예) xvlog -d CORE_MODULE=core   /   xvlog -d NO_RESIDUAL_PORT
 //  * 처리 순서 : MAC(+bias) -> RES -> ReLU -> MAXPOOL -> GAP  (ResNet : conv -> add -> ReLU)
-//      - MAXPOOL + GAP 동시 enable : 직렬 (MAX 결과 Kg 개를 GAP 으로 평균), 입력 토큰 Kp*Kg 개당 출력 1개
-//                                    (POOL_CASCADE = 0 이면 이전 conv_top 방식 : avg 결과만 출력)
+//      - MAXPOOL / GAP 은 둘 중 하나만 enable (동시 enable 은 CNN 에서 쓰지 않아 테스트하지 않음)
 //      - bias_data     : MAC 결과에 더하는 bias (케이스마다 상수)
-//      - residual_data : shortcut 값. 출력 1개를 만드는 MAC 윈도우의 "마지막 입력" 과 같은 클럭에 인가
+//      - residual_data : shortcut 값 (출력 1개당 1개)
+//                        RES_DRIVE = 0 (기본) : MAC 윈도우마다 1개. 윈도우가 진행되는 동안 (in_enable = 1 인 iter 클럭) 같은 값 유지, idle 클럭은 0
+//                        RES_DRIVE = 1        : 윈도우 첫 입력부터 다음 윈도우 전까지 (idle 포함) 같은 값 유지
+//                        RES_DRIVE = 2        : 윈도우 마지막 입력 클럭에만 유효, 나머지 클럭은 랜덤 garbage
 //                        (RES_SRC = 1 이면 포트 대신 MAC 윈도우 중앙 입력 in_data 를 residual 로 기대)
 //      - residual 은 MAC 이 켜져 있을 때만 동작 (mac_enable && residual_enable)
 //  * 입력 : posedge 후 IN_DLY (= IN_DLY_RATIO x 주기) 에 인가
@@ -33,13 +35,16 @@
 //             (= 출력 1개를 만드는 마지막 입력을 캡처한 posedge 부터 결과를 낸 posedge 까지)
 //             wrapper 의 입출력 레지스터 +2 클럭은 빼고 core 기준으로 표시
 //
+//  * 디버깅 : FAIL 케이스는 틀린 출력의 계산 과정 (토큰별 MAC -> RES -> ReLU -> POOL) 을 자동 출력
+//             DUT 출력이 기대값을 몇 칸 밀어 놓은 것과 같으면 shift 패턴도 알려줌 (valid / data 타이밍 어긋남)
+//
 //  주파수 변경 : CLK_FREQ_MHZ  (예: xelab ... -generic_top "CLK_FREQ_MHZ=50.0")
 //  Vivado xsim : 기본 run time(1000ns)으로는 안 끝납니다 -> Tcl 콘솔에서  run all
 //==============================================================================
 `ifndef CORE_MODULE
 `define CORE_MODULE conv_top
 `endif
-
+`define NO_WRAPPER
 `ifdef NO_WRAPPER
 `define TB_DUT `CORE_MODULE
 `else
@@ -55,7 +60,7 @@ module tb_conv_top;
     parameter real    IN_DLY_RATIO = 0.75;   // 입력 인가 시점 = posedge 후 (IN_DLY_RATIO x 주기)
     parameter integer FRAC_BITS    = 8;      // 소수부 비트 : Q7.8 -> 8
     parameter integer RES_SRC      = 0;      // residual 값  0: residual_data 포트 / 1: MAC 윈도우 중앙 입력 (내부 캡처)
-    parameter integer POOL_CASCADE = 1;      // MAX+GAP 동시 enable  1: MAX -> GAP 직렬 (ResNet 순서) / 0: avg 결과만 (이전 conv_top)
+    parameter integer RES_DRIVE    = 0;      // residual_data 인가  0: 윈도우 입력 동안 유지, idle 0 / 1: idle 까지 유지 / 2: 마지막 입력 클럭만 + garbage
     parameter integer GAP_ROUND    = 0;      // GAP 나눗셈  0: floor (>>>) / 1: 0 방향 절삭
     parameter integer GAP_NPOW2    = 0;      // 1: GAP K 가 2^n 이 아닌 케이스 포함
     parameter integer MAC_GAP      = 4;      // MAC 윈도우 사이 idle 클럭 (현재 conv_top 최소 3)
@@ -63,6 +68,12 @@ module tb_conv_top;
     parameter integer RST_WAIT     = 8;      // nrst 해제 후 첫 입력까지 대기 클럭
     parameter integer REF_CLIP     = 1;      // SNR ideal 모델  1: 표현 범위 clip / 0: clip 없음
     parameter integer SEED         = 1;      // 랜덤 시드
+    parameter integer DBG_FAIL     = 1;      // 1: FAIL 케이스는 틀린 출력의 계산 과정을 자동 출력 / 0: 끔
+    parameter integer DBG_FAIL_MAX = 3;      // FAIL 케이스당 계산 과정을 출력할 틀린 출력 수 (0 이하 = 전부)
+    parameter integer DBG_TERMS    = 1;      // 1: MAC 곱 (x, w, x*w) 한 줄씩 출력 / 0: 토큰별 요약만
+    parameter integer DBG_CASE     = 0;      // PASS/FAIL 무관 강제 출력  0: 끔 / -1: 모든 케이스 / n: [CASE n] 만
+    parameter integer DBG_WIN      = 1;      // 강제 출력 시작 출력 번호 (1 = 케이스의 첫 출력)
+    parameter integer DBG_NWIN     = 1;      // 강제 출력 케이스당 출력 개수 (0 이하 = 케이스의 모든 출력)
 
     //--------------------------------------------------------------------------
     // derived / fixed
@@ -186,6 +197,8 @@ module tb_conv_top;
     real    r_snr  [0:MAXC-1];
 
     integer n_case;
+    integer pass_g;                // 마지막 케이스 PASS(1) / FAIL(0) (dbg 용)
+    integer n_err_g;               // 마지막 케이스 값 불일치 수 (dbg 용)
     integer seed;
     integer cur_cap;
     integer ii;
@@ -350,8 +363,13 @@ module tb_conv_top;
             in_enable     = 1'b0;
             in_data       = {PC{r[15:0]}};
             kernel_data   = {PC{r[31:16]}};
-            r             = $random(seed);
-            residual_data = {PC{r[15:0]}};
+            if (RES_DRIVE == 0)
+                residual_data = {(PC*WORD_W){1'b0}};       // 유효 skip 없음 -> 0
+            else if (RES_DRIVE == 2)
+            begin
+                r             = $random(seed);
+                residual_data = {PC{r[15:0]}};             // garbage
+            end                                            // RES_DRIVE 1 : 이전 값 유지
             tick;
         end
     endtask
@@ -468,14 +486,13 @@ module tb_conv_top;
             //   Kp : MAXPOOL window, Kg : GAP window, K = 출력 1개당 토큰 수
             //------------------------------------------------------------------
             use_res = (en_mac && en_res) ? 1 : 0;
-            if (en_max && en_gap && (POOL_CASCADE != 0)) begin Kp = p_iter; Kg = g_iter; end
-            else if (en_gap)                             begin Kp = 1;      Kg = g_iter; end
-            else if (en_max)                             begin Kp = p_iter; Kg = 1;      end
-            else                                         begin Kp = 1;      Kg = 1;      end
+            if (en_gap)      begin Kp = 1;      Kg = g_iter; end
+            else if (en_max) begin Kp = p_iter; Kg = 1;      end
+            else             begin Kp = 1;      Kg = 1;      end
             if (Kp < 1) Kp = 1;
             if (Kg < 1) Kg = 1;
             K     = Kp * Kg;
-            Kw    = (en_max && en_gap && (POOL_CASCADE != 0)) ? Kp : K;   // pooling 윈도우 단위 (idle 삽입)
+            Kw    = K;                                                     // pooling 윈도우 단위 (idle 삽입)
             if (en_mac) Neff = (n_iter < 1) ? 1 : n_iter;
             else        Neff = 1;
             cidx  = (n_iter >= 1) ? (n_iter >> 1) : 0;                     // MAC 윈도우 중앙 입력 번호
@@ -491,8 +508,8 @@ module tb_conv_top;
                 $display("  [NOTE] RES without MAC : residual is not applied (mac_enable && residual_enable)");
             if (use_res && (RES_SRC == 0) && (HAS_RES_PORT == 0))
                 $display("  [WARN] RES_SRC=0 but NO_RESIDUAL_PORT : set RES_SRC=1 for internal capture");
-            if (en_max && en_gap && (POOL_CASCADE == 0) && (p_iter != g_iter))
-                $display("  [WARN] MAX+GAP parallel : pooling_iteration must equal gap_iteration");
+            if (en_max && en_gap)
+                $display("  [WARN] MAXPOOL+GAP both enabled : not supported (not used in CNNs), expecting GAP result");
 
             //------------------------------------------------------------------
             // stimulus
@@ -636,12 +653,15 @@ module tb_conv_top;
             idx = 0;
             if (en_mac)
             begin
-                // MAC : iter 개 연속 입력 (마지막 입력과 같은 클럭에 residual_data) -> idle MAC_GAP 클럭
+                // MAC : iter 개 연속 입력 -> idle MAC_GAP 클럭
+                //   RES_DRIVE 0 : 윈도우 입력 내내 residual_data = 이 출력의 skip, idle 클럭은 0
+                //   RES_DRIVE 1 : 윈도우 입력 내내 residual_data = 이 출력의 skip (idle 동안에도 유지)
+                //   RES_DRIVE 2 : 마지막 입력 클럭에만 skip, 나머지 입력 클럭은 garbage
                 for (j = 0; j < S; j = j + 1)
                 begin
                     for (k = 0; k < Neff; k = k + 1)
                     begin
-                        if (k == Neff - 1)
+                        if ((RES_DRIVE == 0) || (RES_DRIVE == 1) || (k == Neff - 1))
                             rv = res_v[j];
                         else
                         begin
@@ -666,8 +686,17 @@ module tb_conv_top;
                         rnd = $random(seed);
                         if (rnd[1:0] == 2'b00) drive_idle;
                     end
-                    rnd = $random(seed);
-                    drive_in(stim_x[j], stim_w[j], $signed(rnd[15:0]));
+                    // MAC 미사용 : residual 은 쓰지 않음
+                    if (RES_DRIVE == 2)
+                    begin
+                        rnd = $random(seed);
+                        rv  = $signed(rnd[15:0]);
+                    end
+                    else if (RES_DRIVE == 1)
+                        rv  = $signed(residual_data[WORD_W-1:0]);    // 이전 값 유지
+                    else
+                        rv  = 0;
+                    drive_in(stim_x[j], stim_w[j], rv);
                     tok_cap[j] = cur_cap;
                     if ((en_max || en_gap) && ((j % Kw) == (Kw-1)))
                         repeat (POOL_GAP) drive_idle;
@@ -680,6 +709,234 @@ module tb_conv_top;
             mon_en = 1'b0;
 
             finish_case(name, n_exp);
+
+            // 계산 과정 출력 : DBG_CASE 로 지정한 케이스 (PASS/FAIL 무관) 또는 FAIL 케이스의 틀린 출력
+            if (dbg_on(n_case))
+                dbg_conv(n_case, n_exp, en_mac, en_res, en_relu, en_max, en_gap, n_iter, Kp, Kg, Neff, bias, use_res, 0);
+            else if ((DBG_FAIL != 0) && !pass_g)
+            begin
+                if ((DBG_FAIL_MAX <= 0) || (n_err_g <= DBG_FAIL_MAX))
+                    $display("  ---- [DBG] FAIL detail : mismatched outputs (%0d) ----", n_err_g);
+                else
+                    $display("  ---- [DBG] FAIL detail : first %0d of %0d mismatched outputs (DBG_FAIL_MAX) ----", DBG_FAIL_MAX, n_err_g);
+                dbg_shift_hint(n_exp);
+                dbg_conv(n_case, n_exp, en_mac, en_res, en_relu, en_max, en_gap, n_iter, Kp, Kg, Neff, bias, use_res, 1);
+            end
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // dbg 대상 선택
+    //   dbg_on  : 이 케이스를 출력할지 (DBG_CASE -1 = 전부, 0 = 끔, n = n 번만)
+    //   dbg_sel : 케이스 안에서 출력 t(0부터)를 출력할지 (DBG_WIN 부터 DBG_NWIN 개, 0 이하 = 전부)
+    //   dbg_pick: only_err = 1 이면 틀린 출력만 DBG_FAIL_MAX 개까지
+    //--------------------------------------------------------------------------
+    function integer dbg_on;
+        input integer cnum;
+        begin
+            dbg_on = (DBG_CASE < 0) || ((DBG_CASE != 0) && (DBG_CASE == cnum));
+        end
+    endfunction
+
+    function integer dbg_sel;
+        input integer t;
+        begin
+            if (DBG_NWIN <= 0) dbg_sel = (t >= DBG_WIN - 1);
+            else               dbg_sel = (t >= DBG_WIN - 1) && (t < DBG_WIN - 1 + DBG_NWIN);
+        end
+    endfunction
+
+    function integer dbg_pick;
+        input integer t;
+        input integer only_err;
+        input integer is_err;
+        input integer n_pr;
+        begin
+            if (only_err)
+                dbg_pick = is_err && ((DBG_FAIL_MAX <= 0) || (n_pr < DBG_FAIL_MAX));
+            else
+                dbg_pick = dbg_sel(t);
+        end
+    endfunction
+
+    //--------------------------------------------------------------------------
+    // dbg_shift_hint : DUT 출력이 기대값을 s 칸 (-3 ~ +3) 밀어 놓은 것과 같은지 검사
+    //   got[i] == exp[i + s] 가 비교 가능한 모든 i 에서 성립하면 출력
+    //   s < 0 : DUT 가 이전 출력 값을 내고 있음 (data 가 valid 보다 늦음)
+    //   s > 0 : DUT 가 다음 출력 값을 내고 있음 (data 가 valid 보다 빠름 / 출력 누락)
+    //--------------------------------------------------------------------------
+    task dbg_shift_hint;
+        input integer n_exp;
+        integer s, i, ncmp, ok, n_got, found;
+        begin
+            n_got = (out_cnt < MAXO) ? out_cnt : MAXO;
+            found = 0;
+            for (s = -3; s <= 3; s = s + 1)
+            begin
+                if (s != 0)
+                begin
+                    ok   = 1;
+                    ncmp = 0;
+                    for (i = 0; i < n_got; i = i + 1)
+                    begin
+                        if ((i + s >= 0) && (i + s < n_exp))
+                        begin
+                            ncmp = ncmp + 1;
+                            if (got_val[i] !== exp_int[i + s]) ok = 0;
+                        end
+                    end
+                    if (ok && (ncmp >= 2) && (ncmp * 2 >= n_exp))
+                    begin
+                        found = 1;
+                        $display("    shift pattern : got[i] == exp[i%0s%0d] for all %0d compared outputs", (s > 0) ? "+" : "-",
+                                 (s > 0) ? s : -s, ncmp);
+                        if (s < 0)
+                            $display("                    -> DUT outputs the PREVIOUS result : data is later than out_enable (valid/data misalignment)");
+                        else
+                            $display("                    -> DUT outputs a LATER result : data is earlier than out_enable, or outputs were dropped");
+                    end
+                end
+            end
+            if (!found)
+                $display("    shift pattern : none (values are wrong, not just shifted)");
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // dbg_fail_reason : FAIL 인데 값 불일치가 없을 때 원인
+    //--------------------------------------------------------------------------
+    task dbg_fail_reason;
+        input integer n_exp;
+        begin
+            $display("  ---- [DBG] FAIL without value mismatch : cause ----");
+            if (out_cnt < n_exp) $display("    missing outputs : %0d (out_enable pulses too few)", n_exp - out_cnt);
+            if (out_cnt > n_exp) $display("    extra outputs   : %0d (out_enable held > 1 clk or spurious pulses)", out_cnt - n_exp);
+            if (x_cnt != 0)      $display("    X/Z on outputs  : %0d samples", x_cnt);
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
+    // dbg_conv : 출력별 계산 과정
+    //   출력 j = 토큰 j*K ~ j*K+K-1 (K = Kp*Kg) 를 pooling 한 값
+    //   토큰마다 : (MAC : x*w 누적 + bias << F -> 반올림/포화)  또는  입력 그대로
+    //              -> (+ residual -> 포화) -> (ReLU) -> 토큰 값
+    //   마지막에 MAXPOOL (max) / GAP (합 / Kg) -> 기대값 vs DUT
+    //--------------------------------------------------------------------------
+    task dbg_conv;
+        input integer cnum;
+        input integer n_exp;
+        input integer en_mac;
+        input integer en_res;
+        input integer en_relu;
+        input integer en_max;
+        input integer en_gap;
+        input integer n_iter;
+        input integer Kp;
+        input integer Kg;
+        input integer Neff;
+        input integer bias;
+        input integer use_res;
+        input integer only_err;
+        integer j, m, k, tk, K, ix, v, vmax, isum, n_pr, is_err, h;
+        reg signed [63:0] acc, prod, bb, rnd;
+        begin
+            K    = Kp * Kg;
+            h    = 1 << (FRAC_BITS - 1);
+            n_pr = 0;
+            for (j = 0; j < n_exp; j = j + 1)
+            begin
+                is_err = (j >= out_cnt) || (j >= MAXO);
+                if (!is_err) is_err = (got_val[j] != exp_int[j]);
+                if (dbg_pick(j, only_err, is_err, n_pr))
+                begin
+                    n_pr = n_pr + 1;
+                    $display("  ---- [DBG] CASE %0d, output #%0d : tokens %0d..%0d  (MAC=%0d RES=%0d ReLU=%0d MAX=%0d GAP=%0d) ----",
+                             cnum, j + 1, j*K, j*K + K - 1, en_mac, (use_res != 0), en_relu, en_max, en_gap);
+                    for (m = 0; m < K; m = m + 1)
+                    begin
+                        tk = j*K + m;
+                        //------------------------------------------------------
+                        // stage 1 : MAC (+bias) 또는 입력 그대로
+                        //------------------------------------------------------
+                        if (en_mac)
+                        begin
+                            $display("    token %0d : MAC iter=%0d, bias=%0d (%0.6f)", tk, n_iter, bias, bias / QSCALE);
+                            acc = 0;
+                            for (k = 0; k < Neff; k = k + 1)
+                            begin
+                                ix   = tk*Neff + k;
+                                prod = stim_x[ix];
+                                prod = prod * stim_w[ix];
+                                if (k < n_iter)
+                                begin
+                                    acc = acc + prod;
+                                    if (DBG_TERMS != 0)
+                                        $display("      k=%2d : x=%6d (%10.6f)  w=%6d (%10.6f)  x*w=%11d  sum=%12d",
+                                                 k, stim_x[ix], stim_x[ix] / QSCALE, stim_w[ix], stim_w[ix] / QSCALE, prod, acc);
+                                end
+                                else if (DBG_TERMS != 0)
+                                    $display("      k=%2d : x=%6d  w=%6d  (iter=0 : not accumulated)", k, stim_x[ix], stim_w[ix]);
+                            end
+                            bb  = bias;
+                            bb  = bb <<< FRAC_BITS;
+                            acc = acc + bb;
+                            if (acc < 0) rnd = (acc + h - 1) >>> FRAC_BITS;
+                            else         rnd = (acc + h) >>> FRAC_BITS;
+                            v = mac_round_sat(acc);
+                            $display("      sum + (bias << %0d) = %0d  -> round = %0d  -> sat = %0d  (%0.6f)%0s",
+                                     FRAC_BITS, acc, rnd, v, v / QSCALE, ((rnd > 32767) || (rnd < -32768)) ? "  [saturated]" : " ");
+                        end
+                        else
+                        begin
+                            v = stim_x[tk];
+                            $display("    token %0d : in_data = %0d (%0.6f)%0s", tk, v, v / QSCALE, en_mac ? " " : "  (MAC bypass)");
+                        end
+                        //------------------------------------------------------
+                        // stage 2 : residual
+                        //------------------------------------------------------
+                        if (use_res)
+                        begin
+                            $display("      + residual %0d = %0d  -> sat = %0d%0s", res_v[tk], v + res_v[tk], sat16(v + res_v[tk]),
+                                     ((v + res_v[tk] > 32767) || (v + res_v[tk] < -32768)) ? "  [saturated]" : " ");
+                            v = sat16(v + res_v[tk]);
+                        end
+                        //------------------------------------------------------
+                        // stage 3 : ReLU
+                        //------------------------------------------------------
+                        if (en_relu)
+                        begin
+                            $display("      ReLU(%0d) = %0d", v, (v < 0) ? 0 : v);
+                            if (v < 0) v = 0;
+                        end
+                        if (K > 1)
+                            $display("      token value = %0d", v);
+                    end
+                    //----------------------------------------------------------
+                    // stage 4 : pooling
+                    //----------------------------------------------------------
+                    if (en_gap)
+                    begin
+                        isum = 0;
+                        for (m = 0; m < K; m = m + 1) isum = isum + t_int[j*K + m];
+                        $display("    GAP  : sum of %0d tokens = %0d  -> / %0d (%0s) = %0d", Kg, isum, Kg,
+                                 (GAP_ROUND != 0) ? "trunc to 0" : "floor", gap_div(isum, Kg));
+                    end
+                    else if (en_max)
+                    begin
+                        vmax = t_int[j*K];
+                        for (m = 1; m < K; m = m + 1) if (t_int[j*K + m] > vmax) vmax = t_int[j*K + m];
+                        $display("    MAX  : max of %0d tokens = %0d", Kp, vmax);
+                    end
+                    $display("    EXPECTED out_data = %0d  (0x%04h, %0.6f)", exp_int[j], exp_int[j] & 16'hFFFF, exp_int[j] / QSCALE);
+                    if ((j < out_cnt) && (j < MAXO))
+                        $display("    DUT      out_data = %0d  (0x%04h, %0.6f)  latency %0d clk  -> %0s", got_val[j], got_val[j] & 16'hFFFF,
+                                 got_val[j] / QSCALE, got_cyc[j] - last_cap[j] - WRAP_LAT,
+                                 (got_val[j] == exp_int[j]) ? "MATCH" : "MISMATCH");
+                    else
+                        $display("    DUT      out_data = <missing>  (out_enable did not come for this output)");
+                end
+            end
+            if (only_err && (n_pr == 0)) dbg_fail_reason(n_exp);
         end
     endtask
 
@@ -768,6 +1025,8 @@ module tb_conv_top;
             r_lavg[n_case] = lavg;
             r_kind[n_case] = kind;
             r_snr [n_case] = snr;
+            pass_g         = pass;
+            n_err_g        = n_err;
             n_case         = n_case + 1;
         end
     endtask
@@ -796,7 +1055,7 @@ module tb_conv_top;
             $display("====================================================================================================");
             $display("  conv_top TEST SUMMARY   (CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, wrapper latency %0d excluded)",
                      CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, WRAP_LAT);
-            $display("  FRAC_BITS %0d, RES_SRC %0d, POOL_CASCADE %0d, GAP_ROUND %0d", FRAC_BITS, RES_SRC, POOL_CASCADE, GAP_ROUND);
+            $display("  FRAC_BITS %0d, RES_SRC %0d, GAP_ROUND %0d", FRAC_BITS, RES_SRC, GAP_ROUND);
             $display("====================================================================================================");
             $display("  No | Result |  Exp |  Got |  Err |  Lat(clk) |  SNR(dB)  | Case");
             $display(" ----+--------+------+------+------+-----------+-----------+------------------------------------------");
@@ -883,6 +1142,8 @@ module tb_conv_top;
         x_cnt             = 0;
         cal_on            = 1'b0;
         n_case            = 0;
+        pass_g            = 1;
+        n_err_g           = 0;
         seed              = SEED;
         cur_cap           = 0;
         nrst              = 1'b0;
@@ -906,10 +1167,20 @@ module tb_conv_top;
         $display("========================================================================");
         $display(" tb_conv_top  (CLK %0.3f MHz = %0.3f ns, IN_DLY %0.3f ns, wrapper latency %0d)",
                  CLK_FREQ_MHZ, CLK_PERIOD, IN_DLY, WRAP_LAT);
-        $display(" FRAC_BITS %0d, RES_SRC %0d (%0s), residual_data port %0d, POOL_CASCADE %0d, GAP_ROUND %0d (%0s)",
+        $display(" FRAC_BITS %0d, RES_SRC %0d (%0s), residual_data port %0d, GAP_ROUND %0d (%0s)",
                  FRAC_BITS, RES_SRC, RES_SRC ? "MAC center tap" : "residual_data port", HAS_RES_PORT,
-                 POOL_CASCADE, GAP_ROUND, GAP_ROUND ? "trunc to 0" : "floor");
+                 GAP_ROUND, GAP_ROUND ? "trunc to 0" : "floor");
         $display(" MAC_GAP %0d, POOL_GAP %0d, RST_WAIT %0d, REF_CLIP %0d", MAC_GAP, POOL_GAP, RST_WAIT, REF_CLIP);
+        $display(" RES_DRIVE %0d (%0s)", RES_DRIVE,
+                 (RES_DRIVE == 0) ? "1 skip per MAC window, held while the window's MAC inputs are driven, 0 on idle" :
+                 (RES_DRIVE == 1) ? "residual_data held for the whole window and idle" :
+                                    "residual_data valid only at last MAC input, garbage elsewhere");
+        $display(" debug trace : FAIL cases %0s (DBG_FAIL_MAX=%0d, DBG_TERMS=%0d)%0s",
+                 (DBG_FAIL != 0) ? "ON" : "OFF", DBG_FAIL_MAX, DBG_TERMS,
+                 (DBG_CASE != 0) ? ", forced DBG_CASE on" : " ");
+        if (DBG_CASE != 0)
+            $display("               forced : DBG_CASE=%0d (-1 = all cases), DBG_WIN=%0d, DBG_NWIN=%0d (<= 0 = all outputs)",
+                     DBG_CASE, DBG_WIN, DBG_NWIN);
         $display("========================================================================");
         if ((RES_SRC == 0) && (HAS_RES_PORT == 0))
             $display("[WARN] RES_SRC=0 needs residual_data port. Use RES_SRC=1 with NO_RESIDUAL_PORT.");
@@ -957,12 +1228,6 @@ module tb_conv_top;
         //======================================================================
         run_case("[4] MAC+RES+ReLU+MAXPOOL",             1,1,1,1,0,  9, 4, 1,   100, RM_SMALL,     0,   8, DM_SMALL, 0);
         run_case("[4] MAC+RES+ReLU+GAP",                 1,1,1,0,1,  9, 1, 4,  -100, RM_SMALL,     0,   8, DM_SMALL, 0);
-
-        //======================================================================
-        // E2. 5 blocks (ResNet 전체 : conv -> add -> ReLU -> MAXPOOL -> GAP)
-        //======================================================================
-        run_case("[5] MAC+RES+ReLU+MAX->GAP",            1,1,1,1,1,  9, 4, 4,    50, RM_SMALL,     0,   4, DM_SMALL, 0);
-        run_case("[5] MAC+RES+ReLU+MAX->GAP (P=2,G=8)",  1,1,1,1,1,  9, 2, 8,   -50, RM_SMALL,     0,   4, DM_SMALL, 0);
 
         //======================================================================
         // F. corner cases
@@ -1055,14 +1320,7 @@ module tb_conv_top;
             run_case("[C] GAP iter=9 (non 2^n)",          0,0,0,0,1,  1, 1, 9,     0, RM_SMALL,     0,  16, DM_FULL,  0);
         end
 
-        // F16. MAX+GAP 동시 enable : MAX -> GAP 직렬 (POOL_CASCADE = 0 이면 avg 결과만)
-        run_case("[C] MAX->GAP (P=4, G=4)",               0,0,0,1,1,  1, 4, 4,     0, RM_SMALL,     0,   8, DM_FULL,  0);
-        run_case("[C] MAX->GAP (P=2, G=8)",               0,0,0,1,1,  1, 2, 8,     0, RM_SMALL,     0,   8, DM_FULL,  0);
-        run_case("[C] MAX->GAP (P=9, G=2)",               0,0,0,1,1,  1, 9, 2,     0, RM_SMALL,     0,   8, DM_FULL,  0);
-        run_case("[C] ReLU+MAX->GAP",                     0,1,0,1,1,  1, 4, 4,     0, RM_SMALL,     0,   8, DM_FULL,  0);
-        run_case("[C] MAC+MAX->GAP",                      1,0,0,1,1,  9, 4, 4,     0, RM_SMALL,     0,   4, DM_SMALL, 0);
-
-        // F17. 긴 연속 스트림 (back-to-back, bubble 없음)
+        // F16. 긴 연속 스트림 (back-to-back, bubble 없음)
         run_case("[C] ReLU long back-to-back stream",     0,1,0,0,0,  1, 1, 1,     0, RM_SMALL,     0, 256, DM_FULL,  0);
 
         print_summary;

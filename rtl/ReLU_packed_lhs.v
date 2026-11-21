@@ -45,6 +45,7 @@ parameter integer WORD_W = 16
             valid_out   <= 0;
             data_out    <= 0;
         end
+        else
         begin
             valid_out   <= valid_relu;
             data_out    <= data_out_wire;

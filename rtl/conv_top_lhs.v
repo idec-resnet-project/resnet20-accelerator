@@ -1,22 +1,26 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
+// Company:
+// Engineer:
+//
 // Create Date: 2026/11/10 12:16:12
-// Design Name: 
+// Design Name:
 // Module Name: conv_top
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
+// Revision 0.02 - residual_data 를 MAC 결과와 정렬 (residual_data_capture FIFO)
+//                 이전에는 residual_data 포트가 data_skip 에 직결되어 MAC 결과가 나오는
+//                 시점(마지막 입력 + 7 clk)의 포트 값(= 다음 윈도우 값 / idle 0)을 더했음
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//   residual_data : MAC 윈도우마다 1개. 윈도우 마지막 입력 클럭에 유효하면 됨
+//                   (윈도우 입력 동안 유지해도 동일). 내부 FIFO 가 MAC 결과와 맞춰서 더함
 //////////////////////////////////////////////////////////////////////////////////
 
 
@@ -50,8 +54,8 @@ module conv_top
     input  wire [PARALLEL_PC*WORD_W-1:0]         kernel_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         bias_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         residual_data,
-    // resi data는 외부에서 받을지 내부에서 capture할지 결정해야함.
-    // core 입장에서는 외부에서 주는게 편하긴 함
+    // resi data 는 외부(컨트롤러)에서 받음 : MAC 윈도우 마지막 입력 클럭에 유효
+    // MAC 결과와의 정렬은 내부 residual_data_capture FIFO 가 담당
 
     // output
     output reg                                   out_enable,
@@ -65,12 +69,9 @@ module conv_top
     wire [PARALLEL_PC*WORD_W-1:0] ReLU_out;
     wire [PARALLEL_PC*WORD_W-1:0] residual_out;
     wire [WORD_W-1:0]             pooling_out;
-    //=======================================================================
-    // resi data capture
-    // residual data는 외부에서 받을지 내부에서 capture할지 결정해야함.
-    // core 입장에서는 외부에서 주는게 편하긴 함
-    //=======================================================================
-    reg [WORD_W-1:0] residual_data_capture[PARALLEL_PC-1:0];
+    wire [PARALLEL_PC*WORD_W-1:0] residual_skip;      // MAC 결과와 정렬된 residual (packed)
+    wire                          residual_overflow;  // 디버그용 (FIFO 넘침, sticky)
+
 
     //=======================================================================
     // valid
@@ -96,13 +97,13 @@ module conv_top
     reg residual_enable_reg;
     reg pooling_enable_reg;
     reg gap_enable_reg;
-    
+
     reg rst_reg_all;
     reg rst_reg_mac;
     reg rst_reg_relu;
     reg rst_reg_residual;
     reg rst_reg_pooling;
-    
+
     always @(posedge clk or negedge nrst)
     begin
         if (!nrst)
@@ -118,8 +119,7 @@ module conv_top
             rst_reg_residual        <= 1'b0;
             rst_reg_pooling         <= 1'b0;
             out_data                <= {WORD_W{1'b0}};
-            residual_data_capture   <= {PARALLEL_PC*WORD_W{1'b0}};
-            out_enable              <= 1'b0;            
+            out_enable              <= 1'b0;
         end
         else
         begin
@@ -129,20 +129,24 @@ module conv_top
             pooling_enable_reg  <= pooling_enable;
             gap_enable_reg      <= gap_enable;
             out_data            <= pooling_out;
-            out_enable          <= chain_valid_out;       
+            out_enable          <= chain_valid_out;
             rst_reg_all         <= nrst;
             rst_reg_mac         <= rst_reg_all;
             rst_reg_relu        <= rst_reg_all;
             rst_reg_residual    <= rst_reg_all;
-            rst_reg_pooling     <= rst_reg_all;     
+            rst_reg_pooling     <= rst_reg_all;
         end
     end
 
     //=======================================================================
     // valid 체인 디코더
     //=======================================================================
+    // 꺼진 블록의 valid 를 1클럭 지연하는 레지스터가 dcd 안에 있어 clk / reset 연결
     conv_valid_dcd uut_valid_dcd
     (
+        .clk                (clk),
+        .nrst               (rst_reg_all),
+
         .mac_enable         (mac_enable_reg),
         .relu_enable        (relu_enable_reg),
         .residual_enable    (residual_enable_reg),
@@ -165,7 +169,36 @@ module conv_top
     );
 
     //=======================================================================
-    // lane: MAC -> ReLU -> residual
+    // residual 정렬 FIFO
+    //   push : MAC 윈도우 마지막 입력 클럭의 residual_data
+    //   pop  : MAC valid_out 클럭 -> 같은 클럭에 residual 의 data_skip 으로 사용
+    //   reset 은 MAC 과 같은 타이밍 (rst_reg_all 에서 1단) 이라 윈도우 카운터가 MAC 과 같이 시작
+    //=======================================================================
+    residual_data_capture
+    #(
+        .WORD_W(WORD_W),
+        .BITWIDTH_MAC_ITERATION(BITWIDTH_MAC_ITERATION),
+        .BITWIDTH_POOLING_ITERATION(BITWIDTH_POOLING_ITERATION),
+        .BITWIDTH_GAP_ITERATION(BITWIDTH_GAP_ITERATION),
+        .PARALLEL_PC(PARALLEL_PC),
+        .PARALLEL_PF(PARALLEL_PF)
+    )
+    uut_residual_data_capture
+    (
+        .clk                (clk),
+        .nrst               (rst_reg_residual),
+        .mac_enable         (mac_enable_reg),
+        .residual_enable    (residual_enable_reg),
+        .mac_valid_in       (mac_valid_in),
+        .mac_iteration      (mac_iteration),
+        .mac_valid_out      (valid_out_mac[0]),
+        .residual_data      (residual_data),
+        .residual_data_out  (residual_skip),
+        .overflow           (residual_overflow)
+    );
+
+    //=======================================================================
+    // lane: MAC -> residual -> ReLU
     //=======================================================================
     genvar i;
     generate
@@ -205,7 +238,7 @@ module conv_top
             .enable    (residual_enable_reg),
             .valid_in  (residual_valid_in),
             .data_in   (mac_out[i*WORD_W +: WORD_W]),
-            .data_skip (residual_data_capture[i]),
+            .data_skip (residual_skip[i*WORD_W +: WORD_W]),
             .valid_out (valid_out_residual[i]),
             .data_out  (residual_out[i*WORD_W +: WORD_W])
         );

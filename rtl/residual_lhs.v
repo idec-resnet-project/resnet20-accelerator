@@ -27,6 +27,9 @@ module residual_unit
     reg signed [WORD_W-1:0] data_x;
     reg signed [WORD_W-1:0] data_y;
     reg signed [WORD_W:0]   data_add;
+
+    reg skip_load;
+    reg data_load;
     //reg                     proc;
     //reg                     done;
 
@@ -41,21 +44,31 @@ module residual_unit
             proc      <= 1'b0;
             done      <= 1'b0;
             valid_out <= 1'b0;
+            skip_load <= 1'b0;
+            data_load <= 1'b0;
         end 
         else
         begin
             // stage 1 : 입력 저장
             proc <= enable && valid_in;
+            if(enable)
+            begin
+                data_y    <= data_skip;
+                skip_load <= valid_in;
+            end
             if (enable && valid_in)
             begin
                 data_x <= data_in;
                 data_y <= data_skip;
+                data_load <= enable && valid_in;
             end
 
             
             done <= proc;
             if (proc)
+            begin
                 data_add <= data_x + data_y;
+            end
 
             
             valid_out <= done;
@@ -67,6 +80,11 @@ module residual_unit
                     data_out <= INT_MAX;
                 else
                     data_out <= data_add[WORD_W-1:0];
+            end
+
+            else
+            begin
+                data_out <= {WORD_W{1'b0}};
             end
         end
     end

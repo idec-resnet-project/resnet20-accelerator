@@ -8,6 +8,7 @@
 //  * 모든 출력 : IOB FF 로 1단 등록  -> clk-to-pad 지연이 비트마다 균일
 //  * nrst     : async assert / sync deassert 2-FF 동기화
 //  * 지연     : conv_top 대비 +2 클럭 (입력 1 + 출력 1)
+//  * residual_data : 다른 입력과 같이 IOB FF 1단 -> in_enable 과의 클럭 관계 유지
 //==============================================================================
 module conv_top_wrapper
 #(
@@ -37,6 +38,7 @@ module conv_top_wrapper
     input  wire [PARALLEL_PC*WORD_W-1:0]         in_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         kernel_data,
     input  wire [PARALLEL_PC*WORD_W-1:0]         bias_data,
+    input  wire [PARALLEL_PC*WORD_W-1:0]         residual_data,
 
     // output
     output wire                                  out_enable,
@@ -73,6 +75,7 @@ module conv_top_wrapper
     (* IOB = "TRUE" *) reg [PARALLEL_PC*WORD_W-1:0]         in_data_q;
     (* IOB = "TRUE" *) reg [PARALLEL_PC*WORD_W-1:0]         kernel_data_q;
     (* IOB = "TRUE" *) reg [PARALLEL_PC*WORD_W-1:0]         bias_data_q;
+    (* IOB = "TRUE" *) reg [PARALLEL_PC*WORD_W-1:0]         residual_data_q;
 
     always @(posedge clk or negedge nrst_i)
     begin
@@ -90,6 +93,7 @@ module conv_top_wrapper
             in_data_q           <= {(PARALLEL_PC*WORD_W){1'b0}};
             kernel_data_q       <= {(PARALLEL_PC*WORD_W){1'b0}};
             bias_data_q         <= {(PARALLEL_PC*WORD_W){1'b0}};
+            residual_data_q     <= {(PARALLEL_PC*WORD_W){1'b0}};
         end
         else
         begin
@@ -105,6 +109,7 @@ module conv_top_wrapper
             in_data_q           <= in_data;
             kernel_data_q       <= kernel_data;
             bias_data_q         <= bias_data;
+            residual_data_q     <= residual_data;
         end
     end
 
@@ -139,6 +144,7 @@ module conv_top_wrapper
         .in_data           (in_data_q),
         .kernel_data       (kernel_data_q),
         .bias_data         (bias_data_q),
+        .residual_data     (residual_data_q),
         .out_enable        (core_out_enable),
         .out_data          (core_out_data)
     );
