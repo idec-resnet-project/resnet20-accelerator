@@ -9,7 +9,10 @@
 //   * push    : capture 다음 클럭에 FIFO 에 씀 (타이밍 분리용 1단)
 //   * pop     : MAC valid_out (= residual 의 valid_in) 클럭에 꺼냄
 //               -> residual_data_out 은 그 클럭에 MAC 결과와 같은 윈도우의 residual
-//               (MAC 결과는 마지막 입력 후 최소 6 clk 뒤라 push 1 clk 지연은 영향 없음)
+//               [제약] pop 은 마지막 입력 캡처 edge 후 2 clk 이상 뒤여야 함 (1 clk 이면 FIFO 가 아직 비어 있음)
+//                      현재 conv_top 은 8 clk (iter = 0 이면 7 clk)
+//   * 동시에 FIFO 에 쌓이는 윈도우 수 <= DEPTH (push 대기 1단 포함 시 DEPTH+1 까지는 pop 과 겹치면 수용)
+//     넘치면 overflow = 1 (sticky) - 현재 conv_top 최악 2
 //   * 윈도우 마지막 입력 판단 (mac_v3 와 같은 규칙 : 첫 입력에서 iter 래치, iter 개, iter = 0 이면 1개)
 //       첫 입력 : iter <= 1 이면 그 입력이 마지막, 아니면 남은 입력 수 (iter - 1) 를 tap_rem 에 저장
 //       이후    : tap_rem == 1 이면 마지막, 아니면 tap_rem - 1
