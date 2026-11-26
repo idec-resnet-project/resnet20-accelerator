@@ -41,10 +41,14 @@
             access_reg(0, cfg.status_addr, state);
         endtask
 
-        task wait_status(output bit [31:0] state, output bit timed_out,
-                         input int max_polls);
+        task wait_status(output bit [31:0] state, output bit timed_out);
+            int max_polls;
+            // Budget four cycles for an AXI-Lite read plus the idle polling gap.
+            max_polls = cfg.timeout_cycles / (4 + cfg.status_poll_gap_cycles);
             timed_out = 0;
             for (int i = 0; i < max_polls; i++) begin
+                if (i > 0)
+                    repeat (cfg.status_poll_gap_cycles) @(posedge env.ctrl.driver.vif.clk);
                 read_status(state);
                 if (state & (cfg.error_mask | cfg.done_mask)) return;
             end
@@ -98,7 +102,7 @@
                 send_source(cmd, KERNEL);
                 send_source(cmd, BIAS);
             join
-            wait_status(state, timed_out, cfg.timeout_cycles / 4);
+            wait_status(state, timed_out);
             if (timed_out || (state & cfg.error_mask) || !(state & cfg.done_mask))
                 test_fatal("COMMAND_FAILED", $sformatf("command[%0d] state=%08h timeout=%0b",
                                                        index, state, timed_out));

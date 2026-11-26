@@ -116,6 +116,7 @@ module tb_axi_bottleneck;
 
         if (!$value$plusargs("TB_DIR=%s", tb_dir)) tb_dir = ".";
         cfg = build_model_config(model_data_dir(tb_dir));
+        cfg.status_poll_gap_cycles = 256;
 
         uvm_config_db#(model_run_config)::set(null, "uvm_test_top", "run_cfg", cfg);
         uvm_config_db#(virtual axi_lite_if)::set(null, "uvm_test_top.env.ctrl*", "vif", ctrl);
