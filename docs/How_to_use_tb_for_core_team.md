@@ -10,7 +10,7 @@ git clone -b feat/memory-hyunkeon-1.0.0 https://github.com/idec-resnet-project/r
 cd resnet20-accelerator
 
 # Run behavioral simulation
-./scripts/behav_sim.bat tb_axi_bottleneck --gui
+./scripts/behav_sim.bat tb_axi_bottleneck --gui --no-wdb
 ```
 
 ## Use Your Own Core RTL
@@ -20,7 +20,7 @@ cd resnet20-accelerator
 2. Run the behavioral simulation:
 
 ```bash
-./scripts/behav_sim.bat tb_axi_bottleneck --gui
+./scripts/behav_sim.bat tb_axi_bottleneck --gui --no-wdb
 ```
 
 > [!CAUTION]
